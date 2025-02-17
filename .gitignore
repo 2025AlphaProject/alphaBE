@@ -1,0 +1,14 @@
+.env
+*/migrations
+# 파이참 설정 폴더 무시
+*.idea
+.idea/
+# 가상환경 폴더 무시
+/venv
+db.sqlite3
+# pycache 무시
+*/__pycache__
+*.pyc
+*.bak
+*.dat
+*.dir
