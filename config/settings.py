@@ -11,9 +11,19 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import os, environ
+
+# .env 파일을 읽기 위한 객체 생성
+env = environ.Env()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# env 파일을 읽습니다. 최상위 폴더 기준 바로 아래에 위치한 .env 파일을 읽습니다.
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
+# env 파일로부터 rest api 키를 가져옵니다.
+KAKAO_REST_API_KEY = env('KAKAO_REST_API_KEY')
 
 
 # Quick-start development settings - unsuitable for production
@@ -37,9 +47,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
+    'rest_framework'
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware', # cors 관련 미들웨어 추가
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -48,6 +61,10 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# TODO 특정 호스트만 접속하도록 허용할것
+CORS_ORIGIN_ALLOW_ALL = True # 모든 호스트의 접속을 허용합니다.
+# CORS_ORIGIN_WHITELIST = () # 특정 호스트의 접속만을 허용합니다.
 
 ROOT_URLCONF = 'config.urls'
 
@@ -103,9 +120,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ko-kr' # 언어를 한국어로 설정
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Seoul' # 타임존을 한국 시간으로 설정
 
 USE_I18N = True
 
