@@ -147,3 +147,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # 아래는 커스텀 설정입니다.
 AUTH_USER_MODEL = 'usr.User' # usr의 User를 기본 auth 모델로 적용
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'authenticate.authentications.CustomAuthentication',
+    ),
+}
