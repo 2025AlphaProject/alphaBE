@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-from rest_framework import status
+from rest_framework import status, viewsets
+from rest_framework.response import Response
 import requests
 
 from config.settings import KAKAO_REST_API_KEY # 환경변수를 가져옵니다.
@@ -47,3 +48,33 @@ def kakao_callback(request):
         data['refresh_token'] = response.json().get('refresh_token', None)  # 리프레시 토큰 정보 추가
         return JsonResponse(data, status=201) # post 요청을 보내줬기 때문에 201 create를 보내줍니다.
     return JsonResponse({"Error": response.text}, status=status.HTTP_400_BAD_REQUEST)
+
+class KakaoRefreshTokens(viewsets.ViewSet):
+    """
+    해당 클래스는 카카오 세션이 만료되었을 때 refresh를 해주기 위한 api view 입니다.
+    """
+    def create(self, request):
+        # refresh_token 파싱
+        refresh_token = request.data.get('refresh_token', None)
+        # refresh_token이 body에 존재하지 않는다면
+        if refresh_token is None:
+            return Response({"Error": "Refresh token is missing"}, status=400)
+        # 리프레시 토큰이 있는경우
+        # 토큰을 발급받기위한 요청 url 입니다.
+        token_url = 'https://kauth.kakao.com/oauth/token'
+        # 요청 헤더
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+        }
+        data = {
+            'grant_type': 'refresh_token',
+            'client_id': KAKAO_REST_API_KEY,
+            'refresh_token': refresh_token,
+        }
+        # 헤더와 정보를 조합하여 정보를 보냅니다.
+        response = requests.post(token_url, data=data, headers=headers)
+        # 올바른 정보가 넘어왔다면
+        if response.status_code == 200:
+            return Response(response.json(), status=status.HTTP_201_CREATED)
+        # 만일 토큰 정보가 잘못되었거나, refresh_token마저 만료 된경우, 혹은 카카오 측 오류인 경우
+        return Response({"Error": response.text}, status=status.HTTP_400_BAD_REQUEST)
