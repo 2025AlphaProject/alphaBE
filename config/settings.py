@@ -35,7 +35,8 @@ SECRET_KEY = 'django-insecure-ppdx8t7r7ys%84627-7v9st+7+-@js620k#9ivbhc2)#0g-rhd
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# TODO 특정 호스트만 접속 가능하도록 변경
+ALLOWED_HOSTS = ['*'] # 모든 호스트 접속이 가능합니다.
 
 
 # Application definition
