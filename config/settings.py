@@ -24,6 +24,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # env 파일로부터 rest api 키를 가져옵니다.
 KAKAO_REST_API_KEY = env('KAKAO_REST_API_KEY')
+KAKAO_AUTH_CODE = env('KAKAO_AUTH_CODE') # 카카오 로그인의 임시 인가코드를 사용됩니다. 테스트를 위해 사용됩니다.
 
 
 # Quick-start development settings - unsuitable for production

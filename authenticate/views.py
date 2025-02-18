@@ -45,5 +45,5 @@ def kakao_callback(request):
         data['access_token'] = response.json().get('access_token', None)  # 액세스 토큰 추가
         data['token_type'] = response.json().get('token_type', None)  # token 타입 정보 추가
         data['refresh_token'] = response.json().get('refresh_token', None)  # 리프레시 토큰 정보 추가
-        return JsonResponse(data, status=200)
+        return JsonResponse(data, status=201) # post 요청을 보내줬기 때문에 201 create를 보내줍니다.
     return JsonResponse({"Error": response.text}, status=status.HTTP_400_BAD_REQUEST)
