@@ -75,6 +75,10 @@ class KakaoRefreshTokens(viewsets.ViewSet):
         response = requests.post(token_url, data=data, headers=headers)
         # 올바른 정보가 넘어왔다면
         if response.status_code == 200:
-            return Response(response.json(), status=status.HTTP_201_CREATED)
+            # data 딕셔너리 객체를 생성하여 액세스, 리프레시 토큰만 골라서 추출
+            data = dict()
+            data['access_token'] = response.json().get('access_token', None)  # 액세스 토큰 추가
+            data['token_type'] = response.json().get('token_type', None)  # token 타입 정보 추가
+            return Response(data, status=status.HTTP_201_CREATED)
         # 만일 토큰 정보가 잘못되었거나, refresh_token마저 만료 된경우, 혹은 카카오 측 오류인 경우
         return Response({"Error": response.text}, status=status.HTTP_400_BAD_REQUEST)
