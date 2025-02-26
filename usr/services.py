@@ -59,7 +59,7 @@ class UserService:
         }
         response = requests.get(kakao_user_info_url, headers=header)  # 요청을 받아옵니다.
         if response.status_code == 200:  # 정상적으로 데이터가 왔다면
-            self.__upload_user(response.json()) # 실제 데이터 업로드를 진행합니다.
+            return self.__upload_user(response.json()) # 실제 데이터 업로드를 진행합니다.
         raise Exception()
 
     def __upload_user(self, raw_data):
@@ -68,7 +68,10 @@ class UserService:
         :params raw_data: 카카오에서 날라오는 json 정보 그대로를 말합니다.
         """
         data_dict = dict() # 실제 데이터가 저장될 정보입니다.
+        raw_data = raw_data['kakao_account'] # 카카오 계정 정보로 대체 저장
         profile = raw_data['profile'] # 추가 파싱 데이터
+        # sub 저장
+        data_dict['sub'] = self.sub
         # 닉네임 저장
         data_dict['username'] = profile['nickname']
         # 프로필 이미지 url 저장
