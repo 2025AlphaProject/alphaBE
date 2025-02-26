@@ -77,6 +77,7 @@ class UserService:
 
         # 실제 유저 업로드
         try:
-            User.objects.create(**data_dict)
+            user = User.objects.create(**data_dict)
         except Exception as e:
             raise Exception(e)
+        return user
