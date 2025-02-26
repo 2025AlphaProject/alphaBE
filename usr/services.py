@@ -1,6 +1,7 @@
 from .models import User
 from config.settings import KAKAO_ADMIN_KEY
 import requests
+import jwt
 
 
 
@@ -13,11 +14,15 @@ class UserService:
     user = None
     sub = None # sub는 long 방식의 정수형을 받습니다.
 
-    def __init__(self, sub):
+    def __init__(self, id_token):
         """
         해당 함수는 유저 서비스 객체가 생성될 때 자동으로 실행되는 함수입니다.
+        :param id_token: 회원 정보가 들어있는 아이디 토큰입니다.
         """
-        self.sub = sub # 회원 번호 저장
+        payload = jwt.decode(id_token, options={"verify_signature": False})
+        self.sub = payload.get('sub', None) # 회원 번호 저장
+        if self.sub is None:
+            raise Exception("토큰 내 회원정보 일부가 존재하지 않습니다.")
         self.user = self.get_user() # 함수를 이용해서 유저를 가져옵니다.
 
     def get_or_register_user(self):

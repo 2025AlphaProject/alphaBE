@@ -4,6 +4,8 @@ from rest_framework import status, viewsets
 from rest_framework.response import Response
 import requests
 
+from usr.services import UserService
+
 from config.settings import KAKAO_REST_API_KEY # 환경변수를 가져옵니다.
 
 # Create your views here.
