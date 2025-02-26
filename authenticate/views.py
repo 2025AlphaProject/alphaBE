@@ -4,6 +4,8 @@ from rest_framework import status, viewsets
 from rest_framework.response import Response
 import requests
 
+from usr.services import UserService
+
 from config.settings import KAKAO_REST_API_KEY # 환경변수를 가져옵니다.
 
 # Create your views here.
@@ -41,11 +43,14 @@ def kakao_callback(request):
         if id_token is None:
             return JsonResponse({"Error": "id 토큰이 존재하지 않습니다.", "ErrorResponse": response.json()})
         # TODO 유저 생성하여 회원가입 처리 or 로그인 처리
+        user_service = UserService(id_token)
+        user, is_new = user_service.get_or_register_user() # 로그인 혹은 회원가입을 처리합니다.
         # data 딕셔너리 객체를 생성하여 액세스, 리프레시 토큰만 골라서 추출
         data = dict()
         data['access_token'] = response.json().get('access_token', None)  # 액세스 토큰 추가
         data['token_type'] = response.json().get('token_type', None)  # token 타입 정보 추가
         data['refresh_token'] = response.json().get('refresh_token', None)  # 리프레시 토큰 정보 추가
+        data['is_new'] = is_new # 신규 유저인지 알려주는 플래그 입니다.
         return JsonResponse(data, status=201) # post 요청을 보내줬기 때문에 201 create를 보내줍니다.
     return JsonResponse({"Error": response.text}, status=status.HTTP_400_BAD_REQUEST)
 
