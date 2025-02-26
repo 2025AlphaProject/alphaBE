@@ -26,9 +26,12 @@ class UserService:
         self.user = self.get_user() # 함수를 이용해서 유저를 가져옵니다.
 
     def get_or_register_user(self):
+        """
+        :return: user(User object), isNew(bool)
+        """
         if self.user is None: # 유저가 존재하지 않는다면 가입을 진행
-            return self.register_user()
-        return self.user
+            return self.register_user(), True
+        return self.user, False
 
     def get_user(self):
         """
