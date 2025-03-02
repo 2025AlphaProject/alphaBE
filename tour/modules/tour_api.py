@@ -15,6 +15,8 @@ class Area:
         self.__mapX = raw_dict['mapx']
         self.__mapY = raw_dict['mapy']
         self.__title = raw_dict['title']
+        self.__eventStartDate = raw_dict.get('eventstartdate', None)
+        self.__eventEndDate = raw_dict.get('eventenddate', None)
 
     @staticmethod
     def from_raw_list_to_area_list(raw_list):
@@ -58,6 +60,12 @@ class Area:
 
     def get_title(self):
         return self.__title
+
+    def get_eventStartDate(self):
+        return self.__eventStartDate
+
+    def get_eventEndDate(self):
+        return self.__eventEndDate
 
     def __str__(self):
         return self.get_title()
@@ -395,6 +403,25 @@ class TourApi:
                 each.pop('rnum')
             return raw
         return None
+
+    def get_festival_list(self, event_start_date, event_end_date, **kwargs):
+        """
+        해당 함수는 행사 정보를 얻는 데 초점을 둔 함수 입니다.
+        :param event_start_date: 이벤트 시작 날짜 (여행 시작 날짜, YYYYMMDD 형식)
+        :param event_end_date: 이벤트 마감 날짜(여행 마감 날짜, YYYYMMDD 형식)
+        """
+        uri = '/searchFestival1'
+        parameters = self.__upload_required_params()
+        parameters['eventStartDate'] = event_start_date
+        parameters['eventEndDate'] = event_end_date
+        for each in kwargs.keys():
+            parameters[each] = kwargs[each].value if isinstance(kwargs[each], Enum) else kwargs[each]
+
+        response = requests.get(BASE_URL + uri, params=parameters)
+        if response.status_code == 200:
+            if response.json()['response']['body']['totalCount'] == 0: return []
+            raw = response.json()['response']['body']['items']['item']
+            return Area.from_raw_list_to_area_list(raw)
 
 
 
