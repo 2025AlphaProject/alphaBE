@@ -398,24 +398,3 @@ class TourApi:
 
 
 
-
-if __name__ == '__main__':
-    tour = TourApi(MobileOS=MobileOS.ANDROID, MobileApp='AlphaTest')
-    tour.set_serviceKey('')
-    # 지역 기반 관광지 가져오기 1
-    area = tour.get_area_based_list(areaCode=AreaCode.SEOUL, sigunguCode=tour.get_sigungu_code(areaCode=AreaCode.SEOUL, targetName='성북'))
-    for each in area:
-        print(f'{each}, 주소: {each.get_address()}')
-
-    # 지역 기반 관광지 가져오기 2
-    data = {
-        'areaCode': AreaCode.SEOUL,
-        'sigunguCode': tour.get_sigungu_code(areaCode=AreaCode.SEOUL, targetName='종로'),
-        'arrange': Arrange.TITLE_IMAGE,
-        'contentTypeId': ContentTypeId.GWANGWANGJI
-    }
-    area = tour.get_area_based_list(**data)
-    for each in area:
-        print(f'{each}, 주소: {each.get_address()}')
-
-    print(tour.get_category_code_list(cat1=Category1Code.HUMANITIES, cat2='A0201'))
