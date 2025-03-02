@@ -46,3 +46,10 @@ class TestTour(TestCase):
         }
         response = tour.get_location_based_list(126.3547412438, 34.4354594945, 20000)
         self.assertNotEqual(response, None)
+
+        # 행사 정보 가져오기
+        data.pop('contentTypeId')
+        response = tour.get_festival_list('20250315', '20250318', **data)
+        self.assertNotEqual(response, None)
+        for each in response:
+            print(each.get_eventStartDate(), each.get_eventEndDate())
