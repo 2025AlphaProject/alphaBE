@@ -57,8 +57,10 @@ INSTALLED_APPS = [
     'rest_framework',
     'authenticate',
     'usr',
-    'tour'
+    'tour',
+    'channels',
 ]
+ASGI_APPLICATION = 'config.asgi.application'
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', # cors 관련 미들웨어 추가
