@@ -61,6 +61,14 @@ INSTALLED_APPS = [
     'channels',
 ]
 ASGI_APPLICATION = 'config.asgi.application'
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("redis", 6379)],
+        },
+    },
+}
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', # cors 관련 미들웨어 추가
