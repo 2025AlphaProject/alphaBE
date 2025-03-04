@@ -3,7 +3,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import async_to_sync
 from config.celery import app
 from config.settings import PUBLIC_DATA_PORTAL_API_KEY
-from modules.tour_api import *
+from .modules.tour_api import *
 import urllib.parse
 
 class TaskConsumer(AsyncWebsocketConsumer):
@@ -47,7 +47,7 @@ class TaskConsumer(AsyncWebsocketConsumer):
             return
 
         task_result = app.send_task('tour.tasks.get_recommended_tour_based_area', args=[self.user_id, # 채널 레이어 그룹 특정을 위해 보냅니다.
-                                                                                        areaCode, contentTypeId, Arrange.TITLE_IMAGE, sigunguCode])
+                                                                                        areaCode, contentTypeId, Arrange.TITLE_IMAGE.value, sigunguCode])
         await self.send(text_data=json.dumps({
             'state': 'OK',
             'Message': {
@@ -61,4 +61,4 @@ class TaskConsumer(AsyncWebsocketConsumer):
 
     async def task_update(self, event):
         # celery 컨테이너에서 보낸 메시지를 클라이언트로 전송
-        await self.send(text_data=json.dumps(event["message"]))
+        await self.send(text_data=json.dumps(event["message"], ensure_ascii=False))
