@@ -46,7 +46,8 @@ class TaskConsumer(AsyncWebsocketConsumer):
             }))
             return
 
-        task_result = app.send_task('tour.tasks.get_recommended_tour_based_area', args=[areaCode, contentTypeId, Arrange.TITLE_IMAGE, sigunguCode])
+        task_result = app.send_task('tour.tasks.get_recommended_tour_based_area', args=[self.user_id, # 채널 레이어 그룹 특정을 위해 보냅니다.
+                                                                                        areaCode, contentTypeId, Arrange.TITLE_IMAGE, sigunguCode])
         await self.send(text_data=json.dumps({
             'state': 'OK',
             'Message': {
