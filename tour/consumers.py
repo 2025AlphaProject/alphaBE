@@ -62,3 +62,39 @@ class TaskConsumer(AsyncWebsocketConsumer):
     async def task_update(self, event):
         # celery 컨테이너에서 보낸 메시지를 클라이언트로 전송
         await self.send(text_data=json.dumps(event["message"], ensure_ascii=False))
+
+    async def receive(self, text_data=None, bytes_data=None):
+        """
+        재시도를 위한 메시지 입니다.
+        """
+        data = json.loads(text_data)
+        user_id = data.get("user_id", None)
+        areaCode = data.get("areaCode", None)
+        sigunguName = data.get("sigunguName", None)
+        contentTypeId = data.get("contentTypeId", None)
+        if user_id is None or areaCode is None or sigunguName is None or contentTypeId is None:
+            # 데이터가 없다면 예외 처리
+            await self.send(text_data=json.dumps({
+                'state': 'ERROR',
+                'Message': '필수 파라미터 중 일부가 없거나 잘못되었습니다.'
+            }))
+            return
+
+        tour = TourApi(MobileOS=MobileOS.ANDROID, MobileApp='AlphaProject2025', service_key=PUBLIC_DATA_PORTAL_API_KEY)
+        sigunguCode = tour.get_sigungu_code(areaCode, sigunguName)  # 시군구 이름에 대응되는 코드를 가져옵니다.
+        if sigunguCode is None:  # 시군구 코드가 없다면
+            await self.send(text_data=json.dumps({
+                'state': 'ERROR',
+                'Message': '해당 시군구 이름에 대응되는 코드를 가져올 수 없습니다. 시군구 이름을 다시 한번 확인 바랍니다.'
+            }))
+            return
+
+        task_result = app.send_task('tour.tasks.get_recommended_tour_based_area',
+                                    args=[self.user_id,  # 채널 레이어 그룹 특정을 위해 보냅니다.
+                                          areaCode, contentTypeId, Arrange.TITLE_IMAGE.value, sigunguCode])
+        await self.send(text_data=json.dumps({
+            'state': 'OK',
+            'Message': {
+                'task_id': task_result.task_id,
+            }
+        }))
