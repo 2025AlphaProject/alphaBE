@@ -28,6 +28,7 @@ KAKAO_AUTH_CODE = env('KAKAO_AUTH_CODE') # 카카오 로그인의 임시 인가�
 KAKAO_REFRESH_TOKEN = env('KAKAO_REFRESH_TOKEN')
 KAKAO_ADMIN_KEY = env('KAKAO_ADMIN_KEY') # 카카오 어드민 키를 가져옵니다.
 KAKAO_TEST_ID_TOKEN = env('KAKAO_TEST_ID_TOKEN')
+KAKAO_TEST_ACCESS_TOKEN = env('KAKAO_TEST_ACCESS_TOKEN') # 카카오 테스트 액세스 토큰을 가져옵니다.
 PUBLIC_DATA_PORTAL_API_KEY = env('PUBLIC_DATA_PORTAL_API_KEY') # 공공 데이터 포탈 서비스 키입니다.
 
 
