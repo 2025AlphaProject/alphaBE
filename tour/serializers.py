@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import Travel
 
 class TravelSerializer(serializers.ModelSerializer):
-    tour_name = serializers.CharField(source='travel_name', required=True)
+    tour_name = serializers.CharField(required=True)
     start_date = serializers.DateField(required=True)
     end_date = serializers.DateField(required=True)
 
