@@ -110,10 +110,21 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+# 기본 데이터 베이스를 mysql로 설정합니다.
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': env('DB_NAME'), # DB 이름을 설정합니다.
+        'USER': env('DB_USER'), # 접근 사용자 이름을 지정합니다.
+        'PASSWORD': env('DB_PASSWORD'), # 접근 비밀번호를 지정합니다.
+        'HOST': env('DB_HOST'), # mysql 접근 호스트를 의미합니다.
+        'PORT': env('DB_PORT'), # 접근 포트 번호를 의미합니다.
     }
 }
 
