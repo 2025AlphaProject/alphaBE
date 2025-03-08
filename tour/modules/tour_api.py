@@ -424,4 +424,102 @@ class TourApi:
             return Area.from_raw_list_to_area_list(raw)
 
 
+import math
+from tour.models import Event
+
+# 주변 행사 정보를 가져오는 목적의 클래스를 제작합니다.
+class NearEventInfo:
+    def __init__(self, service_key, all_events=None):
+        self.all_events = all_events
+        self.service_key = service_key
+
+    def set_service_key(self, service_key):
+        """
+        service키 설정
+        """
+        self.service_key = service_key
+
+    @staticmethod
+    def haversine(map_y1, map_x1, map_y2, map_x2):
+        """
+        두 지점의 위도와 경도 정보가 주어질 때 두 지점 사이의 거리를 구하는 함수입니다.
+        :param map_x1: 경도 좌표 1
+        :param map_y1: 위도 좌표 1
+        :param map_x2: 경도 좌표 2
+        :param map_y2: 위도 좌표 2
+        """
+
+        R = 6378  # 지구 반지름 (단위: km)
+
+        # 위도 및 경도를 라디안 단위로 변환
+        map_x1, map_y1, map_x2, map_y2 = map(math.radians, [map_x1, map_y1, map_x2, map_y2])
+
+        # 위도, 경도의 차이 계산
+        d_y = map_y2 - map_y1
+        d_x = map_x2 - map_x1
+
+        # haversine 공식 적용
+        a = math.sin(d_y / 2) ** 2 + math.cos(map_y1) * math.cos(map_y2) * math.sin(d_x / 2) ** 2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+        distance = R * c  # 거리 계산
+        return distance
+
+    def get_near_by_events(self, my_y, my_x, all_events=None):
+        """
+        db에서 위도 경도 좌표차를 이용해서 대략적으로 근처에 있는 행사 정보들만 추출합니다.
+        :param all_events: places.objects.all()과 같은 장소 정보 전체 데이터를 말합니다.
+        :param my_y: 타겟 장소 경도 좌표입니다.
+        :param my_x: 타겟 장소 위도 좌표입니다.
+        :return: 필터된 장소들을 반환합니다.
+        """
+        self.all_events = all_events
+        if self.all_events is None: # 만약 모든 events 객체가 없다면
+            raise Exception("There are not all_events objects")
+
+        # 만약 all_events 객체가 Event 인스턴스가 아니라면 오류를 발생시킵니다.
+        if not isinstance(all_events, Event):
+            raise Exception("all_events are not a Event objects")
+
+        # 경도 차가 0.273601, 위도 차가 0.0045일 때 500m 차이가 납니다. -> 경도 차 0.0547202: 0.1km 위도 차 0.0009: 0.1km
+        filtered_events = self.__get_events_in_shadow_box(my_y, my_x, 0.5) # 0.5km 사각형 내에 있는 장소정보들을 가져옵니다.
+        result_events = self.__get_events_in_radius_box(filtered_events) # 0.5km 반경 내에 있는 장소정보들을 가져옵니다.
+        return result_events
+
+    def __get_events_in_shadow_box(self, target_y, target_x, distance):
+        """
+        상하 좌우 distance (단위: km)만큼 떨어진 곳을 한 변으로 하여 사각형을 그렸을 때, 그 사각형 안에 있는 장소들을 가져옵니다.
+        :return: Event 객체들을 반환합니다.
+        """
+        self.distance = distance # 거리 설정
+        self.target_y = target_y
+        self.target_x = target_x
+        # 경도 차가 0.273601, 위도 차가 0.0045일 때 500m 차이가 납니다. -> 경도 차 0.0547202: 0.1km 위도 차 0.0009: 0.1km
+        LON_DIF_PER_100M = 0.0547202 # 경도 차
+        LAT_DIF_PER_100M = 0.0009 # 위도 차
+        mul = distance / 0.1 # 기준 단위가 0.1km로 되어 있기 때문에 곱수를 구합니다.
+        lon_dif = mul * LON_DIF_PER_100M
+        lat_dif = mul * LAT_DIF_PER_100M
+        # Places 필드를 기준으로 작성되었습니다.
+        # TODO Places 필드 변경시 변경 작성 바랍니다.
+        filtered_events = self.all_events.filter(mapX__gte=(target_x - lon_dif),
+                                                 mapX__lte=(target_x + lon_dif),
+                                                 mapY__gte=(target_y - lat_dif),
+                                                 mapY__lte=(target_y + lat_dif))
+        return filtered_events
+
+
+    def __get_events_in_radius_box(self, filtered_places):
+        """
+        타겟 장소 기준 반경 self.distance 만큼 떨어진 장소들을 가져옵니다. 반드시 get_places_in_shadow_box를 통해 선별된 장소들이어야 합니다.
+        :return: Event 객체들을 반환합니다.
+        """
+        return_list_id = []
+        for each_place in filtered_places:
+            x = each_place.mapX # 경도 좌표 추출
+            y = each_place.mapY # 위도 좌표 추출
+            dif = self.haversine(self.target_y, self.target_x, y, x)
+            if dif < self.distance: # 설정한 거리보다 작다면
+                return_list_id.append(each_place.id)
+        return Event.objects.filter(id__in=return_list_id)
 
