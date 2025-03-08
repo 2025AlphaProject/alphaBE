@@ -53,3 +53,5 @@ class TestTour(TestCase):
         self.assertNotEqual(response, None)
         for each in response:
             print(each.get_eventStartDate(), each.get_eventEndDate())
+
+
