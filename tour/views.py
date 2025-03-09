@@ -8,11 +8,16 @@ class TravelViewSet(viewsets.ModelViewSet):
     serializer_class = TravelSerializer
 
     def create(self, request, *args, **kwargs):  # 새로운 여행 등록 API
-        user_sub = request.user.sub #액세스 토큰에서 sub 값 가져오기
-        serializer = self.get_serializer(data=request.data)
+        user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
+
+        # request.data를 변경 가능한 딕셔너리로 변환 후 user 추가
+        travel_data = dict(request.data).copy()
+        travel_data["user"] = user_sub
+
+        serializer = self.get_serializer(data=travel_data)  # 수정된 데이터로 serializer 초기화
 
         if serializer.is_valid():  # 데이터에 모든 필드가 다 있을 때 실행되는 조건문
-            travel = serializer.save(user=user_sub)  #user 필드에 User 객체 저장 (ORM 방식)
+            travel = serializer.save()  # ORM을 이용해 저장
 
             # json 응답을 반환
             return Response({
@@ -33,7 +38,7 @@ class TravelViewSet(viewsets.ModelViewSet):
         queryset = self.get_queryset().filter(user_id=user_sub)  # 로그인한 사용자의 여행만 조회
         serializer = self.get_serializer(queryset, many=True)
 
-        #json 응답을 반환
+        # json 응답을 반환
         response_data = [
             {
                 "tour_id": travel["id"],
