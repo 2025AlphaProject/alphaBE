@@ -1,5 +1,7 @@
 import requests
 from enum import Enum
+import math
+# from tour.models import Event
 
 class Area:
     def __init__(self, raw_dict):
@@ -424,14 +426,14 @@ class TourApi:
             return Area.from_raw_list_to_area_list(raw)
 
 
-import math
-from tour.models import Event
+
 
 # 주변 행사 정보를 가져오는 목적의 클래스를 제작합니다.
 class NearEventInfo:
-    def __init__(self, service_key, all_events=None):
+    def __init__(self, EventListModel, service_key, all_events=None):
         self.all_events = all_events
         self.service_key = service_key
+        self.EventListModel = EventListModel
 
     def set_service_key(self, service_key):
         """
@@ -473,13 +475,14 @@ class NearEventInfo:
         :param my_x: 타겟 장소 위도 좌표입니다.
         :return: 필터된 장소들을 반환합니다.
         """
-        self.all_events = all_events
+        if all_events is not None:
+            self.all_events = all_events
         if self.all_events is None: # 만약 모든 events 객체가 없다면
             raise Exception("There are not all_events objects")
 
         # 만약 all_events 객체가 Event 인스턴스가 아니라면 오류를 발생시킵니다.
-        if not isinstance(all_events, Event):
-            raise Exception("all_events are not a Event objects")
+        # if not isinstance(all_events, self.EventListModel):
+        #     raise Exception("all_events are not a Event objects")
 
         # 경도 차가 0.273601, 위도 차가 0.0045일 때 500m 차이가 납니다. -> 경도 차 0.0547202: 0.1km 위도 차 0.0009: 0.1km
         filtered_events = self.__get_events_in_shadow_box(my_y, my_x, 0.5) # 0.5km 사각형 내에 있는 장소정보들을 가져옵니다.
@@ -521,5 +524,4 @@ class NearEventInfo:
             dif = self.haversine(self.target_y, self.target_x, y, x)
             if dif < self.distance: # 설정한 거리보다 작다면
                 return_list_id.append(each_place.id)
-        return Event.objects.filter(id__in=return_list_id)
-
+        return self.EventListModel.objects.filter(id__in=return_list_id)
