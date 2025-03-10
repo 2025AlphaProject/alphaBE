@@ -25,7 +25,7 @@ class TravelDaysAndPlaces(models.Model):
     place = models.ForeignKey(Place, on_delete=models.CASCADE) # 장소 제거시 해당 일차도 제거
     date = models.DateField() # 여행 날짜
     mission = models.ForeignKey(Mission, on_delete=models.SET_NULL, blank=True, null=True) # 미션을 추가합니다. 미션 제거시 해당 일차 미션 NULL
-    mission_image = models.ImageField(upload_to='', blank=True, null=True) # 이미지 필드를 추가합니다.
+    # mission_image = models.ImageField(upload_to='', blank=True, null=True) # 이미지 필드를 추가합니다.
 
 class PlaceImages(models.Model):
     # id: pk
