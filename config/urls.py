@@ -22,4 +22,5 @@ urlpatterns = [
     path('auth/', include('authenticate.urls')),
     path('user/',include('usr.urls')),
     path('tour/', include('tour.urls')),
+    path('mission/', include('mission.urls')),
 ]
