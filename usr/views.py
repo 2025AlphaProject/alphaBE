@@ -1,8 +1,10 @@
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 
 class Who(ViewSet):
+    permission_classes = [IsAuthenticated] # 로그인 사용자만 api 접근 허용
 
     def retrieve(self, request, pk=None):
         try:
