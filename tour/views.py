@@ -1,5 +1,6 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from .models import Travel
 from .serializers import TravelSerializer
 from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY
@@ -11,6 +12,7 @@ from .models import Event
 class TravelViewSet(viewsets.ModelViewSet):
     queryset = Travel.objects.all()
     serializer_class = TravelSerializer
+    permission_classes = [IsAuthenticated] # 로그인한 사용자만 api를 승인합니다.
 
     def create(self, request, *args, **kwargs):  # 새로운 여행 등록 API
         user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
