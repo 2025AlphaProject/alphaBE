@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'authenticate',
     'usr',
     'tour',
+    'mission',
     'channels',
 ]
 ASGI_APPLICATION = 'config.asgi.application'
