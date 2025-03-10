@@ -30,6 +30,7 @@ KAKAO_ADMIN_KEY = env('KAKAO_ADMIN_KEY') # 카카오 어드민 키를 가져옵�
 KAKAO_TEST_ID_TOKEN = env('KAKAO_TEST_ID_TOKEN')
 KAKAO_TEST_ACCESS_TOKEN = env('KAKAO_TEST_ACCESS_TOKEN') # 카카오 테스트 액세스 토큰을 가져옵니다.
 PUBLIC_DATA_PORTAL_API_KEY = env('PUBLIC_DATA_PORTAL_API_KEY') # 공공 데이터 포탈 서비스 키입니다.
+SEOUL_PUBLIC_DATA_SERVICE_KEY = env('SEOUL_PUBLIC_DATA_SERVICE_KEY') # 서울 열린데이터 광장 서비스 키
 
 
 # Quick-start development settings - unsuitable for production
@@ -66,7 +67,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("localhost", 6379)],
+            "hosts": [(env("CHANNEL_HOST"), 6379)],
         },
     },
 }
@@ -110,10 +111,21 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+# 기본 데이터 베이스를 mysql로 설정합니다.
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': env('DB_NAME'), # DB 이름을 설정합니다.
+        'USER': env('DB_USER'), # 접근 사용자 이름을 지정합니다.
+        'PASSWORD': env('DB_PASSWORD'), # 접근 비밀번호를 지정합니다.
+        'HOST': env('DB_HOST'), # mysql 접근 호스트를 의미합니다.
+        'PORT': env('DB_PORT'), # 접근 포트 번호를 의미합니다.
     }
 }
 
