@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import Mission, TestMission
+from .models import Mission
 from .serializers import MissionSerializer
 from tour.models import TravelDaysAndPlaces
 
@@ -31,9 +31,12 @@ class MissionImageUploadView(viewsets.ModelViewSet):
             travel_days_and_places = TravelDaysAndPlaces.objects.get(id=travel_days_and_places_id)
         except TravelDaysAndPlaces.DoesNotExist:
             return Response({"Error": "travel_days_id is not exist"}, status=status.HTTP_404_NOT_FOUND)
-        travel_days_and_places.image = image
+        travel_days_and_places.mission_image = image
         travel_days_and_places.save()
-        return Response({"message": "image upload success"}, status=status.HTTP_201_CREATED)
+        return Response({
+            "message": "image upload success",
+            'mission_image_url': travel_days_and_places.mission_image.url, # aws url 형식으로 줍니다.
+        }, status=status.HTTP_201_CREATED)
 
 
 class MissionCheckCompleteView(viewsets.ModelViewSet):
