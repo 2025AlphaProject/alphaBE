@@ -11,4 +11,10 @@
         4. 풀 리퀘스트를 생성할 때 source branch를 develop, target branch를 작업 브랜치로 해서 풀리퀘 생성해주세요.
         5. 반드시 코드 리뷰어는 PM으로 해놓습니다.
     TODO pip freeze > requirements.txt 명령어 반드시 입력
+
+    <추가 인지 사항>
+        1. 미션에 해당하는, 개인이 촬영한 이미지는 TravelDaysAndPlaces.objects.get(id='여행 번호', mission='미션 번호')로 가져옵니다.
+        2. 장소 예시 이미지는 PlaceImages.objects.get(place=Place.objects.get(id='여행 장소 번호'))
+        3. 여행 장소 번호, 여행 번호, 미션 번호는 함수나 클래스의 '입력값' 즉, 인수로 사용됩니다.
 """
+from tour.models import PlaceImages, TravelDaysAndPlaces, Place # 모델을 가져옵니다.
