@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import MissionListView, MissionCheckCompleteView
+from .views import MissionListView, MissionCheckCompleteView, MissionImageUploadView
 
 urlpatterns = [
     path('list/', MissionListView.as_view({
@@ -7,5 +7,8 @@ urlpatterns = [
     }), name='mission_list'),
     path('check_complete/', MissionCheckCompleteView.as_view({
         'post': 'create', # 사진을 올리고 검사를 받는 로직 구성
-    }))
+    })),
+    path('image_upload/', MissionImageUploadView.as_view({
+        'post': 'create',
+    }), name='mission_image_upload'),
 ]
