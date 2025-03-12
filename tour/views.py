@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -131,6 +132,9 @@ class NearEventView(viewsets.ModelViewSet):
         """
         mapX = request.GET.get('mapX', None)
         mapY = request.GET.get('mapY', None)
+        radius = request.GET.get('radius', '0.5') # 반경 정보를 가져옵니다. default: 0.5km
+        start_date = request.GET.get('start_date', None)
+        end_date = request.GET.get('end_date', None)
 
         if mapX is None or mapY is None: # 필수 파라미터 검증
             return Response({"ERROR": "필수 파라미터 중 일부 혹은 전체가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
@@ -140,9 +144,19 @@ class NearEventView(viewsets.ModelViewSet):
 
         event_info = NearEventInfo(Event, SEOUL_PUBLIC_DATA_SERVICE_KEY, Event.objects.all())
         try:
-            events = event_info.get_near_by_events(float(mapY), float(mapX)) # 주변 행사 정보를 불러옵니다.
+            events = event_info.get_near_by_events(float(mapY), float(mapX), float(radius)) # 주변 행사 정보를 불러옵니다.
         except ValueError:
-            return Response({"ERROR": "경도, 위도 좌표 일부 혹은 모두가 데이터 형식이 실수형이 아닙니다."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"ERROR": "경도, 위도, 반경 정보 일부 혹은 모두가 데이터 형식이 실수형이 아닙니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            if start_date is not None:
+                events = events.filter(start_date__gte=start_date) # 시작 날짜보다 더 크거나 같은 데이터를 불러옵니다.
+            if end_date is not None:
+                events = events.filter(end_date__lte=end_date) # 마지막 날짜보다 더 작거나 같은 데이터를 불러옵니다.
+        except ValidationError:
+            return Response({"ERROR": "날짜 값이 날짜 형식이 아닙니다. 반드시 YYYY-MM-DD 형식이어야 합니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        events = events.order_by('start_date') # 날짜 순 정렬
 
         serializer = self.get_serializer(events, many=True) # 시리얼라이저에 정보를 넣어 시리얼라이징합니다.
         return Response(serializer.data, status=status.HTTP_200_OK)

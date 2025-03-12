@@ -467,12 +467,13 @@ class NearEventInfo:
         distance = R * c  # 거리 계산
         return distance
 
-    def get_near_by_events(self, my_y, my_x, all_events=None):
+    def get_near_by_events(self, my_y, my_x, radius=0.5, all_events=None):
         """
         db에서 위도 경도 좌표차를 이용해서 대략적으로 근처에 있는 행사 정보들만 추출합니다.
         :param all_events: places.objects.all()과 같은 장소 정보 전체 데이터를 말합니다.
         :param my_y: 타겟 장소 경도 좌표입니다.
         :param my_x: 타겟 장소 위도 좌표입니다.
+        :param radius: 검색 반경을 의미합니다(단위: km)
         :return: 필터된 장소들을 반환합니다.
         """
         if all_events is not None:
@@ -485,7 +486,7 @@ class NearEventInfo:
         #     raise Exception("all_events are not a Event objects")
 
         # 경도 차가 0.273601, 위도 차가 0.0045일 때 500m 차이가 납니다. -> 경도 차 0.0547202: 0.1km 위도 차 0.0009: 0.1km
-        filtered_events = self.__get_events_in_shadow_box(my_y, my_x, 0.5) # 0.5km 사각형 내에 있는 장소정보들을 가져옵니다.
+        filtered_events = self.__get_events_in_shadow_box(my_y, my_x, radius) # 0.5km 사각형 내에 있는 장소정보들을 가져옵니다.
         result_events = self.__get_events_in_radius_box(filtered_events) # 0.5km 반경 내에 있는 장소정보들을 가져옵니다.
         return result_events
 
