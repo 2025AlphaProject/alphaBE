@@ -156,6 +156,8 @@ class NearEventView(viewsets.ModelViewSet):
         except ValidationError:
             return Response({"ERROR": "날짜 값이 날짜 형식이 아닙니다. 반드시 YYYY-MM-DD 형식이어야 합니다."}, status=status.HTTP_400_BAD_REQUEST)
 
+        events = events.order_by('start_date') # 날짜 순 정렬
+
         serializer = self.get_serializer(events, many=True) # 시리얼라이저에 정보를 넣어 시리얼라이징합니다.
         return Response(serializer.data, status=status.HTTP_200_OK)
 
