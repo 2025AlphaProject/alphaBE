@@ -131,6 +131,7 @@ class NearEventView(viewsets.ModelViewSet):
         """
         mapX = request.GET.get('mapX', None)
         mapY = request.GET.get('mapY', None)
+        radius = request.GET.get('radius', '0.5') # 반경 정보를 가져옵니다. default: 0.5km
 
         if mapX is None or mapY is None: # 필수 파라미터 검증
             return Response({"ERROR": "필수 파라미터 중 일부 혹은 전체가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
@@ -140,9 +141,9 @@ class NearEventView(viewsets.ModelViewSet):
 
         event_info = NearEventInfo(Event, SEOUL_PUBLIC_DATA_SERVICE_KEY, Event.objects.all())
         try:
-            events = event_info.get_near_by_events(float(mapY), float(mapX)) # 주변 행사 정보를 불러옵니다.
+            events = event_info.get_near_by_events(float(mapY), float(mapX), float(radius)) # 주변 행사 정보를 불러옵니다.
         except ValueError:
-            return Response({"ERROR": "경도, 위도 좌표 일부 혹은 모두가 데이터 형식이 실수형이 아닙니다."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"ERROR": "경도, 위도, 반경 정보 일부 혹은 모두가 데이터 형식이 실수형이 아닙니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = self.get_serializer(events, many=True) # 시리얼라이저에 정보를 넣어 시리얼라이징합니다.
         return Response(serializer.data, status=status.HTTP_200_OK)
