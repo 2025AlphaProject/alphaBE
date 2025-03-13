@@ -180,7 +180,7 @@ class TourApi:
     해당 클래스는 한국관광공사_국문 관광정보 서비스_GW API를 조금 더 쉽게 사용하기 위해 만들어진 클래스 입니다.
     """
 
-    def __init__(self, MobileOS, MobileApp, service_key=None):
+    def __init__(self, MobileOS=MobileOS.ANDROID, MobileApp='KmuAlphaProject2025', service_key=None):
         """
         모바일 운영체제, 모바일 앱 이름을 파라미터로 받습니다.
         :param MobileOS:
