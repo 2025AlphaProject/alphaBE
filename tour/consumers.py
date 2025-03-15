@@ -38,17 +38,22 @@ class TaskConsumer(AsyncWebsocketConsumer):
             return
         tour = TourApi(MobileOS=MobileOS.ANDROID, MobileApp='AlphaProject2025', service_key=PUBLIC_DATA_PORTAL_API_KEY)
         sigunguCode = None
+        sigunguCodes = None
         if sigunguName is not None:
-            sigunguCode = tour.get_sigungu_code(areaCode, sigunguName) # 시군구 이름에 대응되는 코드를 가져옵니다.
-            if sigunguCode is None: # 시군구 코드가 없다면
-                await self.send(text_data=json.dumps({
-                    'state': 'ERROR',
-                    'Message': '해당 시군구 이름에 대응되는 코드를 가져올 수 없습니다. 시군구 이름을 다시 한번 확인 바랍니다.'
-                }, ensure_ascii=False))
-                return
+            sigunguNames = sigunguName.split(',')
+            sigunguCodes = []
+            for each in sigunguNames:
+                sigunguCode = tour.get_sigungu_code(areaCode, each) # 시군구 이름에 대응되는 코드를 가져옵니다.
+                if sigunguCode is None: # 시군구 코드가 없다면
+                    await self.send(text_data=json.dumps({
+                        'state': 'ERROR',
+                        'Message': '해당 시군구 이름에 대응되는 코드를 가져올 수 없습니다. 시군구 이름을 다시 한번 확인 바랍니다.'
+                    }, ensure_ascii=False))
+                    return
+                sigunguCodes.append(sigunguCode)
 
         task_result = app.send_task('tour.tasks.get_recommended_tour_based_area', args=[self.user_id, # 채널 레이어 그룹 특정을 위해 보냅니다.
-                                                                                        areaCode, Arrange.TITLE_IMAGE.value, sigunguCode])
+                                                                                        areaCode, Arrange.TITLE_IMAGE.value, sigunguCodes])
         await self.send(text_data=json.dumps({
             'state': 'OK',
             'Message': {
