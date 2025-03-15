@@ -17,4 +17,157 @@
         2. 장소 예시 이미지는 PlaceImages.objects.get(place=Place.objects.get(id='여행 장소 번호'))
         3. 여행 장소 번호, 여행 번호, 미션 번호는 함수나 클래스의 '입력값' 즉, 인수로 사용됩니다.
 """
-from tour.models import PlaceImages, TravelDaysAndPlaces, Place # 모델을 가져옵니다.
+# from tour.models import PlaceImages, TravelDaysAndPlaces, Place # 모델을 가져옵니다.
+
+import cv2
+import numpy as np
+import requests
+from skimage.metrics import structural_similarity as ssim
+from tour.models import PlaceImages, TravelDaysAndPlaces, Place
+
+
+class ImageSimilarity:
+    def __init__(self, travel_id, place_id, mission_id):
+        self.travel_id = travel_id
+        self.place_id = place_id
+        self.mission_id = mission_id
+        self.img1 = self.get_user_image()
+        self.img2 = self.get_reference_image()
+
+    @staticmethod
+    def get_image_from_url(url):
+        """ URL로부터 이미지를 가져옵니다. """
+        try:
+            # 이미지 URL로부터 데이터 가져오기
+            response = requests.get(url)
+            # 응답이 정상적이면 이미지 데이터를 NumPy 배열로 변환
+            if response.status_code == 200:
+                img_array = np.array(bytearray(response.content), dtype=np.uint8)
+                img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)  # 이미지 디코딩
+                return img
+            else:
+                print("이미지 요청 실패")
+                return None
+        except Exception as e:
+            print(f"이미지 다운로드 중 오류 발생: {e}")
+            return None
+
+    def get_user_image(self):
+        """ 사용자가 촬영한 미션 이미지를 가져옵니다. """
+        try:
+            # TravelDaysAndPlaces에서 이미지 객체를 찾고 이미지 경로를 가져옵니다.
+            image_obj = TravelDaysAndPlaces.objects.get(id=self.travel_id, mission=self.mission_id)
+            # 이미지가 실제로 존재한다면, cv2를 사용하여 이미지 파일을 읽어들입니다.
+            if image_obj.mission_image:
+                image_path = image_obj.mission_image.path
+                return cv2.imread(image_path)
+            else:
+                print("미션 이미지가 존재하지 않습니다.")
+                return None
+        except TravelDaysAndPlaces.DoesNotExist:
+            print("사용자 이미지 조회 실패")
+            return None
+
+    def get_reference_image(self):
+        """ 장소의 예시 이미지를 가져옵니다. """
+        try:
+            place_obj = Place.objects.get(id=self.place_id)
+            image_obj = PlaceImages.objects.get(place=place_obj)
+            image_url = image_obj.image_url  # 이미지 URL 가져오기
+            return self.get_image_from_url(image_url)
+        except (Place.DoesNotExist, PlaceImages.DoesNotExist):
+            print("참고 이미지 조회 실패")
+            return None
+
+    def calculate_histogram_similarity(self):
+        """ RGB 히스토그램 유사도 계산 """
+        if self.img1 is None or self.img2 is None: # 이미지가 None인 경우, 유사도 0 반환
+            return 0
+
+       # 두 이미지의 RGB 히스토그램을 계산
+        hist1 = cv2.calcHist([self.img1], [0], None, [256], [0, 256])
+        hist2 = cv2.calcHist([self.img2], [0], None, [256], [0, 256])
+
+        # 히스토그램 정규화
+        hist1 = cv2.normalize(hist1, hist1).flatten()
+        hist2 = cv2.normalize(hist2, hist2).flatten()
+
+        # 두 히스토그램의 유사도를 비교하고, 상관계수를 반환
+        return cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
+
+    @property
+    def calculate_ssim(self):
+        """ SSIM 유사도 계산 """
+        if self.img1 is None or self.img2 is None:
+            return 0
+
+        # 이미지를 그레이스케일로 변환하여 구조적 유사도를 계산
+        gray1 = cv2.cvtColor(self.img1, cv2.COLOR_BGR2GRAY)
+        gray2 = cv2.cvtColor(self.img2, cv2.COLOR_BGR2GRAY)
+
+        # 두 이미지의 크기를 맞추기 위해  첫 번째 이미지(유저)를 두 번째 이미지(예시사진)의 크기로 리사이즈
+        gray1 = cv2.resize(gray1, (gray2.shape[1], gray2.shape[0]))
+
+        # ssim 함수는 두 이미지를 비교하여 구조적 유사도를 계산합니다.
+        similarity_index, _ = ssim(gray1, gray2, full=True)
+        return similarity_index
+
+    def get_similarity_score(self, weight_hist=0.5, weight_ssim=0.5):
+        """ 히스토그램과 SSIM의 가중 평균 유사도 """
+        hist_similarity = self.calculate_histogram_similarity()
+        ssim_similarity = self.calculate_ssim()
+
+        # 가중 평균 유사도 계산
+        score = (weight_hist * hist_similarity) + (weight_ssim * ssim_similarity)
+
+        return round(score * 100, 2) # 최종 유사도 반환(0~100 범위로 변환)
+
+    def check_mission_success(self):
+        """ 유사도 40% 이상이면 미션 성공, 이하면 실패 """
+        score = self.get_similarity_score()
+        return 1 if score >= 40 else 0  # 성공이면 1, 실패면 0 반환
+
+"""테스트용 코드 """
+# if __name__ == "__main__":
+#     similarity_checker = ImageSimilarity()
+#     print(f"유사도 점수: {similarity_checker.get_similarity_score()}%")
+
+#     print("미션 성공 여부:", "성공" if similarity_checker.check_mission_success() else "실패")
+
+"""
+
+위 테스트용 코드를 기반으로 이름을 정한다고 가정
+자세한 기능은 코드 참조
+
+similarity_checker = ImageSimilarity()
+'similarity_checker.check_mission_success()' 이거 실행하면 알아서 됨
+
+1.  클래스의 객체가 생성되면서 
+    self.img1은 'get_user_image()' 호출
+    self.img2는 get_reference_image() 호출
+2.  get_user_image() 호출
+    • 사용자가 올린 이미지를 가져오는 함수
+3.  get_reference_image() 호출
+	• 장소의 예시사진 url을 받아오는 함수
+	• get_image_from_url()을 호출
+4.  get_image_from_url() 호출
+    • get_reference_image()에서의 url로 이미지를 다운하는 함수
+    
+similarity_checker.check_mission_success()을 실행시 차례대로 함수 호출하고 반환됨
+
+5.  check_mission_success() 호출
+    • 사진 유사도 점수를 보고 미션 성공 여부 판단
+    • get_similarity_score() 호출
+6.  get_similarity_score() 호출
+    • 최종 유사도 반환
+    • 히스토그램과 ssim 방식의 각 유사도를 평균으로 합한 유사도 계산
+    •  calculate_histogram_similarity() 호출
+    •  calculate_ssim() 호출
+
+7.  calculate_histogram_similarity() 호출
+    •  두 이미지의 히스토그램을 계산하여 유사도 측정
+8.  calculate_ssim() 호출
+    •  두 이미지를 전처리 후 구조적 유사도 측정
+저 역순으로 다시 값 return 하여 유사도 구함 
+     
+"""
