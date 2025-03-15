@@ -26,7 +26,7 @@ services:
       - app_network
 
   celery_worker:
-    image: ytk030305/alpha_celery:0.3.0
+    image: ytk030305/alpha_celery:0.4.0
     command: celery -A config worker -l INFO
     depends_on:
       - db
@@ -39,7 +39,7 @@ services:
       - app_network
 
   celery_beat:
-    image: ytk030305/alpha_celery:0.3.0
+    image: ytk030305/alpha_celery:0.4.0
     command: celery -A config beat -l INFO
     depends_on:
       - db
@@ -52,7 +52,7 @@ services:
       - app_network
 
   migrations:
-    image: ytk030305/alpha_be:0.3.0
+    image: ytk030305/alpha_be:0.4.0
     command: sh entrypoint.sh
     depends_on:
       - db
@@ -64,7 +64,7 @@ services:
       - app_network
 
   conever_api: # api 컨테이너
-    image: ytk030305/alpha_be:0.3.0
+    image: ytk030305/alpha_be:0.4.0
     command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
     ports:
       - "8000:8000"
