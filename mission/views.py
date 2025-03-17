@@ -19,7 +19,7 @@ class MissionImageUploadView(viewsets.ModelViewSet):
     """
     여행 일차별 방문 장소 id를 받습니다.
     """
-    permission_classes = [IsAuthenticated] # 로그인 한 사용자만
+    # permission_classes = [IsAuthenticated] # 로그인 한 사용자만
     def create(self, request, *args, **kwargs):
         """
         post 요청시 들어오는 함수입니다. 여행 일차별 방문 장소 id와 이미지를 받습니다.
@@ -44,7 +44,7 @@ class MissionCheckCompleteView(viewsets.ModelViewSet):
     """
     미션 성공 여부를 확인하는 API 입니다.
     """
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
         """
