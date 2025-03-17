@@ -6,7 +6,8 @@ from rest_framework import status
 
 from .models import Mission
 from .serializers import MissionSerializer
-from tour.models import TravelDaysAndPlaces
+from tour.models import TravelDaysAndPlaces, Place
+from .services import ImageSimilarity
 
 
 # Create your views here.
@@ -41,23 +42,43 @@ class MissionImageUploadView(viewsets.ModelViewSet):
 
 class MissionCheckCompleteView(viewsets.ModelViewSet):
     """
-    Handles operations related to completing mission checks within the system.
-
-    This class extends `viewsets.ModelViewSet` and is responsible for providing
-    create, retrieve, update, and delete operations for mission check completion.
-    It is tightly integrated with Django REST Framework and offers functionalities
-    to manage mission check statuses effectively.
-
-    Attributes:
-        queryset: The default QuerySet used to retrieve objects. Typically, this is
-            set to MissionCheckComplete.objects.all() or similar to include all
-            mission completion records.
-        serializer_class: The serializer class used to convert query objects into
-            native Python data types and vice versa. This serializer handles
-            validation and data transformation.
-        permission_classes: List of permission classes that specify the access
-            controls. This typically ensures only authorized users can perform
-            operations on mission check data.
-
+    미션 성공 여부를 확인하는 API 입니다.
     """
-    pass
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        """
+        여행 ID, 장소 ID, 미션 ID를 받아서 미션 성공 여부를 반환합니다.
+        """
+        travel_days_id = request.data.get("travel_days_id", None)
+        place_id = request.data.get("place_id", None)
+        mission_id = request.data.get("mission_id", None)
+
+        # 필수 값이 없으면 400 에러 반환
+        if travel_days_id is None or place_id is None or mission_id is None:
+            return Response({"Error": "travel_days_id, place_id, or mission_id is missing"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # TravelDaysAndPlaces 객체 확인 (미션 사진이 있는지)
+        try:
+            travel_days_id = TravelDaysAndPlaces.objects.get(id=travel_days_id, mission=mission_id)
+        except TravelDaysAndPlaces.DoesNotExist:
+            return Response({"Error": "Invalid travel_days_id or mission_id"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Place 객체 확인 (장소 예시 이미지가 있는지)
+        try:
+            place_id = Place.objects.get(id=place_id)
+        except Place.DoesNotExist:
+            return Response({"Error": "Invalid place_id"}, status=status.HTTP_404_NOT_FOUND)
+
+        # 이미지 비교 수행
+        similarity_checker = ImageSimilarity(travel_days_id, place_id, mission_id)
+        similarity_score = similarity_checker.get_similarity_score()
+        mission_success = similarity_checker.check_mission_success()
+
+
+        return Response({
+            "message": "Mission check complete",
+            "similarity_score": similarity_score,
+            "mission_success": mission_success
+        }, status=status.HTTP_200_OK)
