@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
+
 # Create your models here.
 
 class User(AbstractUser):
@@ -9,6 +10,9 @@ class User(AbstractUser):
     gender = models.CharField(max_length=20) # male or female
     age_range = models.CharField(max_length=20) # '1-9' 형식으로 들어옴
     profile_image_url = models.URLField() # 프로필 이미지 링크입니다.
+
+    USERNAME_FIELD = 'sub'
+    REQUIRED_FIELDS = ['username']
 
     def __str__(self): # 모델 자체에 이름을 부여합니다.
         return self.username
