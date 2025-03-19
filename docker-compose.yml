@@ -20,8 +20,6 @@ services:
     image: redis:7.2.4
     restart: always
     command: redis-server --replicaof no one --maxmemory-policy noeviction
-    ports:
-      - "6379:6379"
     networks:
       - app_network
 
