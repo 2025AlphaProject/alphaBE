@@ -6,7 +6,7 @@ from mission.models import Mission
 
 class Travel(models.Model):
     # id: pk
-    user = models.ForeignKey(User, on_delete=models.CASCADE) # 유저 제거시 해당 여행도 제거
+    user = models.ManyToManyField(User) # 유저 제거시 해당 여행도 제거
     tour_name = models.CharField(max_length=255)  # 여행 이름 필드 추가
     start_date = models.DateField() # 여행 시작 날짜
     end_date = models.DateField() # 여행 마감 날짜
