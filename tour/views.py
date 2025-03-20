@@ -168,6 +168,7 @@ class AddTravelerView(viewsets.ModelViewSet):
     해당 클래스는 한 여행에 다른 여행자를 추가하는 API 뷰입니다.
     """
     permission_classes = [IsAuthenticated] # 로그인 한 사용자만 허용합니다.
+    serializer_class = TravelSerializer
 
     def create(self, request, *args, **kwargs):
         user_sub = request.data.get('add_traveler_sub', None) # post body에서 add_traveler_sub를 가져옵니다.
@@ -187,4 +188,5 @@ class AddTravelerView(viewsets.ModelViewSet):
             return Response({"ERROR": "허가되지 않은 접근"}, status=status.HTTP_403_FORBIDDEN)
 
         travel.user.add(add_target_user)
-        return Response({"Message": "해당 여행자가 추가 되었습니다."}, status=status.HTTP_201_CREATED)
+        serializer = self.get_serializer(travel)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
