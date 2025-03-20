@@ -2,6 +2,8 @@ from django.core.exceptions import ValidationError
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+
+from usr.models import User
 from .models import Travel
 from .serializers import TravelSerializer
 from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY
@@ -161,3 +163,28 @@ class NearEventView(viewsets.ModelViewSet):
         serializer = self.get_serializer(events, many=True) # 시리얼라이저에 정보를 넣어 시리얼라이징합니다.
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+class AddTravelerView(viewsets.ModelViewSet):
+    """
+    해당 클래스는 한 여행에 다른 여행자를 추가하는 API 뷰입니다.
+    """
+    permission_classes = [IsAuthenticated] # 로그인 한 사용자만 허용합니다.
+
+    def create(self, request, *args, **kwargs):
+        user_sub = request.data.get('add_traveler_sub', None) # post body에서 add_traveler_sub를 가져옵니다.
+        travel_id = request.data.get('travel_id', None) # 추가할 여행
+        if user_sub is None or travel_id is None:
+            return Response({"Error": "필수 파라미터가 존재하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
+        travel = None
+        try:
+            travel = Travel.objects.get(id=int(travel_id))
+            add_target_user = User.objects.get(sub=int(user_sub))
+        except (Travel.DoesNotExist, User.DoesNotExist):
+            return Response({"Error": "여행과 사용자 정보가 올바르지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            travel.user.get(sub=int(request.user.sub))
+        except User.DoesNotExist: # 로그인한 사용자의 것이 아닌 여행일 때
+            return Response({"ERROR": "허가되지 않은 접근"}, status=status.HTTP_403_FORBIDDEN)
+
+        travel.user.add(add_target_user)
+        return Response({"Message": "해당 여행자가 추가 되었습니다."}, status=status.HTTP_201_CREATED)
