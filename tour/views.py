@@ -22,12 +22,13 @@ class TravelViewSet(viewsets.ModelViewSet):
 
         # request.data를 변경 가능한 딕셔너리로 변환 후 user 추가
         travel_data = dict(request.data).copy()
-        travel_data["user"] = user_sub
+        # travel_data["user"] = user_sub
 
         serializer = self.get_serializer(data=travel_data)  # 수정된 데이터로 serializer 초기화
 
         if serializer.is_valid():  # 데이터에 모든 필드가 다 있을 때 실행되는 조건문
             travel = serializer.save()  # ORM을 이용해 저장
+            travel.user.add(User.objects.get(sub=user_sub))
 
             # json 응답을 반환
             return Response({
@@ -45,7 +46,7 @@ class TravelViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):  # 리스트 조회 API
         user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
-        queryset = self.get_queryset().filter(user_id=user_sub)  # 로그인한 사용자의 여행만 조회
+        queryset = self.get_queryset().filter(user=user_sub)  # 로그인한 사용자의 여행만 조회
         serializer = self.get_serializer(queryset, many=True)
 
         # json 응답을 반환
@@ -65,7 +66,7 @@ class TravelViewSet(viewsets.ModelViewSet):
         tour_id = kwargs.get('pk')
 
         try:
-            travel = Travel.objects.get(id=tour_id, user_id=user_sub)  # 로그인한 사용자의 여행인지 확인
+            travel = Travel.objects.get(id=tour_id, user=user_sub)  # 로그인한 사용자의 여행인지 확인
         except Travel.DoesNotExist:
             return Response({
                 "error": "404",
@@ -84,7 +85,7 @@ class TravelViewSet(viewsets.ModelViewSet):
         tour_id = kwargs.get('pk')
 
         try:
-            travel = Travel.objects.get(id=tour_id, user_id=user_sub)  # 로그인한 사용자의 여행인지 확인
+            travel = Travel.objects.get(id=tour_id, user=user_sub)  # 로그인한 사용자의 여행인지 확인
         except Travel.DoesNotExist:
             return Response({
                 "error": "404",
@@ -114,7 +115,7 @@ class TravelViewSet(viewsets.ModelViewSet):
         tour_id = kwargs.get('pk')
 
         try:
-            travel = Travel.objects.get(id=tour_id, user_id=user_sub)  # 로그인한 사용자의 여행인지 확인
+            travel = Travel.objects.get(id=tour_id, user=user_sub)  # 로그인한 사용자의 여행인지 확인
         except Travel.DoesNotExist:
             return Response({
                 "error": "404",
