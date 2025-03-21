@@ -2,6 +2,8 @@ from django.core.exceptions import ValidationError
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+
+from usr.models import User
 from .models import Travel
 from .serializers import TravelSerializer
 from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY
@@ -20,12 +22,13 @@ class TravelViewSet(viewsets.ModelViewSet):
 
         # request.data를 변경 가능한 딕셔너리로 변환 후 user 추가
         travel_data = dict(request.data).copy()
-        travel_data["user"] = user_sub
+        # travel_data["user"] = user_sub # 다대일 관계시 유저 추가
 
         serializer = self.get_serializer(data=travel_data)  # 수정된 데이터로 serializer 초기화
 
         if serializer.is_valid():  # 데이터에 모든 필드가 다 있을 때 실행되는 조건문
             travel = serializer.save()  # ORM을 이용해 저장
+            travel.user.add(User.objects.get(sub=user_sub)) # 다대 다 관계시 유저 추가
 
             # json 응답을 반환
             return Response({
@@ -43,7 +46,7 @@ class TravelViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):  # 리스트 조회 API
         user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
-        queryset = self.get_queryset().filter(user_id=user_sub)  # 로그인한 사용자의 여행만 조회
+        queryset = self.get_queryset().filter(user=user_sub)  # 로그인한 사용자의 여행만 조회
         serializer = self.get_serializer(queryset, many=True)
 
         # json 응답을 반환
@@ -63,7 +66,7 @@ class TravelViewSet(viewsets.ModelViewSet):
         tour_id = kwargs.get('pk')
 
         try:
-            travel = Travel.objects.get(id=tour_id, user_id=user_sub)  # 로그인한 사용자의 여행인지 확인
+            travel = Travel.objects.get(id=tour_id, user=user_sub)  # 로그인한 사용자의 여행인지 확인
         except Travel.DoesNotExist:
             return Response({
                 "error": "404",
@@ -82,7 +85,7 @@ class TravelViewSet(viewsets.ModelViewSet):
         tour_id = kwargs.get('pk')
 
         try:
-            travel = Travel.objects.get(id=tour_id, user_id=user_sub)  # 로그인한 사용자의 여행인지 확인
+            travel = Travel.objects.get(id=tour_id, user=user_sub)  # 로그인한 사용자의 여행인지 확인
         except Travel.DoesNotExist:
             return Response({
                 "error": "404",
@@ -112,7 +115,7 @@ class TravelViewSet(viewsets.ModelViewSet):
         tour_id = kwargs.get('pk')
 
         try:
-            travel = Travel.objects.get(id=tour_id, user_id=user_sub)  # 로그인한 사용자의 여행인지 확인
+            travel = Travel.objects.get(id=tour_id, user=user_sub)  # 로그인한 사용자의 여행인지 확인
         except Travel.DoesNotExist:
             return Response({
                 "error": "404",
@@ -161,3 +164,30 @@ class NearEventView(viewsets.ModelViewSet):
         serializer = self.get_serializer(events, many=True) # 시리얼라이저에 정보를 넣어 시리얼라이징합니다.
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+class AddTravelerView(viewsets.ModelViewSet):
+    """
+    해당 클래스는 한 여행에 다른 여행자를 추가하는 API 뷰입니다.
+    """
+    permission_classes = [IsAuthenticated] # 로그인 한 사용자만 허용합니다.
+    serializer_class = TravelSerializer
+
+    def create(self, request, *args, **kwargs):
+        user_sub = request.data.get('add_traveler_sub', None) # post body에서 add_traveler_sub를 가져옵니다.
+        travel_id = request.data.get('travel_id', None) # 추가할 여행
+        if user_sub is None or travel_id is None:
+            return Response({"Error": "필수 파라미터가 존재하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
+        travel = None
+        try:
+            travel = Travel.objects.get(id=int(travel_id))
+            add_target_user = User.objects.get(sub=int(user_sub))
+        except (Travel.DoesNotExist, User.DoesNotExist):
+            return Response({"Error": "여행과 사용자 정보가 올바르지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            travel.user.get(sub=int(request.user.sub))
+        except User.DoesNotExist: # 로그인한 사용자의 것이 아닌 여행일 때
+            return Response({"ERROR": "허가되지 않은 접근"}, status=status.HTTP_403_FORBIDDEN)
+
+        travel.user.add(add_target_user)
+        serializer = self.get_serializer(travel)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

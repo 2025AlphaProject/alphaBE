@@ -1,6 +1,5 @@
 from django.urls import path
-from .views import TravelViewSet
-from .views import NearEventView
+from .views import TravelViewSet, NearEventView, AddTravelerView
 
 urlpatterns = [
     path('', TravelViewSet.as_view({
@@ -16,4 +15,7 @@ urlpatterns = [
     path('near_event/', NearEventView.as_view({
         'get': 'list',
     }), name='near_event'), # 주변 행사 정보 url 매핑
+    path('add_traveler/', AddTravelerView.as_view({
+        'post': 'create'
+    }), name='add_traveler') # 여행자 추가 url 매핑
 ]

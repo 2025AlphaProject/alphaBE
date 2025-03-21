@@ -20,6 +20,16 @@ class TestService(TestCase):
         user.set_password('test_password112')
         user.save()
 
+        user2 = User.objects.create(
+            sub=1,
+            username='TestUser2',
+            gender='male',
+            age_range='1-9',
+            profile_image_url='https://example.org'
+        )
+        user2.set_password('test_password112')
+        user2.save()
+
     def test_user_service(self):
         """
         해당 테스트는 유저 서비스를 테스트 하기 위한 테스트 코드입니다.
@@ -45,4 +55,13 @@ class TestService(TestCase):
         }
         response = self.client.get(end_point, headers=headers)
         self.assertEqual(response.status_code, 200) # 200이 맞는지 확인합니다.
+        print(response.json())
+
+    def test_user_list(self):
+        end_point = '/user/?user_name=TestUser2'
+        headers = {
+            'Authorization': f'Bearer {KAKAO_TEST_ACCESS_TOKEN}'
+        }
+        response = self.client.get(end_point, headers=headers)
+        self.assertEqual(response.status_code, 200)
         print(response.json())
