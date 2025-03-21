@@ -158,7 +158,20 @@ class TestTour(TestCase):
             'add_traveler_sub': 1,
             'travel_id': 1,
         }
+        # Normal POST Test
         response = self.client.post(end_point, data, headers=headers, content_type='application/json')
         print(response.json())
         self.assertEqual(response.status_code, 201)
+
+        # Exception Test
+        strange_data = {
+            'aadd_traveler_sub': 1,
+            'travel_id': 1,
+        }
+        response = self.client.post(end_point, strange_data, headers=headers, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+
+        data['add_traveler_sub'] = 324 # 없는 데이터
+        response = self.client.post(end_point, data, headers=headers, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
 
