@@ -22,13 +22,13 @@ class TravelViewSet(viewsets.ModelViewSet):
 
         # request.data를 변경 가능한 딕셔너리로 변환 후 user 추가
         travel_data = dict(request.data).copy()
-        # travel_data["user"] = user_sub
+        # travel_data["user"] = user_sub # 다대일 관계시 유저 추가
 
         serializer = self.get_serializer(data=travel_data)  # 수정된 데이터로 serializer 초기화
 
         if serializer.is_valid():  # 데이터에 모든 필드가 다 있을 때 실행되는 조건문
             travel = serializer.save()  # ORM을 이용해 저장
-            travel.user.add(User.objects.get(sub=user_sub))
+            travel.user.add(User.objects.get(sub=user_sub)) # 다대 다 관계시 유저 추가
 
             # json 응답을 반환
             return Response({

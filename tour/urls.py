@@ -17,5 +17,5 @@ urlpatterns = [
     }), name='near_event'), # 주변 행사 정보 url 매핑
     path('add_traveler/', AddTravelerView.as_view({
         'post': 'create'
-    }), name='add_traveler')
+    }), name='add_traveler') # 여행자 추가 url 매핑
 ]
