@@ -245,7 +245,7 @@ SIMPLE_JWT = {
     "USER_AUTHENTICATION_RULE": "rest_framework_simplejwt.authentication.default_user_authentication_rule",
 
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
-    "TOKEN_TYPE_CLAIM": "token_type",
+    "TOKEN_TYPE_CLAIM": "token_type", # 토큰 타입을 말하며, access, refresh, sliding 토큰을 받습니다.
     "TOKEN_USER_CLASS": "rest_framework_simplejwt.models.TokenUser",
 
     "JTI_CLAIM": "jti",
