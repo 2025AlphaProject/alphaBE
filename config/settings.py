@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     'usr',
     'tour',
     'mission',
+    'rest_framework_simplejwt',
     'channels',
     'storages',
 ]
