@@ -25,18 +25,20 @@ class CustomAuthentication(BaseAuthentication):
         if prefix != 'Bearer':
             raise AuthenticationFailed('Invalid Bearer Prefix')
 
-        # jwt 토큰을 디코드합니다.
-        payload = None
-        try:
-            payload = jwt.decode(access_token, SECRET_KEY, algorithms=['HS256']) # 장고 시크릿 키로 해독을 시도합니다.
-        except jwt.ExpiredSignatureError:
-            raise AuthenticationFailed('Expired Token')
-        except jwt.InvalidTokenError:
-            raise AuthenticationFailed('Invalid Token')
+        # 액세스 토큰 검증을 시도합니다.
+        payload = self.validate_kakao_access_token(access_token)
         # 사용자 정보를 받아옵니다.
         try:
-            sub = payload['sub']
+            sub = payload['id']
             user = User.objects.get(sub=sub)
             return user, access_token
         except User.DoesNotExist: # 사용자 정보가 없을 경우
-            raise AuthenticationFailed('User not found')
+            return None
+
+    def validate_kakao_access_token(self, access_token):
+        end_point = 'https://kapi.kakao.com/v1/user/access_token_info' # 유효성 검증 url
+        headers = {'Authorization': f'Bearer {access_token}'}
+        response = requests.get(end_point, headers=headers)
+        if response.status_code != 200:
+            raise AuthenticationFailed('Invalid Kakao Access Token')
+        return response.json()
