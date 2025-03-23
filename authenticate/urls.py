@@ -1,9 +1,8 @@
 from django.urls import path
-from .views import kakao_callback, KakaoRefreshTokens
+from .views import kakao_callback, KakaoRefreshTokens, IssueTokenView
+from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
-    path('login/', kakao_callback, name='kakao_login'), # 로그인 url 매핑
-    path('refresh/', KakaoRefreshTokens.as_view({
-        'post': 'create' # post 메소드를 클래스 내 create로 매핑
-    }), name='kakao_refresh_tokens'),
+    path('login/', IssueTokenView.as_view(), name='login'), # 로그인 url 매핑
+    path('refresh/', TokenRefreshView.as_view(), name='refresh_tokens'),
 ]

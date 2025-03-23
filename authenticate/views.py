@@ -3,6 +3,8 @@ from django.http import JsonResponse
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 import requests
+from rest_framework_simplejwt.views import TokenViewBase, TokenObtainPairView
+from usr.serializers import UserAuthenticationSerializer
 
 from usr.services import UserService
 
@@ -87,3 +89,7 @@ class KakaoRefreshTokens(viewsets.ViewSet):
             return Response(data, status=status.HTTP_201_CREATED)
         # 만일 토큰 정보가 잘못되었거나, refresh_token마저 만료 된경우, 혹은 카카오 측 오류인 경우
         return Response({"Error": response.text}, status=status.HTTP_400_BAD_REQUEST)
+
+class IssueTokenView(TokenObtainPairView):
+    serializer_class = UserAuthenticationSerializer
+

@@ -2,6 +2,8 @@ import requests
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from usr.models import User
+import jwt # jwt 토큰 해석을 위해 필요합니다.
+from config.settings import SECRET_KEY
 
 import logging # 로그 작성을 위해서 사용됩니다.
 
@@ -23,22 +25,18 @@ class CustomAuthentication(BaseAuthentication):
         if prefix != 'Bearer':
             raise AuthenticationFailed('Invalid Bearer Prefix')
 
-        # 카카오 토큰 정보를 보기 위한 URL 입니다.
-        token_url = 'https://kapi.kakao.com/v1/user/access_token_info'
-        headers = {'Authorization': 'Bearer ' + access_token}
-        response = requests.get(token_url, headers=headers)
-        if response.status_code == 400: # 카카오 플랫폼 서비스의 일시적 내부 장애 상태
-            raise AuthenticationFailed('카카오 서비스 장애로 서비스를 이용하실 수 없습니다.')
-        elif response.status_code == 401:
-            raise AuthenticationFailed('Expired or Invalid Token')
-        elif response.status_code == 200:
-            sub = response.json().get('id')
-            try:
-                user = User.objects.get(sub=sub)
-            except User.DoesNotExist:
-                logger.warning('회원번호 ' + str(sub) + '인 회원이 존재하지 않습니다.')
-                raise AuthenticationFailed('User not found')
-            logger.info('회원번호 ' + str(sub) + '이 백엔드 api에 접근 중입니다.')
+        # jwt 토큰을 디코드합니다.
+        payload = None
+        try:
+            payload = jwt.decode(access_token, SECRET_KEY, algorithms=['HS256']) # 장고 시크릿 키로 해독을 시도합니다.
+        except jwt.ExpiredSignatureError:
+            raise AuthenticationFailed('Expired Token')
+        except jwt.InvalidTokenError:
+            raise AuthenticationFailed('Invalid Token')
+        # 사용자 정보를 받아옵니다.
+        try:
+            sub = payload['sub']
+            user = User.objects.get(sub=sub)
             return user, access_token
-        logger.warning('알 수 없는 오류 발생')
-        return None
+        except User.DoesNotExist: # 사용자 정보가 없을 경우
+            raise AuthenticationFailed('User not found')
