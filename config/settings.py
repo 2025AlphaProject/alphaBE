@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'tour',
     'mission',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist', # 토큰 블랙리스트 위해 필요
     'channels',
     'storages',
 ]
@@ -226,7 +227,7 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5), # 토큰 유효시간 설정
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1), # 리프레시 토큰 유효기간 설정
     "ROTATE_REFRESH_TOKENS": True, # 리프레시 토큰도 같이 반환됩니다.
-    "BLACKLIST_AFTER_ROTATION": False, # 이전 토큰 블랙리스트 적용, 사용시 설치앱에 rest_framework_simplejwt.token_blacklist 추가 필요
+    "BLACKLIST_AFTER_ROTATION": True, # 이전 토큰 블랙리스트 적용, 사용시 설치앱에 rest_framework_simplejwt.token_blacklist 추가 필요
     "UPDATE_LAST_LOGIN": False, # last_login field가 업데이트 됩니다. (커스텀 모델이라 X)
 
     "ALGORITHM": "HS256", # 암호화 알고리즘
