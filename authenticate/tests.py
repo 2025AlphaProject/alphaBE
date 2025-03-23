@@ -67,3 +67,10 @@ class TestAuthenticate(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()['is_new'], False)
 
+        # 400 Test
+        data2 = {
+            'id_token' : 'hsesefs'
+        }
+        response = self.client.post(end_point, headers=headers, data=data2, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+
