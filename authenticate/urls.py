@@ -6,5 +6,7 @@ urlpatterns = [
         'post': 'create',
     }), name='login_register'),
     path('get_token/', kakao_callback, name='login'), # 로그인 url 매핑
-    path('refresh/', KakaoRefreshTokens, name='refresh_tokens'),
+    path('refresh/', KakaoRefreshTokens.as_view({
+        'post': 'create',
+    }), name='refresh_tokens'),
 ]
