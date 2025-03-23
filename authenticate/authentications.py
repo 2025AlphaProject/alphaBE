@@ -2,8 +2,6 @@ import requests
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from usr.models import User
-import jwt # jwt 토큰 해석을 위해 필요합니다.
-from config.settings import SECRET_KEY
 
 import logging # 로그 작성을 위해서 사용됩니다.
 

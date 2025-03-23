@@ -4,9 +4,6 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 import requests
-from rest_framework.views import APIView
-from rest_framework_simplejwt.views import TokenViewBase, TokenObtainPairView
-from usr.serializers import UserAuthenticationSerializer
 
 from usr.services import UserService
 
