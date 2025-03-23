@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from rest_framework import status, viewsets
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 import requests
 
@@ -51,7 +52,8 @@ def kakao_callback(request):
         data['token_type'] = response.json().get('token_type', None)  # token 타입 정보 추가
         data['refresh_token'] = response.json().get('refresh_token', None)  # 리프레시 토큰 정보 추가
         data['is_new'] = is_new # 신규 유저인지 알려주는 플래그 입니다.
-        return JsonResponse(data, status=201) # post 요청을 보내줬기 때문에 201 create를 보내줍니다.
+        # return JsonResponse(data, status=201) # post 요청을 보내줬기 때문에 201 create를 보내줍니다.
+        return JsonResponse(response.json(), status=status.HTTP_201_CREATED) # 모든 정보를 보내줍니다.
     return JsonResponse({"Error": response.text}, status=status.HTTP_400_BAD_REQUEST)
 
 class KakaoRefreshTokens(viewsets.ViewSet):
@@ -87,3 +89,37 @@ class KakaoRefreshTokens(viewsets.ViewSet):
             return Response(data, status=status.HTTP_201_CREATED)
         # 만일 토큰 정보가 잘못되었거나, refresh_token마저 만료 된경우, 혹은 카카오 측 오류인 경우
         return Response({"Error": response.text}, status=status.HTTP_400_BAD_REQUEST)
+
+class LoginRegisterView(viewsets.ViewSet):
+    """
+    해당 뷰는 로그인/회원가입 뷰 역할을 하며 실제 DB속 회원이 존재하면 로그인 처리를,
+    그렇지 않다면 회원가입을 처리합니다.
+    Header
+      Authorization: Bearer <access_token>
+
+    """
+    # permission_classes = [IsAuthenticated] # 카카오 로그인이 된 사용자, 유효한 토큰을 가진 사용자만 서비스 로그인, 회원가입을 처리합니다.
+
+    def create(self, request):
+        id_token = request.data.get('id_token', None)
+
+        if id_token is None: # id token 정보가 없는 경우
+            return Response({"Error": "id_token 정보가 존재하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            user_service = UserService(id_token)
+            user, is_new = user_service.get_or_register_user() # 로그인, 회원가입 처리
+        except Exception as e:
+            return Response({"Error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            "message": "login or register success",
+            "is_new": is_new,
+            "user": {
+                "username": user.username,
+                "sub": user.sub,
+                "profile_image_url": user.profile_image_url,
+                "age_range": user.age_range,
+                "gender": user.gender,
+            }
+        }, status=status.HTTP_201_CREATED)
+

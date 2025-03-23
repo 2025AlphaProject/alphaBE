@@ -1,9 +1,12 @@
 from django.urls import path
-from .views import kakao_callback, KakaoRefreshTokens
+from .views import kakao_callback, KakaoRefreshTokens, LoginRegisterView
 
 urlpatterns = [
-    path('login/', kakao_callback, name='kakao_login'), # 로그인 url 매핑
+    path('login/', LoginRegisterView.as_view({
+        'post': 'create',
+    }), name='login_register'),
+    path('get_token/', kakao_callback, name='login'), # 로그인 url 매핑
     path('refresh/', KakaoRefreshTokens.as_view({
-        'post': 'create' # post 메소드를 클래스 내 create로 매핑
-    }), name='kakao_refresh_tokens'),
+        'post': 'create',
+    }), name='refresh_tokens'),
 ]
