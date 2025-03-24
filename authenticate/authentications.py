@@ -2,10 +2,11 @@ import requests
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from usr.models import User
+from config.settings import APP_LOGGER
 
 import logging # 로그 작성을 위해서 사용됩니다.
 
-logger = logging.getLogger('django')
+logger = logging.getLogger(APP_LOGGER)
 
 
 class CustomAuthentication(BaseAuthentication):

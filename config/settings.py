@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os, environ
 from datetime import timedelta
+import logging
 
 # .env 파일을 읽기 위한 객체 생성
 env = environ.Env()
@@ -277,7 +278,7 @@ LOGGING = {
             'style': '{',
         }
     },
-    'handlers': {
+    'handlers': { # 로그 핸들러 설정
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
@@ -285,11 +286,19 @@ LOGGING = {
             'formatter': 'verbose'
         }
     },
-    'loggers': {
-        'django': {
+    'loggers': { # 로거 설정, 실제 get_logger를 이용하여 로그 설정 가져옴
+        'django': { # 실제 배포 환경에서 사용하는 로거
             'handlers': ['file'],
             'level': 'INFO',
+            'propagate': False,
+        },
+        'django_debug': { # 디버그시 사용하는 로거
+            'handlers': ['file'],
+            'level': 'DEBUG',
             'propagate': False,
         }
     }
 }
+
+# 앱 기본 로거 설정
+APP_LOGGER='django'
