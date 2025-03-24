@@ -4,7 +4,6 @@ from .modules.tour_api import (
     TourApi,
     MobileOS,
     AreaCode,
-    Area,
     Arrange,
     Category1Code,
     ContentTypeId,

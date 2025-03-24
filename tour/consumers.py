@@ -1,6 +1,5 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
-from asgiref.sync import async_to_sync
 from config.celery import app
 from config.settings import PUBLIC_DATA_PORTAL_API_KEY
 from .modules.tour_api import *

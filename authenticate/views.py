@@ -1,7 +1,5 @@
-from django.shortcuts import render
 from django.http import JsonResponse
 from rest_framework import status, viewsets
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 import requests
 

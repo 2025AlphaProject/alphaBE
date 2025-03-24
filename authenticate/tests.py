@@ -5,7 +5,6 @@ from config.settings import (
     KAKAO_TEST_ACCESS_TOKEN,
     KAKAO_TEST_ID_TOKEN
 )
-from usr.models import User
 
 # Create your tests here.
 
