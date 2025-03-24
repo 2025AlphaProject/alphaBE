@@ -45,7 +45,7 @@ class TestMission(TestCase):
         end_point = '/mission/list/'
         response = self.client.get(end_point)
         self.assertEqual(response.status_code, 200)
-        print("✅ 미션 리스트 응답:", response.json())
+        print(response.json())
 
     def test_image_upload_api(self):
         """ 미션 이미지 업로드 POST 테스트 """
@@ -61,7 +61,7 @@ class TestMission(TestCase):
 
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 201)
-        print("✅ 이미지 업로드 응답:", response.json())
+        print(response.json())
 
     # def test_mission_check_api(self):
     #     """ 미션 성공 여부 확인 테스트 """
