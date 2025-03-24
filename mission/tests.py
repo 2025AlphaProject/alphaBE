@@ -2,12 +2,9 @@ from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from mission.models import Mission
 from tour.models import TravelDaysAndPlaces, Place, PlaceImages, Travel
-from django.urls import reverse
 from django.contrib.auth import get_user_model
 from datetime import date
-
-from django.conf import settings
-import os
+from django.core.files.base import ContentFile
 
 class TestMission(TestCase):
     def setUp(self):
@@ -69,7 +66,7 @@ class TestMission(TestCase):
     def test_mission_check_api(self):
         """ 미션 성공 여부 확인 테스트 """
         # 먼저 테스트 이미지를 travel_day에 수동으로 할당
-        from django.core.files.base import ContentFile
+
         self.travel_day.mission_image.save('dummy.jpg', ContentFile(b"dummy_content"), save=True)
 
         url = '/mission/check_complete/'
