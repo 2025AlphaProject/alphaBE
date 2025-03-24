@@ -6,6 +6,9 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from datetime import date
 
+from django.conf import settings
+import os
+
 class TestMission(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(
@@ -63,21 +66,21 @@ class TestMission(TestCase):
         self.assertEqual(response.status_code, 201)
         print(response.json())
 
-    # def test_mission_check_api(self):
-    #     """ 미션 성공 여부 확인 테스트 """
-    #     # 먼저 테스트 이미지를 travel_day에 수동으로 할당
-    #     from django.core.files.base import ContentFile
-    #     self.travel_day.mission_image.save('dummy.jpg', ContentFile(b"dummy_content"), save=True)
-    #
-    #     url = '/mission/check_complete/'
-    #
-    #     data = {
-    #         "travel_days_id": self.travel_day.id,
-    #         "place_id": self.place.id,
-    #         "mission_id": self.mission1.id,
-    #     }
-    #
-    #     response = self.client.post(url, data)
-    #     self.assertEqual(response.status_code, 200)
-    #     print("✅ 미션 체크 응답:", response.json())
+    def test_mission_check_api(self):
+        """ 미션 성공 여부 확인 테스트 """
+        # 먼저 테스트 이미지를 travel_day에 수동으로 할당
+        from django.core.files.base import ContentFile
+        self.travel_day.mission_image.save('dummy.jpg', ContentFile(b"dummy_content"), save=True)
+
+        url = '/mission/check_complete/'
+
+        data = {
+            "travel_days_id": self.travel_day.id,
+            "place_id": self.place.id,
+            "mission_id": self.mission1.id,
+        }
+
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        print(response.json())
 

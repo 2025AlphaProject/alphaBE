@@ -61,7 +61,7 @@ class MissionCheckCompleteView(viewsets.ModelViewSet):
 
         # TravelDaysAndPlaces 객체 확인 (미션 사진이 있는지)
         try:
-            travel_days_id = TravelDaysAndPlaces.objects.get(id=travel_days_id, mission=mission_id)
+            travel_day = TravelDaysAndPlaces.objects.get(id=travel_days_id, mission=mission_id)
         except TravelDaysAndPlaces.DoesNotExist:
             return Response({"Error": "Invalid travel_days_id or mission_id"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -72,7 +72,7 @@ class MissionCheckCompleteView(viewsets.ModelViewSet):
             return Response({"Error": "Invalid place_id"}, status=status.HTTP_404_NOT_FOUND)
 
         # 이미지 비교 수행
-        similarity_checker = ImageSimilarity(travel_days_id, place_id, mission_id)
+        similarity_checker = ImageSimilarity(travel_day.id, place_id, mission_id)
         similarity_score = similarity_checker.get_similarity_score()
         mission_success = similarity_checker.check_mission_success()
 
