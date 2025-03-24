@@ -17,7 +17,6 @@ class TestAuthenticate(TestCase):
         """
         redirect_uri = 'http://localhost:8000/auth/login/'
         response = self.client.post(f'/auth/get_token/?code={self.AUTH_CODE}&redirect_uri={redirect_uri}')
-        print(response.json())
         self.assertEqual(response.status_code, 201)
 
     def test_refresh_token(self):
@@ -31,7 +30,6 @@ class TestAuthenticate(TestCase):
         }
         response = self.client.post(target_uri, data=data, content_type='application/json')
         self.assertEqual(response.status_code, 201)
-        print(response.json())
         # 리프레시 토큰 정보를 body에서 발견하지 못한 경우를 테스트 합니다.
         data = {
             # 일부러 틀린 정보를 넣습니다.

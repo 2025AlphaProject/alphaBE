@@ -55,7 +55,6 @@ class TestService(TestCase):
         }
         response = self.client.get(end_point, headers=headers)
         self.assertEqual(response.status_code, 200) # 200이 맞는지 확인합니다.
-        print(response.json())
 
     def test_user_list(self):
         end_point = '/user/?user_name=TestUser2'
@@ -64,4 +63,3 @@ class TestService(TestCase):
         }
         response = self.client.get(end_point, headers=headers)
         self.assertEqual(response.status_code, 200)
-        print(response.json())
