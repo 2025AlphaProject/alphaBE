@@ -1,7 +1,13 @@
 from django.core.exceptions import ValidationError
 
 from .models import User
-from config.settings import KAKAO_ADMIN_KEY
+from config.settings import (
+    KAKAO_ADMIN_KEY,
+    KAKAO_TEST_REST_API_KEY,
+    KAKAO_TEST_NATIVE_API_KEY,
+    KAKAO_REAL_REST_API_KEY,
+    KAKAO_REAL_NATIVE_API_KEY,
+)
 import requests
 import jwt
 import base64
@@ -61,15 +67,28 @@ class UserService:
                                  "verify_aud": False,
                                  "verify_iat": False, # 서버 시간과 미세하게 일치하지 않아 발생하는 오류를 무시합니다.
                              })
+        payload = self.__validate_payload(payload)
         return payload
 
-    def __validate_header(self):
+    def __validate_payload(self, payload):
         """
         해당 함수는 페이로드의 키별 값을 검증합니다.
         iss: https://kauth.kakao.com
         aud: 서비스 앱 키와 일치해야함
         """
-        pass
+        valid_aud_list = [
+            KAKAO_TEST_REST_API_KEY,
+            KAKAO_TEST_NATIVE_API_KEY,
+            KAKAO_REAL_REST_API_KEY,
+            KAKAO_REAL_NATIVE_API_KEY,
+        ]
+        iss = payload['iss']
+        aud = payload['aud']
+        if iss != 'https://kauth.kakao.com':
+            return ValidationError('issuer information is invalid')
+        if aud not in valid_aud_list:
+            return ValidationError('application key is invalid')
+        return payload
 
     def __download_oidc(self):
         """
