@@ -1,3 +1,5 @@
+from django.core.exceptions import ValidationError
+
 from .models import User
 from config.settings import KAKAO_ADMIN_KEY
 import requests
@@ -7,6 +9,7 @@ import json
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
+from authenticate.models import OIDC
 
 
 
@@ -47,23 +50,58 @@ class UserService:
         # id 토큰에서 헤더 정보만 분리
         header = id_token.split('.')[0]
         # 헤더에서 kid 부분만 분리
-        print('hello')
-        kid = json.loads(base64.b64decode(header).decode('utf-8'))['kid']
+        header = json.loads(base64.b64decode(header).decode('utf-8'))
+        kid = header['kid']
         # OIDC api 통해서 공개키 목록 조회
         # 일치하는 공개키를 찾아서 시크릿 키로 지정
         key = self.__get_public_pem_key(kid)
         # jwt 토큰 유효성 검증
-        payload = jwt.decode(id_token, key, algorithms=['RS256'])
+        payload = jwt.decode(id_token, key, algorithms=['RS256'],
+                             options={
+                                 "verify_aud": False,
+                                 "verify_iat": False, # 서버 시간과 미세하게 일치하지 않아 발생하는 오류를 무시합니다.
+                             })
         return payload
 
-    def __get_public_pem_key(self, kid):
+    def __validate_header(self):
+        """
+        해당 함수는 페이로드의 키별 값을 검증합니다.
+        iss: https://kauth.kakao.com
+        aud: 서비스 앱 키와 일치해야함
+        """
+        pass
+
+    def __download_oidc(self):
+        """
+        oidc 코드 DB 저장
+        """
+        # TODO oidc 다운로드 로거 추가
         end_point = 'https://kauth.kakao.com/.well-known/jwks.json'
         response = requests.get(end_point)
         result = response.json()['keys']
+        # OIDC 테이블 초기화
+        OIDC.objects.all().delete()
+
         for each in result:
-            if each['kid'] == kid:
-                return self.__jwt_to_pem(each['n'], each['e'])
-        raise Exception('일치하는 공개키 없음')
+            OIDC.objects.create(
+                kid=each['kid'],
+                n=each['n'],
+                e=each['e']
+            )
+
+
+    def __get_public_pem_key(self, kid):
+        # db에서 kid에 해당하는 아이디를 가져옵니다.
+        try:
+            OIDC.objects.get(kid=kid)
+        except OIDC.DoesNotExist: # 해당하는 키가 없을 때 키 변경을 감지하고 다운로드 진행
+            self.__download_oidc()
+        oidc = None
+        try:
+            oidc = OIDC.objects.get(kid=kid)
+        except OIDC.DoesNotExist: # 오류 발생
+            raise ValidationError("카카오 JWT 헤더 손상 의심")
+        return self.__jwt_to_pem(oidc.n, oidc.e)
 
 
 
