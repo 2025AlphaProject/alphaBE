@@ -2,6 +2,11 @@ from .models import User
 from config.settings import KAKAO_ADMIN_KEY
 import requests
 import jwt
+import base64
+import json
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
 
 
 
@@ -19,11 +24,49 @@ class UserService:
         해당 함수는 유저 서비스 객체가 생성될 때 자동으로 실행되는 함수입니다.
         :param id_token: 회원 정보가 들어있는 아이디 토큰입니다.
         """
-        payload = jwt.decode(id_token, options={"verify_signature": False})
+        # payload = jwt.decode(id_token, options={"verify_signature": False})
+        payload = self.__validate_id_token(id_token)
         self.sub = payload.get('sub', None) # 회원 번호 저장
         if self.sub is None:
             raise Exception("토큰 내 회원정보 일부가 존재하지 않습니다.")
         self.user = self.get_user() # 함수를 이용해서 유저를 가져옵니다.
+
+    def __jwt_to_pem(self, n, e):
+        """
+        해당 함수는 Base64 URL safe 인코딩된 값이므로 이를 디코딩하여 pem 형식으로 변환
+        """
+        n = int.from_bytes(base64.urlsafe_b64decode(n + '=='), 'big')
+        e = int.from_bytes(base64.urlsafe_b64decode(e + '=='), 'big')
+        public_key = rsa.RSAPublicNumbers(e, n).public_key(default_backend())
+        return public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo)
+
+    def __validate_id_token(self, id_token):
+        """
+        해당 함수는 id_token을 검증하기 위한 함수입니다.
+        """
+        # id 토큰에서 헤더 정보만 분리
+        header = id_token.split('.')[0]
+        # 헤더에서 kid 부분만 분리
+        print('hello')
+        kid = json.loads(base64.b64decode(header).decode('utf-8'))['kid']
+        # OIDC api 통해서 공개키 목록 조회
+        # 일치하는 공개키를 찾아서 시크릿 키로 지정
+        key = self.__get_public_pem_key(kid)
+        # jwt 토큰 유효성 검증
+        payload = jwt.decode(id_token, key, algorithms=['RS256'])
+        return payload
+
+    def __get_public_pem_key(self, kid):
+        end_point = 'https://kauth.kakao.com/.well-known/jwks.json'
+        response = requests.get(end_point)
+        result = response.json()['keys']
+        for each in result:
+            if each['kid'] == kid:
+                return self.__jwt_to_pem(each['n'], each['e'])
+        raise Exception('일치하는 공개키 없음')
+
+
+
 
     def get_or_register_user(self):
         """
