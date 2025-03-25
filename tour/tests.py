@@ -74,8 +74,8 @@ class TestTour(TestCase):
         data.pop('contentTypeId')
         response = tour.get_festival_list('20250315', '20250318', **data)
         self.assertNotEqual(response, None)
-        for each in response:
-            print(each.get_eventStartDate(), each.get_eventEndDate())
+        # for each in response:
+        #     print(each.get_eventStartDate(), each.get_eventEndDate())
 
     def test_travel_api(self):
         uri = '/tour/'
