@@ -4,7 +4,6 @@ from .modules.tour_api import (
     TourApi,
     MobileOS,
     AreaCode,
-    Area,
     Arrange,
     Category1Code,
     ContentTypeId,
@@ -75,8 +74,8 @@ class TestTour(TestCase):
         data.pop('contentTypeId')
         response = tour.get_festival_list('20250315', '20250318', **data)
         self.assertNotEqual(response, None)
-        for each in response:
-            print(each.get_eventStartDate(), each.get_eventEndDate())
+        # for each in response:
+        #     print(each.get_eventStartDate(), each.get_eventEndDate())
 
     def test_travel_api(self):
         uri = '/tour/'
@@ -90,7 +89,6 @@ class TestTour(TestCase):
         }
         # 빈 데이터 list get Test
         response = self.client.get(uri, headers=headers)
-        print(response.json())
         self.assertEqual(response.status_code, 200)
 
         # create test
@@ -104,21 +102,18 @@ class TestTour(TestCase):
 
         # list get Test
         response = self.client.get(uri, headers=headers)
-        print(response.json())
         self.assertEqual(response.status_code, 200)
 
         # detail get Test
         id = Travel.objects.get(tour_name='태근이의 여행').id
         uri_detail = f'/tour/{id}/' # 아이디 1번
         response = self.client.get(uri_detail, headers=headers)
-        print(response.json())
         self.assertEqual(response.status_code, 200)
 
         # delete Test
         response = self.client.delete(uri_detail, headers=headers)
         self.assertEqual(response.status_code, 204)
         response = self.client.get(uri, headers=headers)
-        print(response.json())
         self.assertEqual(response.status_code, 200)
 
         # put Test - Exception Test
@@ -132,7 +127,6 @@ class TestTour(TestCase):
         id2 = Travel.objects.get(tour_name='태근이의 여행2').id
         uri_detail = f'/tour/{id2}/'  # 아이디 2번
         response = self.client.put(uri_detail, put_data, headers=headers, content_type='application/json')
-        print(response.json())
         self.assertEqual(response.status_code, 200)
 
         # get Test - Exception Test
@@ -160,7 +154,6 @@ class TestTour(TestCase):
         }
         # Normal POST Test
         response = self.client.post(end_point, data, headers=headers, content_type='application/json')
-        print(response.json())
         self.assertEqual(response.status_code, 201)
 
         # Exception Test

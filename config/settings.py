@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os, environ
 from datetime import timedelta
+import logging
 
 # .env 파일을 읽기 위한 객체 생성
 env = environ.Env()
@@ -38,7 +39,7 @@ SEOUL_PUBLIC_DATA_SERVICE_KEY = env('SEOUL_PUBLIC_DATA_SERVICE_KEY') # 서울 �
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ppdx8t7r7ys%84627-7v9st+7+-@js620k#9ivbhc2)#0g-rhd'
+SECRET_KEY = env('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -262,3 +263,42 @@ SIMPLE_JWT = {
     "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainSlidingSerializer",
     "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
 }
+
+# 아래는 로그 설정입니다.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False, # 기본 로거 설정 유지
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{', # str.format
+        },
+        'simple': {
+            'format': '{name} {levelname} {asctime} {message}',
+            'style': '{',
+        }
+    },
+    'handlers': { # 로그 핸들러 설정
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'info.log',
+            'formatter': 'verbose'
+        }
+    },
+    'loggers': { # 로거 설정, 실제 get_logger를 이용하여 로그 설정 가져옴
+        'django': { # 실제 배포 환경에서 사용하는 로거
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django_debug': { # 디버그시 사용하는 로거
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        }
+    }
+}
+
+# 앱 기본 로거 설정
+APP_LOGGER='django'

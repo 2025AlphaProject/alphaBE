@@ -2,10 +2,11 @@ import requests
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from usr.models import User
+from config.settings import APP_LOGGER
 
 import logging # 로그 작성을 위해서 사용됩니다.
 
-logger = logging.getLogger('django')
+logger = logging.getLogger(APP_LOGGER)
 
 
 class CustomAuthentication(BaseAuthentication):
@@ -13,7 +14,7 @@ class CustomAuthentication(BaseAuthentication):
     def authenticate(self, request):
         auth_header = request.headers.get('Authorization') # Authorization 헤더 정보를 얻습니다.
         if not auth_header:
-            logger.info('익명의 유저가 백엔드 api에 접근 중입니다.')
+            logger.info('Anonymous User attempting to access backend Api')
             return None # None으로 반환하는 경우 Django의 AnonymousUser로 인식됩니다.
 
         try:
@@ -29,8 +30,10 @@ class CustomAuthentication(BaseAuthentication):
         try:
             sub = payload['id']
             user = User.objects.get(sub=sub)
+            logger.info('Registered User attempting to access backend Api')
             return user, access_token
         except User.DoesNotExist: # 사용자 정보가 없을 경우
+            logger.info('New User attempting to access backend Api')
             return None
 
     def validate_kakao_access_token(self, access_token):
