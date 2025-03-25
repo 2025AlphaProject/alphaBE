@@ -168,3 +168,22 @@ class TestTour(TestCase):
         response = self.client.post(end_point, data, headers=headers, content_type='application/json')
         self.assertEqual(response.status_code, 400)
 
+    def test_get_area_list(self):
+        """
+        해당 테스트는 시군구 코드를 정확하게 가져오는지 테스트합니다.
+        """
+        # 200 Test
+        end_point = '/tour/get_area_list/?area_code=1'
+        response = self.client.get(end_point)
+        self.assertEqual(response.status_code, 200)
+
+        #404 Test
+        end_point = '/tour/get_area_list/?area_code=234'
+        response = self.client.get(end_point)
+        self.assertEqual(response.status_code, 404)
+
+        # sido_list Test
+        end_point = '/tour/get_sido_list/'
+        response = self.client.get(end_point)
+        self.assertEqual(response.status_code, 200)
+
