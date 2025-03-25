@@ -5,10 +5,12 @@ from rest_framework.permissions import IsAuthenticated
 
 from usr.models import User
 from .models import Travel
+from .modules import tour_api
 from .serializers import TravelSerializer
-from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY
+from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY
 from .serializers import EventSerializer
 from .modules.tour_api import NearEventInfo
+from .services import TourApi
 
 from .models import Event
 
@@ -191,3 +193,36 @@ class AddTravelerView(viewsets.ModelViewSet):
         travel.user.add(add_target_user)
         serializer = self.get_serializer(travel)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class GetAreaList(viewsets.ViewSet):
+
+    def list(self, request, *args, **kwargs):
+        area_code = request.GET.get('area_code', None)
+        response_data = {}
+        tour = TourApi(service_key=PUBLIC_DATA_PORTAL_API_KEY)
+        # 전국을 다 보냅니다.
+        area_list = tour.get_sigungu_code_list()
+        if area_code is None:
+            for each in area_list:
+                response_data[each['code']] = tour.get_sigungu_code_list(int(each['code']))
+        else:
+            code_list = []
+            for each in area_list:
+                code_list.append(int(each['code']))
+            area_code = int(area_code)
+            if area_code not in code_list:
+                return Response({"There is no area code": f"{area_code}"}, status=status.HTTP_404_NOT_FOUND)
+            area_list = tour.get_sigungu_code_list(area_code)
+            response_data[str(area_code)] = area_list
+        return Response(response_data, status=status.HTTP_200_OK)
+
+class Sido_list(viewsets.ViewSet):
+
+    def retrieve(self, request):
+        tour = TourApi(service_key=PUBLIC_DATA_PORTAL_API_KEY)
+        sido_list = tour.get_sigungu_code_list()
+        return Response(sido_list, status=status.HTTP_200_OK)
+
+
+
