@@ -33,6 +33,10 @@ KAKAO_TEST_ID_TOKEN = env('KAKAO_TEST_ID_TOKEN')
 KAKAO_TEST_ACCESS_TOKEN = env('KAKAO_TEST_ACCESS_TOKEN') # 카카오 테스트 액세스 토큰을 가져옵니다.
 PUBLIC_DATA_PORTAL_API_KEY = env('PUBLIC_DATA_PORTAL_API_KEY') # 공공 데이터 포탈 서비스 키입니다.
 SEOUL_PUBLIC_DATA_SERVICE_KEY = env('SEOUL_PUBLIC_DATA_SERVICE_KEY') # 서울 열린데이터 광장 서비스 키
+KAKAO_TEST_REST_API_KEY = env('KAKAO_TEST_REST_API_KEY') # 카카오 임시 api 키
+KAKAO_TEST_NATIVE_API_KEY = env('KAKAO_TEST_NATIVE_API_KEY')
+KAKAO_REAL_REST_API_KEY = env('KAKAO_REAL_REST_API_KEY') # 카카오 실제 rest api 키
+KAKAO_REAL_NATIVE_API_KEY = env('KAKAO_REAL_NATIVE_API_KEY') # 카카오 실제 native api 키
 
 
 # Quick-start development settings - unsuitable for production
