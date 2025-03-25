@@ -3,8 +3,11 @@ from config.settings import (
     KAKAO_AUTH_CODE, # 임시 인가 코드를 가져옵니다. 테스트 실행시마다 .env 파일에서 매번 바꿔줘야합니다.
     KAKAO_REFRESH_TOKEN, # 리프레시 토큰. 만료시 바꿔 사용
     KAKAO_TEST_ACCESS_TOKEN,
-    KAKAO_TEST_ID_TOKEN
+    KAKAO_TEST_ID_TOKEN,
+    APP_LOGGER
 )
+import logging
+logger = logging.getLogger(APP_LOGGER)
 
 # Create your tests here.
 
@@ -17,6 +20,7 @@ class TestAuthenticate(TestCase):
         redirect_uri = 'http://localhost:8000/auth/login/'
         response = self.client.post(f'/auth/get_token/?code={self.AUTH_CODE}&redirect_uri={redirect_uri}')
         self.assertEqual(response.status_code, 201)
+        print(response.json())
 
     def test_refresh_token(self):
         """
