@@ -187,3 +187,4 @@ class TestTour(TestCase):
         response = self.client.get(end_point)
         self.assertEqual(response.status_code, 200)
 
+
