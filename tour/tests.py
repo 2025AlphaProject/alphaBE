@@ -188,3 +188,76 @@ class TestTour(TestCase):
         self.assertEqual(response.status_code, 200)
 
 
+    def test_save_course(self):
+        """
+        해당 테스트는 /tour/course/ 경로 저장 API가 정상적으로 작동하는지 검증합니다.
+        """
+
+        # 1️⃣ 여행 생성
+        headers = {
+            'Authorization': f'Bearer {KAKAO_TEST_ACCESS_TOKEN}',
+        }
+        travel_data = {
+            'tour_name': '테스트 여행',
+            'start_date': '2025-04-01',
+            'end_date': '2025-04-05'
+        }
+        create_response = self.client.post('/tour/', data=travel_data, headers=headers, content_type='application/json')
+        self.assertEqual(create_response.status_code, 201)
+        tour_id = create_response.json()['tour_id']
+
+        # 2️⃣ 정상적인 코스 저장 요청
+        course_data = {
+            "tour_id": tour_id,
+            "date": "2025-04-02",
+            "places": [
+                {
+                    "name": "광화문",
+                    "mapX": "126.9769",
+                    "mapY": "37.5759",
+                    "image_url": "https://image.example.com/gwanghwamun.jpg"
+                },
+                {
+                    "name": "서울역",
+                    "mapX": "126.9706",
+                    "mapY": "37.5562",
+                    "image_url": "https://image.example.com/seoul.jpg"
+                }
+            ]
+        }
+        response = self.client.post('/tour/course/', data=course_data, headers=headers, content_type='application/json')
+        self.assertEqual(response.status_code, 201)  # ✅ 정상적으로 저장되었는지 확인
+        self.assertEqual(response.json()['date'], "2025-04-02")
+        self.assertEqual(len(response.json()['places']), 2)
+
+        # 3️⃣ 예외 케이스: 필수 필드 누락 (date 없음)
+        bad_data = {
+            "tour_id": tour_id,
+            "places": [
+                {
+                    "name": "남산타워",
+                    "mapX": "126.9882",
+                    "mapY": "37.5512",
+                    "image_url": "https://image.example.com/namsan.jpg"
+                }
+            ]
+        }
+        response = self.client.post('/tour/course/', data=bad_data, headers=headers, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+
+        # 4️⃣ 예외 케이스: 존재하지 않는 여행 ID
+        wrong_data = {
+            "tour_id": 9999,
+            "date": "2025-04-03",
+            "places": [
+                {
+                    "name": "북촌한옥마을",
+                    "mapX": "126.9870",
+                    "mapY": "37.5825",
+                    "image_url": "https://image.example.com/bukchon.jpg"
+                }
+            ]
+        }
+        response = self.client.post('/tour/course/', data=wrong_data, headers=headers, content_type='application/json')
+        self.assertEqual(response.status_code, 403)
+

@@ -23,7 +23,7 @@ urlpatterns = [
     }), name='get_area_list'),
     path('get_sido_list/', Sido_list.as_view({
         'get': 'retrieve'
-    }))
+    })),
     path('course/', CourseView.as_view({
         'post': 'create'  #
     }), name='save-course'),
