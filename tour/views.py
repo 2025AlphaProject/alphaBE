@@ -11,7 +11,7 @@ from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_AP
 from .serializers import EventSerializer
 from .modules.tour_api import NearEventInfo
 from .services import TourApi
-
+from .models import Travel, TravelDaysAndPlaces, PlaceImages
 from .models import Event
 
 class TravelViewSet(viewsets.ModelViewSet):
@@ -224,5 +224,58 @@ class Sido_list(viewsets.ViewSet):
         sido_list = tour.get_sigungu_code_list()
         return Response(sido_list, status=status.HTTP_200_OK)
 
+class CouseView(viewsets.ViewSet) :
+
+    def retrieve(self, request, pk=None):  # 여행 경로 가져오기 API
+        user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
+        tour_id = pk
+
+        # 여행 존재 여부 및 권한 확인
+        try:
+            travel = Travel.objects.get(id=int(tour_id), user__sub=user_sub)
+        except Travel.DoesNotExist:
+            return Response({
+                "error": "403",
+                "message": "해당 여행이 존재하지 않거나 접근 권한이 없습니다."
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        # 해당 여행에 연결된 날짜별 장소 정보 조회
+        travel_days = TravelDaysAndPlaces.objects.filter(travel=travel).order_by('date')
+        if not travel_days.exists():
+            return Response({
+                "message": "저장된 여행 경로 정보가 없습니다.",
+                "tour_id": tour_id,
+                "courses": []
+            }, status=status.HTTP_200_OK)
+
+        result = {}  # date 별로 그룹화
+
+        for entry in travel_days:
+            date_str = str(entry.date)
+
+            if date_str not in result:
+                result[date_str] = []
+
+            image_url = ""
+            image_obj = PlaceImages.objects.filter(place=entry.place).first()
+            if image_obj:
+                image_url = image_obj.image_url
+
+            result[date_str].append({
+                "name": entry.place.name,
+                "mapX": entry.place.mapX,
+                "mapY": entry.place.mapY,
+                "image_url": image_url
+            })
+
+        # 응답 형태: [{ "date": "YYYY-MM-DD", "places": [...] }, ...]
+        response_data = [
+            {
+                "date": date,
+                "places": places
+            } for date, places in result.items()
+        ]
+
+        return Response(response_data, status=status.HTTP_200_OK)
 
 

@@ -187,3 +187,59 @@ class TestTour(TestCase):
         response = self.client.get(end_point)
         self.assertEqual(response.status_code, 200)
 
+    def test_retrieve_course(self):
+        """
+        해당 테스트는 /tour/course/<tour_id>/ 경로 조회 API가 정상적으로 작동하는지 검증합니다.
+        """
+
+        # 1️⃣ 여행 생성
+        headers = {
+            'Authorization': f'Bearer {KAKAO_TEST_ACCESS_TOKEN}',
+        }
+        travel_data = {
+            'tour_name': '조회용 여행',
+            'start_date': '2025-04-01',
+            'end_date': '2025-04-05'
+        }
+        create_response = self.client.post('/tour/', data=travel_data, headers=headers, content_type='application/json')
+        self.assertEqual(create_response.status_code, 201)
+        tour_id = create_response.json()['tour_id']
+
+        # 2️⃣ 경로 저장
+        course_data = {
+            "tour_id": tour_id,
+            "date": "2025-04-02",
+            "places": [
+                {
+                    "name": "덕수궁",
+                    "mapX": "126.9751",
+                    "mapY": "37.5658",
+                    "image_url": "https://image.example.com/deoksugung.jpg"
+                },
+                {
+                    "name": "경복궁",
+                    "mapX": "126.9769",
+                    "mapY": "37.5796",
+                    "image_url": "https://image.example.com/gyeongbok.jpg"
+                }
+            ]
+        }
+        save_response = self.client.post('/tour/course/', data=course_data, headers=headers,
+                                         content_type='application/json')
+        self.assertEqual(save_response.status_code, 201)
+
+        # 3️⃣ 저장한 경로 조회 요청
+        retrieve_uri = f'/tour/course/{tour_id}/'
+        response = self.client.get(retrieve_uri, headers=headers)
+        self.assertEqual(response.status_code, 200)
+
+        course_list = response.json()
+        self.assertEqual(len(course_list), 1)
+        self.assertEqual(course_list[0]['date'], "2025-04-02")
+        self.assertEqual(len(course_list[0]['places']), 2)
+        self.assertEqual(course_list[0]['places'][0]['name'], "덕수궁")
+
+        # 4️⃣ 예외 케이스: 존재하지 않는 tour_id
+        wrong_uri = '/tour/course/99999/'
+        response = self.client.get(wrong_uri, headers=headers)
+        self.assertEqual(response.status_code, 403)
