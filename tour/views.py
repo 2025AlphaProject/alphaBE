@@ -11,8 +11,9 @@ from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_AP
 from .serializers import EventSerializer
 from .modules.tour_api import NearEventInfo
 from .services import TourApi
-
+from .models import Place, TravelDaysAndPlaces, PlaceImages
 from .models import Event
+
 
 class TravelViewSet(viewsets.ModelViewSet):
     queryset = Travel.objects.all()
