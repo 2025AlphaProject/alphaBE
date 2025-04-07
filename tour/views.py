@@ -225,4 +225,75 @@ class Sido_list(viewsets.ViewSet):
         return Response(sido_list, status=status.HTTP_200_OK)
 
 
+class CourseView(viewsets.ViewSet):
 
+    def create(self, request, *args, **kwargs):  # 여행 경로 저장 API
+        user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
+
+        # request.data를 변경 가능한 딕셔너리로 변환
+        course_data = dict(request.data).copy()
+        tour_id = course_data.get('tour_id')
+        date = course_data.get('date')
+        places = course_data.get('places', [])
+
+        # 필수 파라미터 누락 시
+        if not tour_id or not date or not places:
+            return Response({
+                "error": "400",
+                "message": "필수 파라미터 중 일부 혹은 전체가 없습니다. tour_id, date, places를 확인해주세요."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 여행 존재 여부 및 권한 확인
+        try:
+            travel = Travel.objects.get(id=int(tour_id), user__sub=user_sub)
+        except Travel.DoesNotExist:
+            return Response({
+                "error": "403",
+                "message": "해당 여행이 존재하지 않거나 접근 권한이 없습니다."
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        place_results = []
+
+        for place_data in places:
+            name = place_data.get('name')
+            mapX = place_data.get('mapX')
+            mapY = place_data.get('mapY')
+            image_url = place_data.get('image_url')
+
+            # 장소 필수 정보 누락 시 해당 장소는 스킵
+            if not name or not mapX or not mapY:
+                continue
+
+            # 장소 저장 (중복 시 get)
+            place, _ = Place.objects.get_or_create(
+                name=name,
+                mapX=mapX,
+                mapY=mapY
+            )
+
+            # 날짜별 장소 연결 저장
+            TravelDaysAndPlaces.objects.get_or_create(
+                travel=travel,
+                place=place,
+                date=date
+            )
+
+            # 이미지가 있을 경우 별도 저장
+            if image_url:
+                PlaceImages.objects.get_or_create(
+                    place=place,
+                    image_url=image_url
+                )
+
+            place_results.append({
+                "name": name,
+                "mapX": mapX,
+                "mapY": mapY,
+                "image_url": image_url
+            })
+
+        # 최종 응답 반환
+        return Response({
+            "date": date,
+            "places": place_results
+        }, status=status.HTTP_201_CREATED)
