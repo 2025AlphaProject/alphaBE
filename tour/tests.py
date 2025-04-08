@@ -186,4 +186,3 @@ class TestTour(TestCase):
         end_point = '/tour/get_sido_list/'
         response = self.client.get(end_point)
         self.assertEqual(response.status_code, 200)
-

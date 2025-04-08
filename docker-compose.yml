@@ -55,6 +55,8 @@ services:
     depends_on:
       - db
       - redis
+    env_file :
+      - .env
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -77,6 +79,8 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     networks:
       - app_network
+    env_file:
+      - .env
 
 volumes:
   db_data:

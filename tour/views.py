@@ -225,4 +225,46 @@ class Sido_list(viewsets.ViewSet):
         return Response(sido_list, status=status.HTTP_200_OK)
 
 
+class CourseListView(viewsets.ViewSet):
 
+    def list(self, request, *args, **kwargs):  # 여행 경로 리스트 조회 API
+        user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
+
+        # 사용자가 해당하는 여행 경로들을 모두 조회
+        try:
+            travels = Travel.objects.filter(user__sub=user_sub)  # 해당 user의 여행 경로들
+        except Travel.DoesNotExist:
+            return Response({
+                "error": "404",
+                "message": "사용자의 여행 경로가 존재하지 않습니다."
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # 여행 경로들에 대한 결과 리스트 생성
+        travel_results = []
+
+        for travel in travels:
+            # 여행 경로에 포함된 장소들 조회
+            travel_days_and_places = TravelDaysAndPlaces.objects.filter(travel=travel)
+
+            # 장소 리스트 생성
+            places = []
+            for travel_day_place in travel_days_and_places:
+                place = travel_day_place.place
+                places.append({
+                    "name": place.name,
+                    "mapX": place.mapX,
+                    "mapY": place.mapY,
+                    "image_url": place.placeimages_set.first().image_url if place.placeimages_set.exists() else None
+                })
+
+            # 여행 경로 데이터 포맷
+            travel_results.append({
+                "tour_id": travel.id,
+                "date": travel.date,
+                "places": places
+            })
+
+        # 최종 응답 반환
+        return Response({
+            "travels": travel_results
+        }, status=status.HTTP_200_OK)
