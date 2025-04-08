@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from usr.models import User
-from .models import Travel
+from .models import Travel, TravelDaysAndPlaces
 from .modules import tour_api
 from .serializers import TravelSerializer
 from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY
