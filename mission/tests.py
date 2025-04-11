@@ -1,5 +1,7 @@
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
+
+from config.settings import KAKAO_TEST_ACCESS_TOKEN
 from mission.models import Mission
 from tour.models import TravelDaysAndPlaces, Place, PlaceImages, Travel
 from django.contrib.auth import get_user_model
@@ -64,20 +66,33 @@ class TestMission(TestCase):
         print(response.json())
 
     def test_mission_check_api(self):
-        """ 미션 성공 여부 확인 테스트 """
-        # 먼저 테스트 이미지를 travel_day에 수동으로 할당
+        def test_mission_check_api(self):
+            """
+            미션 성공 여부 검사 POST 검사입니다.
+            """
 
-        self.travel_day.mission_image.save('dummy.jpg', ContentFile(b"dummy_content"), save=True)
+            # 우선 사용자 이미지 업로드처럼 TravelDaysAndPlaces에 이미지 저장
+            test_image_data = ContentFile(b"dummy image data", name="mission.jpg")
+            self.travel_day.mission_image.save("mission.jpg", test_image_data)
+            self.travel_day.save()
 
-        url = '/mission/check_complete/'
+            # 헤더에 카카오 토큰 포함
+            headers = {
+                'Authorization': f'Bearer {KAKAO_TEST_ACCESS_TOKEN}',
+            }
 
-        data = {
-            "travel_days_id": self.travel_day.id,
-            "place_id": self.place.id,
-            "mission_id": self.mission1.id,
-        }
+            url = '/mission/check_complete/'
 
-        response = self.client.post(url, data)
-        self.assertEqual(response.status_code, 200)
-        print(response.json())
+            data = {
+                "travel_id": self.travel_day.id,
+                "place_id": self.place.id,
+                "mission_id": self.mission1.id
+            }
 
+            response = self.client.post(url, data, headers=headers, content_type='application/json')
+
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("result", response.json())
+            self.assertIn("similarity_score", response.json())
+
+            print("유사도 결과:", response.json())

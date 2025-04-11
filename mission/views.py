@@ -40,40 +40,33 @@ class MissionImageUploadView(viewsets.ModelViewSet):
         }, status=status.HTTP_201_CREATED)
 
 
-class MissionCheckCompleteView(viewsets.ModelViewSet):
+class MissionCheckCompleteView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
     def create(self, request, *args, **kwargs):
-        travel_days_id = request.data.get("travel_days_id", None)
-        place_id = request.data.get("place_id", None)
-        mission_id = request.data.get("mission_id", None)
+        """
+        사용자가 업로드한 이미지와 장소 예시 이미지를 비교해
+        미션 성공 여부를 판단하고 응답합니다.
+        """
+        travel_id = request.data.get('travel_id')
+        place_id = request.data.get('place_id')
+        mission_id = request.data.get('mission_id')
 
-        if travel_days_id is None or place_id is None or mission_id is None:
-            return Response({"Error": "travel_days_id, place_id, or mission_id is missing"},
-                            status=status.HTTP_400_BAD_REQUEST)
+        # 필수값 누락 체크
+        if not travel_id or not place_id or not mission_id:
+            return Response({"error": "travel_id, place_id, mission_id는 필수입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            travel_day = TravelDaysAndPlaces.objects.get(id=travel_days_id, mission=mission_id)
-        except TravelDaysAndPlaces.DoesNotExist:
-            return Response({"Error": "Invalid travel_days_id or mission_id"}, status=status.HTTP_404_NOT_FOUND)
+            # 이미지 유사도 비교 클래스 생성
+            checker = ImageSimilarity(travel_id, place_id, mission_id)
+            result = checker.check_mission_success()  # 1: 성공, 0: 실패
+            score = checker.get_similarity_score()    # 유사도 점수
 
-        try:
-            place = Place.objects.get(id=place_id)
-        except Place.DoesNotExist:
-            return Response({"Error": "Invalid place_id"}, status=status.HTTP_404_NOT_FOUND)
-
-        # ✅ 수정된 부분: .path 접근 시 실패해도 처리 가능하도록
-        try:
-            similarity_checker = ImageSimilarity(travel_day.id, place.id, mission_id)
-            similarity_score = similarity_checker.get_similarity_score()
-            mission_success = similarity_checker.check_mission_success()
-        except NotImplementedError:
             return Response({
-                "message": "테스트 환경에서는 파일 시스템이 없기 때문에 path 기반 비교는 지원되지 않습니다.",
-                "similarity_score": 0,
-                "mission_success": 0
+                "result": "success" if result == 1 else "fail",
+                "similarity_score": score,
+                "message": "미션 판별 완료"
             }, status=status.HTTP_200_OK)
 
-        return Response({
-            "message": "Mission check complete",
-            "similarity_score": similarity_score,
-            "mission_success": mission_success
-        }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
