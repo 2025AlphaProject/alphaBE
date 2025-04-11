@@ -260,7 +260,9 @@ class CourseListView(viewsets.ViewSet):
             # 여행 경로 데이터 포맷
             travel_results.append({
                 "tour_id": travel.id,
-                "date": travel.date,
+                "tour_name": travel.tour_name,
+                "start_date": str(travel.start_date),
+                "end_date": str(travel.end_date),
                 "places": places
             })
 

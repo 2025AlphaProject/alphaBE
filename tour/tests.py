@@ -186,3 +186,38 @@ class TestTour(TestCase):
         end_point = '/tour/get_sido_list/'
         response = self.client.get(end_point)
         self.assertEqual(response.status_code, 200)
+
+    def test_get_tour_course_list(self):
+        """
+        해당 테스트는 여행 경로들을 리스트로 가져오는지 테스트합니다.
+        """
+
+        # 여행 생성
+        create_endpoint = '/tour/'
+        headers = {
+            'Authorization': f'Bearer {KAKAO_TEST_ACCESS_TOKEN}',
+        }
+        travel_data = {
+            'tour_name': '경로 테스트 여행',
+            'start_date': '2025-04-01',
+            'end_date': '2025-04-05',
+        }
+        create_response = self.client.post(create_endpoint, data=travel_data, headers=headers, content_type='application/json')
+        self.assertEqual(create_response.status_code, 201)
+
+        # 200 Test
+        endpoint = '/tour/course/list/'
+        response = self.client.get(endpoint, headers=headers)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertIn('travels', response.json())
+        travels = response.json()['travels']
+        self.assertIsInstance(travels, list)
+
+        #데이터가 어케 날아오는지 확인하는 코드 ?
+
+        if travels:
+            self.assertIn('tour_id', travels[0])
+            self.assertIn('start_date', travels[0])
+            self.assertIn('end_date', travels[0])
+            self.assertIn('places', travels[0])
