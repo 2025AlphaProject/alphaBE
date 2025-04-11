@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import MissionListView, MissionCheckCompleteView, MissionImageUploadView
+from .views import MissionListView, MissionCheckCompleteView, MissionImageUploadView, RandomMissionCreateView
 
 urlpatterns = [
     path('list/', MissionListView.as_view({
@@ -11,4 +11,8 @@ urlpatterns = [
     path('image_upload/', MissionImageUploadView.as_view({
         'post': 'create',
     }), name='mission_image_upload'),
+
+    path('mission/random/',RandomMissionCreateView.as_view({
+        'post': 'create',
+    }), name = 'mission_random_create')
 ]
