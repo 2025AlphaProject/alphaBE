@@ -225,4 +225,20 @@ class Sido_list(viewsets.ViewSet):
         return Response(sido_list, status=status.HTTP_200_OK)
 
 
+class CourseListView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
 
+    def destroy(self, request, pk=None):
+        user_sub = request.user.sub  # 로그인한 사용자의 sub
+        tour_id = pk  # URL에서 받은 여행 ID
+
+        try:
+            travel = Travel.objects.get(id=tour_id, user__sub=user_sub)
+        except Travel.DoesNotExist:
+            return Response({
+                "error": "404",
+                "message": "해당 여행 ID가 존재하지 않거나, 접근 권한이 없습니다."
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        travel.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
