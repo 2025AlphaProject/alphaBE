@@ -368,7 +368,7 @@ class TestTour(TestCase):
         self.assertEqual(create_response.status_code, 201)
 
         # 200 Test
-        endpoint = '/tour/course/list/'
+        endpoint = '/tour/course/'
         response = self.client.get(endpoint, headers=headers)
         self.assertEqual(response.status_code, 200)
 
