@@ -1,13 +1,12 @@
-from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-
 from .models import Mission
 from .serializers import MissionSerializer
 from tour.models import TravelDaysAndPlaces, Place
 from .services import ImageSimilarity
+import math
 
 
 # Create your views here.
@@ -45,28 +44,73 @@ class MissionCheckCompleteView(viewsets.ViewSet):
 
     def create(self, request, *args, **kwargs):
         """
-        사용자가 업로드한 이미지와 장소 예시 이미지를 비교해
-        미션 성공 여부를 판단하고 응답합니다.
+        사용자의 GPS(mapX, mapY)와 이미지 유사도를 통해
+        미션 성공 여부를 판별하는 API입니다.
         """
         travel_id = request.data.get('travel_id')
         place_id = request.data.get('place_id')
         mission_id = request.data.get('mission_id')
+        user_lng = request.data.get('mapX')  # 경도
+        user_lat = request.data.get('mapY')  # 위도
 
-        # 필수값 누락 체크
-        if not travel_id or not place_id or not mission_id:
-            return Response({"error": "travel_id, place_id, mission_id는 필수입니다."}, status=status.HTTP_400_BAD_REQUEST)
+        # 필수값 누락 검사
+        if not travel_id:
+            return Response({"error": "travel_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not place_id:
+            return Response({"error": "place_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not mission_id:
+            return Response({"error": "mission_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not user_lat or not user_lng:
+            return Response({"error": "mapX and mapY are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # 이미지 유사도 비교 클래스 생성
+            place = Place.objects.get(id=place_id)
+        except Place.DoesNotExist:
+            return Response({"error": "place_id does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            # 위도 경도 float 변환
+            place_lat = float(place.mapY)
+            place_lng = float(place.mapX)
+            user_lat = float(user_lat)
+            user_lng = float(user_lng)
+
+            # 거리 계산
+            distance = self._haversine_distance(user_lat, user_lng, place_lat, place_lng)
+            location_pass = distance <= 200.0
+
+            # 이미지 유사도 검사
             checker = ImageSimilarity(travel_id, place_id, mission_id)
-            result = checker.check_mission_success()  # 1: 성공, 0: 실패
-            score = checker.get_similarity_score()    # 유사도 점수
+            similarity_score = checker.get_similarity_score()
+            image_pass = similarity_score >= 40.0
+
+            # 최종 판단
+            is_success = location_pass and image_pass
 
             return Response({
-                "result": "success" if result == 1 else "fail",
-                "similarity_score": score,
+                "result": "success" if is_success else "fail",
+                "similarity_score": similarity_score,
+                "distance_to_place": round(distance, 2),
+                "image_check_passed": image_pass,
+                "location_check_passed": location_pass,
                 "message": "미션 판별 완료"
             }, status=status.HTTP_200_OK)
 
+        except ValueError:
+            return Response({"error": "mapX and mapY must be valid float values"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": "서버 오류가 발생했습니다."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _haversine_distance(self, lat1, lon1, lat2, lon2):
+        """
+        두 GPS 좌표 사이의 거리 계산 (미터)
+        """
+        R = 6371000  # 지구 반지름 (m)
+        phi1 = math.radians(lat1)
+        phi2 = math.radians(lat2)
+        d_phi = math.radians(lat2 - lat1)
+        d_lambda = math.radians(lon2 - lon1)
+
+        a = math.sin(d_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return R * c
