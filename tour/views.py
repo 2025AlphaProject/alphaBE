@@ -298,3 +298,114 @@ class CourseView(viewsets.ViewSet):
             "date": date,
             "places": place_results
         }, status=status.HTTP_201_CREATED)
+
+    def retrieve(self, request, pk=None):  # 여행 경로 가져오기 API
+        user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
+        tour_id = pk
+
+        # 여행 존재 여부 및 권한 확인
+        try:
+            travel = Travel.objects.get(id=int(tour_id), user__sub=user_sub)
+        except Travel.DoesNotExist:
+            return Response({
+                "error": "403",
+                "message": "해당 여행이 존재하지 않거나 접근 권한이 없습니다."
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        # 해당 여행에 연결된 날짜별 장소 정보 조회
+        travel_days = TravelDaysAndPlaces.objects.filter(travel=travel).order_by('date')
+        if not travel_days.exists():
+            return Response({
+                "message": "저장된 여행 경로 정보가 없습니다.",
+                "tour_id": tour_id,
+                "courses": []
+            }, status=status.HTTP_200_OK)
+
+        result = {}  # date 별로 그룹화
+
+        for entry in travel_days:
+            date_str = str(entry.date)
+
+            if date_str not in result:
+                result[date_str] = []
+
+            image_url = ""
+            image_obj = PlaceImages.objects.filter(place=entry.place).first()
+            if image_obj:
+                image_url = image_obj.image_url
+
+            result[date_str].append({
+                "name": entry.place.name,
+                "mapX": entry.place.mapX,
+                "mapY": entry.place.mapY,
+                "image_url": image_url
+            })
+
+        # 응답 형태: [{ "date": "YYYY-MM-DD", "places": [...] }, ...]
+        response_data = [
+            {
+                "date": date,
+                "places": places
+            } for date, places in result.items()
+        ]
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    def destroy(self, request, pk=None):
+        user_sub = request.user.sub  # 로그인한 사용자의 sub
+        tour_id = pk  # URL에서 받은 여행 ID
+
+        try:
+            travel = Travel.objects.get(id=tour_id, user__sub=user_sub)
+        except Travel.DoesNotExist:
+            return Response({
+                "error": "404",
+                "message": "해당 여행 ID가 존재하지 않거나, 접근 권한이 없습니다."
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        travel.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def list(self, request, *args, **kwargs):  # 여행 경로 리스트 조회 API
+        user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
+
+        # 사용자가 해당하는 여행 경로들을 모두 조회
+        try:
+            travels = Travel.objects.filter(user__sub=user_sub)  # 해당 user의 여행 경로들
+        except Travel.DoesNotExist:
+            return Response({
+                "error": "404",
+                "message": "사용자의 여행 경로가 존재하지 않습니다."
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # 여행 경로들에 대한 결과 리스트 생성
+        travel_results = []
+
+        for travel in travels:
+            # 여행 경로에 포함된 장소들 조회
+            travel_days_and_places = TravelDaysAndPlaces.objects.filter(travel=travel)
+
+            # 장소 리스트 생성
+            places = []
+            for travel_day_place in travel_days_and_places:
+                place = travel_day_place.place
+                places.append({
+                    "name": place.name,
+                    "mapX": place.mapX,
+                    "mapY": place.mapY,
+                    "image_url": place.placeimages_set.first().image_url if place.placeimages_set.exists() else None
+                })
+
+            # 여행 경로 데이터 포맷
+            travel_results.append({
+                "tour_id": travel.id,
+                "tour_name": travel.tour_name,
+                "start_date": str(travel.start_date),
+                "end_date": str(travel.end_date),
+                "places": places
+            })
+
+        # 최종 응답 반환
+        return Response({
+            "travels": travel_results
+        }, status=status.HTTP_200_OK)
