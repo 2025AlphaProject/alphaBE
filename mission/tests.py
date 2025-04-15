@@ -1,15 +1,22 @@
-from django.test import TestCase
-from django.core.files.uploadedfile import SimpleUploadedFile
-
-from config.settings import KAKAO_TEST_ACCESS_TOKEN
 from mission.models import Mission
-from tour.models import TravelDaysAndPlaces, Place, PlaceImages, Travel
-from django.contrib.auth import get_user_model
-from datetime import date
-from django.core.files.base import ContentFile
+from tour.models import Place
+from config.settings import KAKAO_TEST_ACCESS_TOKEN
+from django.test import TestCase
+from usr.models import User
+
 
 class TestMission(TestCase):
     def setUp(self):
+        # 유저 정보 임의 생성
+        user = User.objects.create(
+            sub=3935716527,
+            username='TestUser',
+            gender='male',
+            age_range='1-9',
+            profile_image_url='https://example.org'
+        )
+        user.set_password('test_password112')
+        user.save()
         # 임의로 미션을 생성합니다.
         Mission.objects.create(
             content='예시 사진과 유사하게 사진찍기'
@@ -17,6 +24,12 @@ class TestMission(TestCase):
         Mission.objects.create(
             content='손 하트 만든 상태로 사진찍기'
         )
+
+        # 장소 생성
+        self.place1 = Place.objects.create(name="사진 X 장소1", mapX=127.001, mapY=37.501)
+        self.place2 = Place.objects.create(name="사진 X 장소2", mapX=127.002, mapY=37.502)
+        self.place3 = Place.objects.create(name="사진 있는 장소", mapX=127.003, mapY=37.503)
+
     def test_mission(self):
         """
         기본 미션 리스트 조회 테스트
