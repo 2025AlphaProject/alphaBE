@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import TravelViewSet, NearEventView, AddTravelerView, GetAreaList, Sido_list
+from .views import TravelViewSet, NearEventView, AddTravelerView,GetAreaList, Sido_list,CourseListView
 
 urlpatterns = [
     path('', TravelViewSet.as_view({
@@ -23,5 +23,8 @@ urlpatterns = [
     }), name='get_area_list'),
     path('get_sido_list/', Sido_list.as_view({
         'get': 'retrieve'
-    }))
+    })),
+    path('course/<int:pk>/', CourseListView.as_view({
+        'delete': 'destroy'
+    }), name='course-delete'),
 ]

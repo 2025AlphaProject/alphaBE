@@ -187,3 +187,32 @@ class TestTour(TestCase):
         response = self.client.get(end_point)
         self.assertEqual(response.status_code, 200)
 
+    def test_delete_tour_course(self):
+        """
+        해당 테스트는 내 여행 경로 삭제 API를 검증합니다.
+        """
+        headers = {
+            'Authorization': f'Bearer {KAKAO_TEST_ACCESS_TOKEN}',
+        }
+
+        # 여행 생성
+        create_endpoint = '/tour/'
+        travel_data = {
+            'tour_name': '삭제 테스트 여행',
+            'start_date': '2025-04-10',
+            'end_date': '2025-04-15',
+        }
+        create_response = self.client.post(create_endpoint, data=travel_data, headers=headers, content_type='application/json')
+        self.assertEqual(create_response.status_code, 201)
+
+        # 생성된 여행의 ID 가져오기
+        tour_id = create_response.json()['tour_id']
+
+        # 삭제 요청
+        delete_endpoint = f'/tour/course/{tour_id}/'
+        delete_response = self.client.delete(delete_endpoint, headers=headers)
+        self.assertEqual(delete_response.status_code, 204)
+
+        # 삭제 후 다시 조회 → 404 떠야 정상
+        get_response = self.client.get(f'/tour/{tour_id}/', headers=headers)
+        self.assertEqual(get_response.status_code, 404)
