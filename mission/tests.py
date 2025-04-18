@@ -37,7 +37,6 @@ class TestMission(TestCase):
         end_point = '/mission/list/'
         response = self.client.get(end_point)
         self.assertEqual(response.status_code, 200)
-        print(response.json())
 
     def test_mission_random_create_api(self):
         """
@@ -61,5 +60,3 @@ class TestMission(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertIn("missions", response.json())
         self.assertEqual(len(response.json()["missions"]), 2)
-
-        print("랜덤 미션 생성 응답:", response.json())
