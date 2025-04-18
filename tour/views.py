@@ -226,19 +226,20 @@ class Sido_list(viewsets.ViewSet):
         return Response(sido_list, status=status.HTTP_200_OK)
 
 
-class CourseView(viewsets.ViewSet):
+
+class CourseView(viewsets.ViewSet) :
 
     def create(self, request, *args, **kwargs):  # 여행 경로 저장 API
         user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
 
         # request.data를 변경 가능한 딕셔너리로 변환
         course_data = dict(request.data).copy()
-        tour_id = course_data.get('tour_id')
-        date = course_data.get('date')
+        tour_id = course_data.get('tour_id', None)
+        date = course_data.get('date', None)
         places = course_data.get('places', [])
 
         # 필수 파라미터 누락 시
-        if not tour_id or not date or not places:
+        if not tour_id or not date or len(places) == 0:
             return Response({
                 "error": "400",
                 "message": "필수 파라미터 중 일부 혹은 전체가 없습니다. tour_id, date, places를 확인해주세요."

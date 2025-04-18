@@ -187,6 +187,7 @@ class TestTour(TestCase):
         response = self.client.get(end_point)
         self.assertEqual(response.status_code, 200)
 
+
     def test_save_course(self):
         """
         해당 테스트는 /tour/course/ 경로 저장 API가 정상적으로 작동하는지 검증합니다.
