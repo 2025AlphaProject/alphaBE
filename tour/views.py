@@ -232,12 +232,12 @@ class CourseView(viewsets.ViewSet) :
 
         # request.data를 변경 가능한 딕셔너리로 변환
         course_data = dict(request.data).copy()
-        tour_id = course_data.get('tour_id')
-        date = course_data.get('date')
+        tour_id = course_data.get('tour_id', None)
+        date = course_data.get('date', None)
         places = course_data.get('places', [])
 
         # 필수 파라미터 누락 시
-        if not tour_id or not date or not places:
+        if not tour_id or not date or len(places) == 0:
             return Response({
                 "error": "400",
                 "message": "필수 파라미터 중 일부 혹은 전체가 없습니다. tour_id, date, places를 확인해주세요."
@@ -255,10 +255,10 @@ class CourseView(viewsets.ViewSet) :
         place_results = []
 
         for place_data in places:
-            name = place_data.get('name')
-            mapX = place_data.get('mapX')
-            mapY = place_data.get('mapY')
-            image_url = place_data.get('image_url')
+            name = place_data.get('name', None)
+            mapX = place_data.get('mapX', None)
+            mapY = place_data.get('mapY', None)
+            image_url = place_data.get('image_url', None)
 
             # 장소 필수 정보 누락 시 해당 장소는 스킵
             if not name or not mapX or not mapY:
