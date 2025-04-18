@@ -115,32 +115,24 @@ class MissionCheckCompleteView(viewsets.ViewSet):
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
         return R * c
 
-class RandomMissionCreateView(viewsets.ModelViewSet):
+class RandomMissionCreateView(viewsets.ViewSet):
     """
-    이미지가 없는 장소(place)에 대해 임의의 미션을 생성합니다.
-    프론트에서 이미지 링크가 빈 문자열("")로 들어오는 장소만 처리 대상입니다.
+    이미지가 없는 장소(place)에 대해 미리 등록된 Mission 중 랜덤으로 할당합니다.
+    TravelDaysAndPlaces에 mission 필드를 설정합니다.
     """
-    permission_classes = [IsAuthenticated]  # 인증된 사용자만
-
-    # 임의 미션 문구 리스트
-    RANDOM_MISSIONS = [
-        "근처 구조물과 함께 사진 찍기",
-        "간판이 보이도록 찍어주세요!",
-        "이 장소의 전경이 나오도록 찍어보세요",
-        "내가 방문한 인증샷 남기기",
-        "해당 위치의 분위기를 담아보세요"
-    ]
+    permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
-        """
-        POST 요청 시 빈 이미지 링크("")를 가진 장소들을 필터링하여
-        랜덤한 미션을 각 장소에 생성해주는 로직입니다.
-        """
         places = request.data.get("places", [])
         if not isinstance(places, list):
-            return Response({
-                "error": "places 필드는 리스트여야 합니다."
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "places 필드는 리스트여야 합니다."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # 관리자 등록 미션들
+        missions_queryset = Mission.objects.all()
+        if not missions_queryset.exists():
+            return Response({"error": "Mission 테이블에 등록된 미션이 없습니다."},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         created_missions = []
 
@@ -148,25 +140,28 @@ class RandomMissionCreateView(viewsets.ModelViewSet):
             place_id = item.get("place_id")
             image_url = item.get("image_url", "")
 
-            # 빈 이미지 문자열인 경우만 처리
             if image_url == "":
                 try:
                     place = Place.objects.get(id=place_id)
-                except Place.DoesNotExist:
-                    continue  # 잘못된 장소 ID는 무시하고 진행
+                    tdp = TravelDaysAndPlaces.objects.get(place=place)
 
-                # 랜덤 미션 생성 및 저장
-                mission_text = random.choice(self.RANDOM_MISSIONS)
-                mission = Mission.objects.create(content=mission_text)
+                    if tdp.mission is not None:
+                        continue  # 이미 미션이 있으면 건너뜀
 
-                # 여기선 연결만 해주고, 나중에 TravelDaysAndPlaces에서 연결해도 OK
-                created_missions.append({
-                    "place_id": place_id,
-                    "mission_content": mission.content,
-                    "mission_id": mission.id
-                })
+                    selected_mission = random.choice(missions_queryset)
+                    tdp.mission = selected_mission
+                    tdp.save()
+
+                    created_missions.append({
+                        "place_id": place_id,
+                        "mission_id": selected_mission.id,
+                        "mission_content": selected_mission.content,
+                    })
+
+                except (Place.DoesNotExist, TravelDaysAndPlaces.DoesNotExist):
+                    continue
 
         return Response({
-            "message": "랜덤 미션 생성 완료",
+            "message": "랜덤 미션 할당 완료",
             "missions": created_missions
         }, status=status.HTTP_201_CREATED)
