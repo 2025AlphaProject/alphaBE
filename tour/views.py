@@ -257,10 +257,10 @@ class CourseView(viewsets.ViewSet) :
         place_results = []
 
         for place_data in places:
-            name = place_data.get('name')
-            mapX = place_data.get('mapX')
-            mapY = place_data.get('mapY')
-            image_url = place_data.get('image_url')
+            name = place_data.get('name', None)
+            mapX = place_data.get('mapX', None)
+            mapY = place_data.get('mapY', None)
+            image_url = place_data.get('image_url', None)
 
             # 장소 필수 정보 누락 시 해당 장소는 스킵
             if not name or not mapX or not mapY:
