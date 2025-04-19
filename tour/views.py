@@ -4,15 +4,11 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from usr.models import User
-from .models import Travel
-from .modules import tour_api
 from .serializers import TravelSerializer
 from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY
 from .serializers import EventSerializer
-from .modules.tour_api import NearEventInfo
-from .services import TourApi
-from .models import Place, TravelDaysAndPlaces, PlaceImages
-from .models import Event
+from .services import TourApi, NearEventInfo
+from .models import Travel, Place, TravelDaysAndPlaces, PlaceImages, Event
 import datetime
 
 
