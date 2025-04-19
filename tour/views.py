@@ -230,7 +230,7 @@ class Sido_list(viewsets.ViewSet):
 
 class CourseView(viewsets.ViewSet):
 
-    def __validate_parameters_in_post(self, tour_id, date, places) -> tuple[int, str]:
+    def __validate_parameters_in_post(self, tour_id, date, places, user_sub) -> tuple[int, str]:
         """
             해당 함수는 post 요청이 들어왔을 때 정상적으로 파라미터가 왔는지 검사히기 위한 로직입니다.
             1. places가 리스트 형식인지 확인
@@ -263,7 +263,7 @@ class CourseView(viewsets.ViewSet):
         places = course_data.get('places', []) # 장소 정보들 가져오기
 
         # 파라미터 validate
-        status_code, message = self.__validate_parameters_in_post(tour_id, date, places)
+        status_code, message = self.__validate_parameters_in_post(tour_id, date, places, user_sub)
         if status_code != 200:
             return Response({
                 "error": status_code,
