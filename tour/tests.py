@@ -259,7 +259,7 @@ class TestTour(TestCase):
             ]
         }
         response = self.client.post('/tour/course/', data=wrong_data, headers=headers, content_type='application/json')
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
     def test_delete_tour_course(self):
         """
