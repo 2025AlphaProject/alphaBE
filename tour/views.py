@@ -13,6 +13,7 @@ from .modules.tour_api import NearEventInfo
 from .services import TourApi
 from .models import Place, TravelDaysAndPlaces, PlaceImages
 from .models import Event
+import datetime
 
 
 class TravelViewSet(viewsets.ModelViewSet):
@@ -227,40 +228,57 @@ class Sido_list(viewsets.ViewSet):
 
 
 
-class CourseView(viewsets.ViewSet) :
+class CourseView(viewsets.ViewSet):
+
+    def __validate_parameters_in_post(self, tour_id, date, places, user_sub) -> tuple[int, str]:
+        """
+            해당 함수는 post 요청이 들어왔을 때 정상적으로 파라미터가 왔는지 검사히기 위한 로직입니다.
+            1. places가 리스트 형식인지 확인
+            2. 필수 파라미터가 존재하는지 확인
+            3. 파라미터 중, date 형식이 맞는지 확인
+            4. 실제로 여행 id가 존재하는지 확인
+        """
+        if not isinstance(places, list): return 400, 'places는 리스트 형태이어야 합니다.'  # places가 리스트 형식이 아니라면
+        if not tour_id or not date or len(places) == 0: return 400, '필수 파라미터 중 일부 혹은 전체가 없습니다. tour_id, date, places를 확인해주세요.' # 파라미터를 잘못 주었을 때
+        try:
+            datetime.datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            return 400, "date의 형식이 올바르지 않습니다."
+
+        # 실제로 Travel이 존재하는지 확인합니다.
+        try:
+            travel = Travel.objects.get(id=int(tour_id), user__sub=user_sub)
+        except Travel.DoesNotExist: # travel이 존재하지 않는다면
+            return 404, '해당 여행이 존재하지 않습니다.'
+        return 200, 'Validate'
 
     def create(self, request, *args, **kwargs):  # 여행 경로 저장 API
         user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
 
         # request.data를 변경 가능한 딕셔너리로 변환
-        course_data = dict(request.data).copy()
-        tour_id = course_data.get('tour_id', None)
-        date = course_data.get('date', None)
-        places = course_data.get('places', [])
+        # 필수 파라미터 추출
+        course_data = request.data.copy()
+        tour_id = course_data.get('tour_id', None) # 여행 id
+        date = course_data.get('date', None) # 여행 날짜
+        places = course_data.get('places', []) # 장소 정보들 가져오기
 
-        # 필수 파라미터 누락 시
-        if not tour_id or not date or len(places) == 0:
+        # 파라미터 validate
+        status_code, message = self.__validate_parameters_in_post(tour_id, date, places, user_sub)
+        if status_code != 200:
             return Response({
-                "error": "400",
-                "message": "필수 파라미터 중 일부 혹은 전체가 없습니다. tour_id, date, places를 확인해주세요."
-            }, status=status.HTTP_400_BAD_REQUEST)
+                "error": status_code,
+                "message": message
+            }, status=status_code)
 
-        # 여행 존재 여부 및 권한 확인
-        try:
-            travel = Travel.objects.get(id=int(tour_id), user__sub=user_sub)
-        except Travel.DoesNotExist:
-            return Response({
-                "error": "403",
-                "message": "해당 여행이 존재하지 않거나 접근 권한이 없습니다."
-            }, status=status.HTTP_403_FORBIDDEN)
+        travel = Travel.objects.get(id=int(tour_id), user__sub=user_sub)
 
         place_results = []
 
         for place_data in places:
-            name = place_data.get('name')
-            mapX = place_data.get('mapX')
-            mapY = place_data.get('mapY')
-            image_url = place_data.get('image_url')
+            name = place_data.get('name', None)
+            mapX = place_data.get('mapX', None)
+            mapY = place_data.get('mapY', None)
+            image_url = place_data.get('image_url', None)
 
             # 장소 필수 정보 누락 시 해당 장소는 스킵
             if not name or not mapX or not mapY:
