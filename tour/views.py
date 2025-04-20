@@ -4,15 +4,11 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from usr.models import User
-from .models import Travel
-from .modules import tour_api
-from .serializers import TravelSerializer
-from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY
+from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer
+from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY, KAKAO_REST_API_KEY
 from .serializers import EventSerializer
-from .modules.tour_api import NearEventInfo
-from .services import TourApi
-from .models import Place, TravelDaysAndPlaces, PlaceImages
-from .models import Event
+from .services import TourApi, NearEventInfo, PlaceService
+from .models import Travel, Place, TravelDaysAndPlaces, PlaceImages, Event
 import datetime
 
 
@@ -241,15 +237,21 @@ class CourseView(viewsets.ViewSet):
         if not isinstance(places, list): return 400, 'places는 리스트 형태이어야 합니다.'  # places가 리스트 형식이 아니라면
         if not tour_id or not date or len(places) == 0: return 400, '필수 파라미터 중 일부 혹은 전체가 없습니다. tour_id, date, places를 확인해주세요.' # 파라미터를 잘못 주었을 때
         try:
-            datetime.datetime.strptime(date, "%Y-%m-%d")
+            tour_date = datetime.datetime.strptime(date, "%Y-%m-%d")
         except ValueError:
             return 400, "date의 형식이 올바르지 않습니다."
 
         # 실제로 Travel이 존재하는지 확인합니다.
+        travel = None
         try:
             travel = Travel.objects.get(id=int(tour_id), user__sub=user_sub)
         except Travel.DoesNotExist: # travel이 존재하지 않는다면
             return 404, '해당 여행이 존재하지 않습니다.'
+
+        end_date = datetime.datetime.strptime(str(travel.end_date), "%Y-%m-%d")
+        start_date = datetime.datetime.strptime(str(travel.start_date), "%Y-%m-%d")
+        if end_date < tour_date or start_date > tour_date: # tour_date가 등록된 여행 날짜 외라면
+            return 400, '해당 여행은 등록된 날짜의 여행 날짜 범위 외 날짜 입니다.'
         return 200, 'Validate'
 
     def create(self, request, *args, **kwargs):  # 여행 경로 저장 API
@@ -279,16 +281,23 @@ class CourseView(viewsets.ViewSet):
             mapX = place_data.get('mapX', None)
             mapY = place_data.get('mapY', None)
             image_url = place_data.get('image_url', None)
+            road_address = place_data.get('road_address', None) # 도로명 주소를 받아옵니다.
+            parcel_address = None # 지번 주소를 받아옵니다.
 
             # 장소 필수 정보 누락 시 해당 장소는 스킵
             if not name or not mapX or not mapY:
                 continue
 
             # 장소 저장 (중복 시 get)
+            place_service = PlaceService(service_key=KAKAO_REST_API_KEY)
+            if road_address is None: parcel_address, road_address = place_service.get_parcel_and_road_address(float(mapX), float(mapY))
+            else: parcel_address = place_service.get_parcel(float(mapX), float(mapY))
             place, _ = Place.objects.get_or_create(
                 name=name,
                 mapX=mapX,
-                mapY=mapY
+                mapY=mapY,
+                road_address=road_address,
+                address=parcel_address
             )
 
             # 날짜별 장소 연결 저장
@@ -309,7 +318,9 @@ class CourseView(viewsets.ViewSet):
                 "name": name,
                 "mapX": mapX,
                 "mapY": mapY,
-                "image_url": image_url
+                "image_url": image_url,
+                "road_address": road_address,
+                "parcel_address": parcel_address,
             })
 
         # 최종 응답 반환
@@ -357,7 +368,9 @@ class CourseView(viewsets.ViewSet):
                 "name": entry.place.name,
                 "mapX": entry.place.mapX,
                 "mapY": entry.place.mapY,
-                "image_url": image_url
+                "image_url": image_url,
+                "road_address": entry.place.road_address,
+                "parcel_address": entry.place.address,
             })
 
         # 응답 형태: [{ "date": "YYYY-MM-DD", "places": [...] }, ...]

@@ -16,6 +16,8 @@ class Place(models.Model):
     name = models.CharField(max_length=100) # 장소 이름, 글자 수 제한
     mapX = models.FloatField() # 소수점 표현
     mapY = models.FloatField() # 소수점 표현
+    road_address = models.TextField(blank=True, null=True) # 도로명 주소
+    address = models.TextField(blank=True, null=True) # 지번 주소
 
 class TravelDaysAndPlaces(models.Model):
     # id: pk
