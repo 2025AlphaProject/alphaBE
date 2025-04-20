@@ -237,15 +237,21 @@ class CourseView(viewsets.ViewSet):
         if not isinstance(places, list): return 400, 'places는 리스트 형태이어야 합니다.'  # places가 리스트 형식이 아니라면
         if not tour_id or not date or len(places) == 0: return 400, '필수 파라미터 중 일부 혹은 전체가 없습니다. tour_id, date, places를 확인해주세요.' # 파라미터를 잘못 주었을 때
         try:
-            datetime.datetime.strptime(date, "%Y-%m-%d")
+            tour_date = datetime.datetime.strptime(date, "%Y-%m-%d")
         except ValueError:
             return 400, "date의 형식이 올바르지 않습니다."
 
         # 실제로 Travel이 존재하는지 확인합니다.
+        travel = None
         try:
             travel = Travel.objects.get(id=int(tour_id), user__sub=user_sub)
         except Travel.DoesNotExist: # travel이 존재하지 않는다면
             return 404, '해당 여행이 존재하지 않습니다.'
+
+        end_date = datetime.datetime.strptime(str(travel.end_date), "%Y-%m-%d")
+        start_date = datetime.datetime.strptime(str(travel.start_date), "%Y-%m-%d")
+        if end_date < tour_date or start_date > tour_date: # tour_date가 등록된 여행 날짜 외라면
+            return 400, '해당 여행은 등록된 날짜의 여행 날짜 범위 외 날짜 입니다.'
         return 200, 'Validate'
 
     def create(self, request, *args, **kwargs):  # 여행 경로 저장 API
@@ -275,6 +281,7 @@ class CourseView(viewsets.ViewSet):
             mapX = place_data.get('mapX', None)
             mapY = place_data.get('mapY', None)
             image_url = place_data.get('image_url', None)
+            road_address = place_data.get('road_address', None) # 도로명 주소를 받아옵니다.
 
             # 장소 필수 정보 누락 시 해당 장소는 스킵
             if not name or not mapX or not mapY:
