@@ -230,6 +230,11 @@ class TestTour(TestCase):
         self.assertEqual(response.json()['date'], "2025-04-02")
         self.assertEqual(len(response.json()['places']), 2)
 
+        # 예외 케이스: 날짜 범위 오류
+        course_data['date'] = '2025-04-06'
+        response = self.client.post('/tour/course/', data=course_data, headers=headers, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+
         # 3️⃣ 예외 케이스: 필수 필드 누락 (date 없음)
         bad_data = {
             "tour_id": tour_id,
