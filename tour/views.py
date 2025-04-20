@@ -4,10 +4,10 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from usr.models import User
-from .serializers import TravelSerializer
-from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY
+from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer
+from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY, KAKAO_REST_API_KEY
 from .serializers import EventSerializer
-from .services import TourApi, NearEventInfo
+from .services import TourApi, NearEventInfo, PlaceService
 from .models import Travel, Place, TravelDaysAndPlaces, PlaceImages, Event
 import datetime
 
@@ -282,16 +282,22 @@ class CourseView(viewsets.ViewSet):
             mapY = place_data.get('mapY', None)
             image_url = place_data.get('image_url', None)
             road_address = place_data.get('road_address', None) # 도로명 주소를 받아옵니다.
+            parcel_address = None # 지번 주소를 받아옵니다.
 
             # 장소 필수 정보 누락 시 해당 장소는 스킵
             if not name or not mapX or not mapY:
                 continue
 
             # 장소 저장 (중복 시 get)
+            place_service = PlaceService(service_key=KAKAO_REST_API_KEY)
+            if road_address is None: parcel_address, road_address = place_service.get_parcel_and_road_address(float(mapX), float(mapY))
+            else: parcel_address = place_service.get_parcel(float(mapX), float(mapY))
             place, _ = Place.objects.get_or_create(
                 name=name,
                 mapX=mapX,
-                mapY=mapY
+                mapY=mapY,
+                road_address=road_address,
+                address=parcel_address
             )
 
             # 날짜별 장소 연결 저장
@@ -312,7 +318,9 @@ class CourseView(viewsets.ViewSet):
                 "name": name,
                 "mapX": mapX,
                 "mapY": mapY,
-                "image_url": image_url
+                "image_url": image_url,
+                "road_address": road_address,
+                "parcel_address": parcel_address,
             })
 
         # 최종 응답 반환
@@ -360,7 +368,9 @@ class CourseView(viewsets.ViewSet):
                 "name": entry.place.name,
                 "mapX": entry.place.mapX,
                 "mapY": entry.place.mapY,
-                "image_url": image_url
+                "image_url": image_url,
+                "road_address": entry.place.road_address,
+                "parcel_address": entry.place.address,
             })
 
         # 응답 형태: [{ "date": "YYYY-MM-DD", "places": [...] }, ...]
