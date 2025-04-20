@@ -1,6 +1,5 @@
 from rest_framework import serializers
-from .models import Travel
-from .models import Event
+from .models import Travel, Place, Event
 from usr.serializers import UserSerializer
 
 class TravelSerializer(serializers.ModelSerializer):
@@ -19,4 +18,12 @@ class TravelSerializer(serializers.ModelSerializer):
 class EventSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
+        fields = '__all__'
+
+class PlaceSerializer(serializers.ModelSerializer):
+    """
+        해당 시리얼라이저는 장소 정보를 불러오거나 추가, 삭제를 진행할 때 사용합니다.
+    """
+    class Meta:
+        model = Place
         fields = '__all__'
