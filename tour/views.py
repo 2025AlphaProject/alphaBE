@@ -25,24 +25,14 @@ class TravelViewSet(viewsets.ModelViewSet):
         # travel_data["user"] = user_sub # 다대일 관계시 유저 추가
 
         serializer = self.get_serializer(data=travel_data)  # 수정된 데이터로 serializer 초기화
+        serializer.is_valid(raise_exception=True)
+        travel = serializer.save()  # ORM을 이용해 저장
+        travel.user.add(User.objects.get(sub=user_sub))  # 다대 다 관계시 유저 추가
+        data = self.get_serializer(travel).data
 
-        if serializer.is_valid():  # 데이터에 모든 필드가 다 있을 때 실행되는 조건문
-            travel = serializer.save()  # ORM을 이용해 저장
-            travel.user.add(User.objects.get(sub=user_sub)) # 다대 다 관계시 유저 추가
+        # json 응답을 반환
+        return Response(data, status=status.HTTP_201_CREATED)
 
-            # json 응답을 반환
-            return Response({
-                "tour_id": travel.id,
-                "tour_name": travel.tour_name,
-                "start_date": str(travel.start_date),
-                "end_date": str(travel.end_date)
-            }, status=status.HTTP_201_CREATED)
-
-        # 데이터가 일부 누락되었을 때
-        return Response({
-            "error": "400",
-            "message": "필수 파라미터 중 일부 혹은 전체가 없습니다. 필수 파라미터 목록을 확인해주세요"
-        }, status=status.HTTP_400_BAD_REQUEST)
 
     def list(self, request, *args, **kwargs):  # 리스트 조회 API
         user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
