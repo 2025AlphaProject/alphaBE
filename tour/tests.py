@@ -95,6 +95,14 @@ class TestTour(TestCase):
         response = self.client.post(uri, data, headers=headers, content_type='application/json')
         self.assertEqual(response.status_code, 201)
 
+        # create test - Exception Test
+        exception_data = {
+            'id': 1,
+            'start_date': '2025-0310',
+        }
+        response = self.client.post(uri, exception_data, headers=headers, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+
         # 인스턴스 임의로 하나 더 생성
         data['tour_name'] = '태근이의 여행2'
         response = self.client.post(uri, data, headers=headers, content_type='application/json')
@@ -204,7 +212,7 @@ class TestTour(TestCase):
         }
         create_response = self.client.post('/tour/', data=travel_data, headers=headers, content_type='application/json')
         self.assertEqual(create_response.status_code, 201)
-        tour_id = create_response.json()['tour_id']
+        tour_id = create_response.json()['id']
 
         # 2️⃣ 정상적인 코스 저장 요청
         course_data = {
@@ -286,7 +294,7 @@ class TestTour(TestCase):
         self.assertEqual(create_response.status_code, 201)
 
         # 생성된 여행의 ID 가져오기
-        tour_id = create_response.json()['tour_id']
+        tour_id = create_response.json()['id']
 
         # 삭제 요청
         delete_endpoint = f'/tour/course/{tour_id}/'
@@ -313,7 +321,7 @@ class TestTour(TestCase):
         }
         create_response = self.client.post('/tour/', data=travel_data, headers=headers, content_type='application/json')
         self.assertEqual(create_response.status_code, 201)
-        tour_id = create_response.json()['tour_id']
+        tour_id = create_response.json()['id']
 
         # 2️⃣ 경로 저장
         course_data = {
