@@ -30,7 +30,7 @@ jobs:
         python -m pip install --upgrade pip
         grep -v '^Django==' requirements.txt > temp_requirements.txt
         pip install -r temp_requirements.txt
-        pip install Django==5.1.4
+        pip install Django==4.2.20
     - name: Create .env file from secrets
       run: |
         echo "${{ secrets.ENV_FILE }}" > .env
