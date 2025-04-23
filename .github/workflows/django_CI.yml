@@ -32,6 +32,7 @@ jobs:
         pip install -r temp_requirements.txt
         pip install Django==4.2.20
         pip install django-environ
+        pip install django-cors-headers
     - name: Create .env file from secrets
       run: |
         echo "${{ secrets.ENV_FILE }}" > .env
