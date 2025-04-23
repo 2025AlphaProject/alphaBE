@@ -31,6 +31,7 @@ jobs:
         grep -v '^Django==' requirements.txt > temp_requirements.txt
         pip install -r temp_requirements.txt
         pip install Django==4.2.20
+        pip install django-environ
     - name: Create .env file from secrets
       run: |
         echo "${{ secrets.ENV_FILE }}" > .env
