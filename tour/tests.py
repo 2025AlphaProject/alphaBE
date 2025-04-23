@@ -1,5 +1,5 @@
 from django.test import TestCase
-from config.settings import PUBLIC_DATA_PORTAL_API_KEY, KAKAO_TEST_ACCESS_TOKEN  # 공공 데이터 포탈 앱 키
+from config.settings import PUBLIC_DATA_PORTAL_API_KEY, KAKAO_REFRESH_TOKEN, KAKAO_REST_API_KEY  # 공공 데이터 포탈 앱 키
 from .modules.tour_api import (
     TourApi,
     MobileOS,
@@ -10,11 +10,21 @@ from .modules.tour_api import (
 )
 from usr.models import User
 from .models import Travel
+from authenticate.services import KakaoTokenService
 
 # Create your tests here.
 
 class TestTour(TestCase):
     def setUp(self):
+        token_service = KakaoTokenService()
+        data = {
+            'grant_type': 'refresh_token',
+            'client_id': KAKAO_REST_API_KEY,
+            'refresh_token': KAKAO_REFRESH_TOKEN,
+        }
+        token_service.get_kakao_token_response(data)
+        self.KAKAO_TEST_ACCESS_TOKEN = token_service.access_token
+        self.KAKAO_TEST_ID_TOKEN = token_service.id_token
         # 유저 정보 임의 생성
         user = User.objects.create(
             sub=3935716527,
@@ -80,7 +90,7 @@ class TestTour(TestCase):
     def test_travel_api(self):
         uri = '/tour/'
         headers = {
-            'Authorization': f'Bearer {KAKAO_TEST_ACCESS_TOKEN}',
+            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
         }
         data = {
             'tour_name': '태근이의 여행',
@@ -145,7 +155,7 @@ class TestTour(TestCase):
     def test_add_traveler(self):
         end_point = '/tour/'
         headers = {
-            'Authorization': f'Bearer {KAKAO_TEST_ACCESS_TOKEN}',
+            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
         }
         data = {
             'tour_name': '태근이의 여행',
@@ -203,7 +213,7 @@ class TestTour(TestCase):
 
         # 1️⃣ 여행 생성
         headers = {
-            'Authorization': f'Bearer {KAKAO_TEST_ACCESS_TOKEN}',
+            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
         }
         travel_data = {
             'tour_name': '테스트 여행',
@@ -279,7 +289,7 @@ class TestTour(TestCase):
         해당 테스트는 내 여행 경로 삭제 API를 검증합니다.
         """
         headers = {
-            'Authorization': f'Bearer {KAKAO_TEST_ACCESS_TOKEN}',
+            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
         }
 
         # 여행 생성
@@ -312,7 +322,7 @@ class TestTour(TestCase):
 
         # 1️⃣ 여행 생성
         headers = {
-            'Authorization': f'Bearer {KAKAO_TEST_ACCESS_TOKEN}',
+            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
         }
         travel_data = {
             'tour_name': '조회용 여행',
@@ -370,7 +380,7 @@ class TestTour(TestCase):
         # 여행 생성
         create_endpoint = '/tour/'
         headers = {
-            'Authorization': f'Bearer {KAKAO_TEST_ACCESS_TOKEN}',
+            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
         }
         travel_data = {
             'tour_name': '경로 테스트 여행',
