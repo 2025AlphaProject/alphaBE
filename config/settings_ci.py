@@ -1,4 +1,4 @@
-import settings
+import config.settings
 
 # 깃허브 ci 테스트를 위해 아래와 같이 DB를 설정합니다.
 DATABASES = {
