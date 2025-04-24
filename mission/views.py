@@ -8,6 +8,7 @@ from tour.models import TravelDaysAndPlaces, Place
 from .services import ImageSimilarity
 import math
 import random
+from tour.services import NearEventInfo
 
 # Create your views here.
 class MissionListView(viewsets.ModelViewSet):
@@ -75,8 +76,8 @@ class MissionCheckCompleteView(viewsets.ViewSet):
             user_lat = float(user_lat)
             user_lng = float(user_lng)
 
-            # 거리 계산
-            distance = self._haversine_distance(user_lat, user_lng, place_lat, place_lng)
+            # 거리 계산, 기존에 있던 모듈 사용
+            distance = NearEventInfo.haversine(user_lat, user_lng, place_lat, place_lng)
             location_pass = distance <= 200.0
 
             # 이미지 유사도 검사
@@ -101,19 +102,6 @@ class MissionCheckCompleteView(viewsets.ViewSet):
         except Exception as e:
             return Response({"error": "서버 오류가 발생했습니다."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def _haversine_distance(self, lat1, lon1, lat2, lon2):
-        """
-        두 GPS 좌표 사이의 거리 계산 (미터)
-        """
-        R = 6371000  # 지구 반지름 (m)
-        phi1 = math.radians(lat1)
-        phi2 = math.radians(lat2)
-        d_phi = math.radians(lat2 - lat1)
-        d_lambda = math.radians(lon2 - lon1)
-
-        a = math.sin(d_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
-        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-        return R * c
 
 class RandomMissionCreateView(viewsets.ViewSet):
     """

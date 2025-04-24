@@ -9,7 +9,7 @@ urlpatterns = [
 
     path('<int:pk>/', TravelViewSet.as_view({
         'get': 'retrieve',
-        'put': 'update',
+        'put': 'partial_update',
         'delete': 'destroy'
     }), name='travel-detail'),
 

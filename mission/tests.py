@@ -1,12 +1,22 @@
 from mission.models import Mission
 from tour.models import Place
-from config.settings import KAKAO_TEST_ACCESS_TOKEN
+from config.settings import KAKAO_REFRESH_TOKEN, KAKAO_REST_API_KEY
 from django.test import TestCase
 from usr.models import User
+from authenticate.services import KakaoTokenService
 
 
 class TestMission(TestCase):
     def setUp(self):
+        token_service = KakaoTokenService()
+        data = {
+            'grant_type': 'refresh_token',
+            'client_id': KAKAO_REST_API_KEY,
+            'refresh_token': KAKAO_REFRESH_TOKEN,
+        }
+        token_service.get_kakao_token_response(data)
+        self.KAKAO_TEST_ACCESS_TOKEN = token_service.access_token
+        self.KAKAO_TEST_ID_TOKEN = token_service.id_token
         # 유저 정보 임의 생성
         user = User.objects.create(
             sub=3935716527,
@@ -37,7 +47,6 @@ class TestMission(TestCase):
         end_point = '/mission/list/'
         response = self.client.get(end_point)
         self.assertEqual(response.status_code, 200)
-        print(response.json())
 
     def test_mission_random_create_api(self):
         """
@@ -46,7 +55,7 @@ class TestMission(TestCase):
         url = '/mission/random/'
 
         headers = {
-            'Authorization': f'Bearer {KAKAO_TEST_ACCESS_TOKEN}',
+            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
         }
 
         data = {
@@ -61,5 +70,3 @@ class TestMission(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertIn("missions", response.json())
         self.assertEqual(len(response.json()["missions"]), 2)
-
-        print("랜덤 미션 생성 응답:", response.json())

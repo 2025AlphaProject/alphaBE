@@ -4,15 +4,12 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from usr.models import User
-from .models import Travel
-from .modules import tour_api
-from .serializers import TravelSerializer
-from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY
+from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer
+from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY, KAKAO_REST_API_KEY
 from .serializers import EventSerializer
-from .modules.tour_api import NearEventInfo
-from .services import TourApi
-from .models import Place, TravelDaysAndPlaces, PlaceImages
-from .models import Event
+from .services import TourApi, NearEventInfo, PlaceService
+from .models import Travel, Place, TravelDaysAndPlaces, PlaceImages, Event
+import datetime
 
 
 class TravelViewSet(viewsets.ModelViewSet):
@@ -28,105 +25,14 @@ class TravelViewSet(viewsets.ModelViewSet):
         # travel_data["user"] = user_sub # 다대일 관계시 유저 추가
 
         serializer = self.get_serializer(data=travel_data)  # 수정된 데이터로 serializer 초기화
-
-        if serializer.is_valid():  # 데이터에 모든 필드가 다 있을 때 실행되는 조건문
-            travel = serializer.save()  # ORM을 이용해 저장
-            travel.user.add(User.objects.get(sub=user_sub)) # 다대 다 관계시 유저 추가
-
-            # json 응답을 반환
-            return Response({
-                "tour_id": travel.id,
-                "tour_name": travel.tour_name,
-                "start_date": str(travel.start_date),
-                "end_date": str(travel.end_date)
-            }, status=status.HTTP_201_CREATED)
-
-        # 데이터가 일부 누락되었을 때
-        return Response({
-            "error": "400",
-            "message": "필수 파라미터 중 일부 혹은 전체가 없습니다. 필수 파라미터 목록을 확인해주세요"
-        }, status=status.HTTP_400_BAD_REQUEST)
-
-    def list(self, request, *args, **kwargs):  # 리스트 조회 API
-        user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
-        queryset = self.get_queryset().filter(user=user_sub)  # 로그인한 사용자의 여행만 조회
-        serializer = self.get_serializer(queryset, many=True)
+        serializer.is_valid(raise_exception=True)
+        travel = serializer.save()  # ORM을 이용해 저장
+        travel.user.add(User.objects.get(sub=user_sub))  # 다대 다 관계시 유저 추가
+        data = self.get_serializer(travel).data
 
         # json 응답을 반환
-        response_data = [
-            {
-                "tour_id": travel["id"],
-                "tour_name": travel["tour_name"],
-                "start_date": travel["start_date"],
-                "end_date": travel["end_date"]
-            } for travel in serializer.data
-        ]
+        return Response(data, status=status.HTTP_201_CREATED)
 
-        return Response(response_data, status=status.HTTP_200_OK)
-
-    def retrieve(self, request, *args, **kwargs):  # 내 여행 가져오기(하나만) API
-        user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
-        tour_id = kwargs.get('pk')
-
-        try:
-            travel = Travel.objects.get(id=tour_id, user=user_sub)  # 로그인한 사용자의 여행인지 확인
-        except Travel.DoesNotExist:
-            return Response({
-                "error": "404",
-                "message": "해당 여행 ID가 존재하지 않거나, 접근 권한이 없습니다."
-            }, status=status.HTTP_404_NOT_FOUND)
-
-        return Response({
-            "tour_id": travel.id,
-            "tour_name": travel.tour_name,
-            "start_date": str(travel.start_date),
-            "end_date": str(travel.end_date)
-        }, status=status.HTTP_200_OK)
-
-    def update(self, request, *args, **kwargs):  # 여행 정보 수정 API
-        user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
-        tour_id = kwargs.get('pk')
-
-        try:
-            travel = Travel.objects.get(id=tour_id, user=user_sub)  # 로그인한 사용자의 여행인지 확인
-        except Travel.DoesNotExist:
-            return Response({
-                "error": "404",
-                "message": "해당 여행 ID가 존재하지 않거나, 접근 권한이 없습니다."
-            }, status=status.HTTP_404_NOT_FOUND)
-
-        data = request.data  # 수정할 데이터 가져오기
-
-        if "tour_name" in data:
-            travel.tour_name = data["tour_name"]
-        if "start_date" in data:
-            travel.start_date = data["start_date"]
-        if "end_date" in data:
-            travel.end_date = data["end_date"]
-
-        travel.save()  # 변경 사항 저장
-
-        return Response({
-            "tour_id": travel.id,
-            "tour_name": travel.tour_name,
-            "start_date": str(travel.start_date),
-            "end_date": str(travel.end_date)
-        }, status=status.HTTP_200_OK)
-
-    def destroy(self, request, *args, **kwargs):  # 여행 삭제 API
-        user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
-        tour_id = kwargs.get('pk')
-
-        try:
-            travel = Travel.objects.get(id=tour_id, user=user_sub)  # 로그인한 사용자의 여행인지 확인
-        except Travel.DoesNotExist:
-            return Response({
-                "error": "404",
-                "message": "해당 여행 ID가 존재하지 않거나, 접근 권한이 없습니다."
-            }, status=status.HTTP_404_NOT_FOUND)
-
-        travel.delete()  # 여행 데이터 삭제
-        return Response(status=status.HTTP_204_NO_CONTENT)  # 204 No Content 응답 반환
       
 class NearEventView(viewsets.ModelViewSet):
     serializer_class =  EventSerializer# 이벤트 시리얼라이저 GET
@@ -227,50 +133,80 @@ class Sido_list(viewsets.ViewSet):
 
 
 
-class CourseView(viewsets.ViewSet) :
+class CourseView(viewsets.ViewSet):
+
+    def __validate_parameters_in_post(self, tour_id, date, places, user_sub) -> tuple[int, str]:
+        """
+            해당 함수는 post 요청이 들어왔을 때 정상적으로 파라미터가 왔는지 검사히기 위한 로직입니다.
+            1. places가 리스트 형식인지 확인
+            2. 필수 파라미터가 존재하는지 확인
+            3. 파라미터 중, date 형식이 맞는지 확인
+            4. 실제로 여행 id가 존재하는지 확인
+        """
+        if not isinstance(places, list): return 400, 'places는 리스트 형태이어야 합니다.'  # places가 리스트 형식이 아니라면
+        if not tour_id or not date or len(places) == 0: return 400, '필수 파라미터 중 일부 혹은 전체가 없습니다. tour_id, date, places를 확인해주세요.' # 파라미터를 잘못 주었을 때
+        try:
+            tour_date = datetime.datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            return 400, "date의 형식이 올바르지 않습니다."
+
+        # 실제로 Travel이 존재하는지 확인합니다.
+        travel = None
+        try:
+            travel = Travel.objects.get(id=int(tour_id), user__sub=user_sub)
+        except Travel.DoesNotExist: # travel이 존재하지 않는다면
+            return 404, '해당 여행이 존재하지 않습니다.'
+
+        end_date = datetime.datetime.strptime(str(travel.end_date), "%Y-%m-%d")
+        start_date = datetime.datetime.strptime(str(travel.start_date), "%Y-%m-%d")
+        if end_date < tour_date or start_date > tour_date: # tour_date가 등록된 여행 날짜 외라면
+            return 400, '해당 여행은 등록된 날짜의 여행 날짜 범위 외 날짜 입니다.'
+        return 200, 'Validate'
 
     def create(self, request, *args, **kwargs):  # 여행 경로 저장 API
         user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
 
         # request.data를 변경 가능한 딕셔너리로 변환
-        course_data = dict(request.data).copy()
-        tour_id = course_data.get('tour_id', None)
-        date = course_data.get('date', None)
-        places = course_data.get('places', [])
+        # 필수 파라미터 추출
+        course_data = request.data.copy()
+        tour_id = course_data.get('tour_id', None) # 여행 id
+        date = course_data.get('date', None) # 여행 날짜
+        places = course_data.get('places', []) # 장소 정보들 가져오기
 
-        # 필수 파라미터 누락 시
-        if not tour_id or not date or len(places) == 0:
+        # 파라미터 validate
+        status_code, message = self.__validate_parameters_in_post(tour_id, date, places, user_sub)
+        if status_code != 200:
             return Response({
-                "error": "400",
-                "message": "필수 파라미터 중 일부 혹은 전체가 없습니다. tour_id, date, places를 확인해주세요."
-            }, status=status.HTTP_400_BAD_REQUEST)
+                "error": status_code,
+                "message": message
+            }, status=status_code)
 
-        # 여행 존재 여부 및 권한 확인
-        try:
-            travel = Travel.objects.get(id=int(tour_id), user__sub=user_sub)
-        except Travel.DoesNotExist:
-            return Response({
-                "error": "403",
-                "message": "해당 여행이 존재하지 않거나 접근 권한이 없습니다."
-            }, status=status.HTTP_403_FORBIDDEN)
+        travel = Travel.objects.get(id=int(tour_id), user__sub=user_sub)
 
         place_results = []
 
         for place_data in places:
-            name = place_data.get('name')
-            mapX = place_data.get('mapX')
-            mapY = place_data.get('mapY')
-            image_url = place_data.get('image_url')
+            name = place_data.get('name', None)
+            mapX = place_data.get('mapX', None)
+            mapY = place_data.get('mapY', None)
+            image_url = place_data.get('image_url', None)
+            road_address = place_data.get('road_address', None) # 도로명 주소를 받아옵니다.
+            parcel_address = None # 지번 주소를 받아옵니다.
 
             # 장소 필수 정보 누락 시 해당 장소는 스킵
             if not name or not mapX or not mapY:
                 continue
 
             # 장소 저장 (중복 시 get)
+            place_service = PlaceService(service_key=KAKAO_REST_API_KEY)
+            if road_address is None: parcel_address, road_address = place_service.get_parcel_and_road_address(float(mapX), float(mapY))
+            else: parcel_address = place_service.get_parcel(float(mapX), float(mapY))
             place, _ = Place.objects.get_or_create(
                 name=name,
                 mapX=mapX,
-                mapY=mapY
+                mapY=mapY,
+                road_address=road_address,
+                address=parcel_address
             )
 
             # 날짜별 장소 연결 저장
@@ -291,7 +227,9 @@ class CourseView(viewsets.ViewSet) :
                 "name": name,
                 "mapX": mapX,
                 "mapY": mapY,
-                "image_url": image_url
+                "image_url": image_url,
+                "road_address": road_address,
+                "parcel_address": parcel_address,
             })
 
         # 최종 응답 반환
@@ -339,7 +277,9 @@ class CourseView(viewsets.ViewSet) :
                 "name": entry.place.name,
                 "mapX": entry.place.mapX,
                 "mapY": entry.place.mapY,
-                "image_url": image_url
+                "image_url": image_url,
+                "road_address": entry.place.road_address,
+                "parcel_address": entry.place.address,
             })
 
         # 응답 형태: [{ "date": "YYYY-MM-DD", "places": [...] }, ...]
