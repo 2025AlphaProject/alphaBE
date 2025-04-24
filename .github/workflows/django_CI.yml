@@ -2,9 +2,9 @@ name: Django CI
 
 on:
   push:
-    branches: [ "master", "develop" ]
+    branches: [ "master", "develop", "feature/#82-autoCD" ]
   pull_request:
-    branches: [ "master", "develop" ]
+    branches: [ "master", "develop", "feature/#82-autoCD" ]
 
 jobs:
   build:
