@@ -58,6 +58,8 @@ class KakaoTokenService:
         if response.status_code == 200:
             self.save_object_property(response)
             return response.status_code, response.json()
+        self.response = response.json()
+        self.status_code = response.status_code
         return response.status_code, response.text
 
     def save_object_property(self, response):
