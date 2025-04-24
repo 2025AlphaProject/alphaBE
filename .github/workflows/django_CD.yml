@@ -1,0 +1,40 @@
+name: Django CI
+
+on:
+  push:
+    branches: [ "master", "develop", "feature/#82-autoCD" ]
+  pull_request:
+    branches: [ "master", "develop", "feature/#82-autoCD" ]
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Copy docker-compose.yml to ec2
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{secrets.HOST}}
+          username: ${{secrets.USERNAME}}
+          key: ${{secrets.KEY}}
+          port: '22'
+          source: "./docker-compose.yml"
+          target: "~"
+      - name: SSH and run docker-compose
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: 22
+          script: |
+            cd ~
+            docker-compose pull
+            docker-compose down
+            docker-compose up -d --build
+      
+
+            
