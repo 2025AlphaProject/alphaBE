@@ -37,4 +37,4 @@ jobs:
         echo "${{ secrets.ENV_FILE }}" > .env
     - name: Run Tests
       run: |
-        python manage.py test --settings=config.settings_ci.py
+        python manage.py test --settings=config.settings_ci
