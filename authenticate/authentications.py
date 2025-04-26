@@ -14,7 +14,6 @@ class CustomAuthentication(BaseAuthentication):
     def authenticate(self, request):
         auth_header = request.headers.get('Authorization') # Authorization 헤더 정보를 얻습니다.
         if not auth_header:
-            logger.info('Anonymous User attempting to access backend Api')
             return None # None으로 반환하는 경우 Django의 AnonymousUser로 인식됩니다.
 
         try:
@@ -30,7 +29,7 @@ class CustomAuthentication(BaseAuthentication):
         try:
             sub = payload['id']
             user = User.objects.get(sub=sub)
-            logger.info('Registered User attempting to access backend Api')
+            logger.info(f'username: {user.username}(sub: {sub}) User attempting to access backend Api')
             return user, access_token
         except User.DoesNotExist: # 사용자 정보가 없을 경우
             logger.info('New User attempting to access backend Api')
