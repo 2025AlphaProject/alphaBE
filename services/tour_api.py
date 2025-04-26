@@ -217,7 +217,7 @@ class TourApi:
         parameters['numOfRows'] = 30 # 디폴트로 30개로 제한
         return parameters
 
-    def get_sigungu_code_list(self, areaCode):
+    def get_sigungu_code_list(self, areaCode=None):
         """
         각 시/도 내의 세부 지역 코드를 가져옵니다.
         :param areaCode: 지역 번호를 의미합니다. AreaCode enum 사용가능
@@ -226,7 +226,8 @@ class TourApi:
         uri = '/areaCode1'
         parameters = self.__upload_required_params()
         parameters['numOfRows'] = 100 # 한번에 100개의 정보를 보여줍니다.
-        parameters['areaCode'] = areaCode.value if isinstance(areaCode, Enum) else areaCode
+        if areaCode is not None:
+            parameters['areaCode'] = areaCode.value if isinstance(areaCode, Enum) else areaCode
         response = requests.get(BASE_URL + uri, params=parameters)
         if response.status_code == 200:
             if response.json()['response']['body']['totalCount'] == 0: # 컨텐츠가 없으면 빈 리스트 반환

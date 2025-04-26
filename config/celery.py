@@ -1,6 +1,9 @@
 import os
 
 from celery import Celery
+import logging
+from config.settings import APP_LOGGER
+logger = logging.getLogger(APP_LOGGER)
 
 # 장고 환경 설정을 불러들입니다.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
@@ -16,4 +19,4 @@ app.autodiscover_tasks()
 
 @app.task(bind=True, ignore_result=True)
 def debug_task(self):
-    print(f'Request: {self.request!r}') # 로그를 발생시킵니다.
+    logger.info(f'Request: {self.request!r}') # 로그를 발생시킵니다.

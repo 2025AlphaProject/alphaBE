@@ -12,3 +12,5 @@ db.sqlite3
 *.bak
 *.dat
 *.dir
+# 로그파일 무시
+*.log

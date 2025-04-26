@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os, environ
+from datetime import timedelta
+import logging
 
 # .env 파일을 읽기 위한 객체 생성
 env = environ.Env()
@@ -31,13 +33,19 @@ KAKAO_TEST_ID_TOKEN = env('KAKAO_TEST_ID_TOKEN')
 KAKAO_TEST_ACCESS_TOKEN = env('KAKAO_TEST_ACCESS_TOKEN') # 카카오 테스트 액세스 토큰을 가져옵니다.
 PUBLIC_DATA_PORTAL_API_KEY = env('PUBLIC_DATA_PORTAL_API_KEY') # 공공 데이터 포탈 서비스 키입니다.
 SEOUL_PUBLIC_DATA_SERVICE_KEY = env('SEOUL_PUBLIC_DATA_SERVICE_KEY') # 서울 열린데이터 광장 서비스 키
+KAKAO_TEST_REST_API_KEY = env('KAKAO_TEST_REST_API_KEY') # 카카오 임시 api 키
+KAKAO_TEST_NATIVE_API_KEY = env('KAKAO_TEST_NATIVE_API_KEY')
+KAKAO_REAL_REST_API_KEY = env('KAKAO_REAL_REST_API_KEY') # 카카오 실제 rest api 키
+KAKAO_REAL_NATIVE_API_KEY = env('KAKAO_REAL_NATIVE_API_KEY') # 카카오 실제 native api 키
+# 아래는 매 실행마다 코드를 변경해줘야하는 테스트 코드를 임의로 차단하기 위한 환경변수 입니다.
+SKIP_TEST = env('SKIP_TEST')
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ppdx8t7r7ys%84627-7v9st+7+-@js620k#9ivbhc2)#0g-rhd'
+SECRET_KEY = env('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -61,6 +69,8 @@ INSTALLED_APPS = [
     'usr',
     'tour',
     'mission',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist', # 토큰 블랙리스트 위해 필요
     'channels',
     'storages',
 ]
@@ -83,6 +93,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'middleware.request_logger.RequestLogMiddleware',
 ]
 
 # TODO 특정 호스트만 접속하도록 허용할것
@@ -218,3 +229,84 @@ STORAGES = {
         "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
     }
 }
+
+# simple jwt setting
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1), # 토큰 유효시간 설정 1시간으로 설정
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=5), # 리프레시 토큰 유효기간 설정 리프레시 토큰 유효기간은 5일로 설정
+    "ROTATE_REFRESH_TOKENS": True, # 리프레시 토큰도 같이 반환됩니다.
+    "BLACKLIST_AFTER_ROTATION": True, # 이전 토큰 블랙리스트 적용, 사용시 설치앱에 rest_framework_simplejwt.token_blacklist 추가 필요
+    "UPDATE_LAST_LOGIN": False, # last_login field가 업데이트 됩니다. (커스텀 모델이라 X)
+
+    "ALGORITHM": "HS256", # 암호화 알고리즘
+    "SIGNING_KEY": SECRET_KEY, # 장고 자체의 시크릿 키로 signing key 지정
+    "VERIFYING_KEY": "",
+    "AUDIENCE": None,
+    "ISSUER": None, # 토큰 발급자 명시
+    "JSON_ENCODER": None,
+    "JWK_URL": None,
+    "LEEWAY": 0,
+
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
+    "USER_ID_FIELD": "sub", # User 모델에서 사용자 ID로 사용할 필드명을 지정합니다.
+    "USER_ID_CLAIM": "sub", # JWT 토큰 내에 포함될 사용자 ID의 클레임 이름을 지정합니다.
+    "USER_AUTHENTICATION_RULE": "rest_framework_simplejwt.authentication.default_user_authentication_rule",
+
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+    "TOKEN_TYPE_CLAIM": "token_type", # 토큰 타입을 말하며, access, refresh, sliding 토큰을 받습니다.
+    "TOKEN_USER_CLASS": "rest_framework_simplejwt.models.TokenUser",
+
+    "JTI_CLAIM": "jti",
+
+    "SLIDING_TOKEN_REFRESH_EXP_CLAIM": "refresh_exp",
+    "SLIDING_TOKEN_LIFETIME": timedelta(minutes=5),
+    "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
+
+    "TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainPairSerializer",
+    "TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSerializer",
+    "TOKEN_VERIFY_SERIALIZER": "rest_framework_simplejwt.serializers.TokenVerifySerializer",
+    "TOKEN_BLACKLIST_SERIALIZER": "rest_framework_simplejwt.serializers.TokenBlacklistSerializer",
+    "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainSlidingSerializer",
+    "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
+}
+
+# 아래는 로그 설정입니다.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False, # 기본 로거 설정 유지
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{', # str.format
+        },
+        'simple': {
+            'format': '{name} {levelname} {asctime} {message}',
+            'style': '{',
+        }
+    },
+    'handlers': { # 로그 핸들러 설정
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'info.log',
+            'formatter': 'verbose',
+            'encoding': 'utf-8'
+        }
+    },
+    'loggers': { # 로거 설정, 실제 get_logger를 이용하여 로그 설정 가져옴
+        'django': { # 실제 배포 환경에서 사용하는 로거
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'django_debug': { # 디버그시 사용하는 로거
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        }
+    }
+}
+
+# 앱 기본 로거 설정
+APP_LOGGER='django'

@@ -1,7 +1,25 @@
+from django.core.exceptions import ValidationError
+
 from .models import User
-from config.settings import KAKAO_ADMIN_KEY
+from config.settings import (
+    KAKAO_ADMIN_KEY,
+    KAKAO_TEST_REST_API_KEY,
+    KAKAO_TEST_NATIVE_API_KEY,
+    KAKAO_REAL_REST_API_KEY,
+    KAKAO_REAL_NATIVE_API_KEY,
+)
 import requests
 import jwt
+import base64
+import json
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+from authenticate.models import OIDC
+
+from config.settings import APP_LOGGER
+import logging
+logger = logging.getLogger(APP_LOGGER)
 
 
 
@@ -19,11 +37,97 @@ class UserService:
         해당 함수는 유저 서비스 객체가 생성될 때 자동으로 실행되는 함수입니다.
         :param id_token: 회원 정보가 들어있는 아이디 토큰입니다.
         """
-        payload = jwt.decode(id_token, options={"verify_signature": False})
+        # payload = jwt.decode(id_token, options={"verify_signature": False})
+        payload = self.__validate_id_token(id_token)
         self.sub = payload.get('sub', None) # 회원 번호 저장
         if self.sub is None:
             raise Exception("토큰 내 회원정보 일부가 존재하지 않습니다.")
         self.user = self.get_user() # 함수를 이용해서 유저를 가져옵니다.
+
+    def __jwt_to_pem(self, n, e):
+        """
+        해당 함수는 Base64 URL safe 인코딩된 값이므로 이를 디코딩하여 pem 형식으로 변환
+        """
+        n = int.from_bytes(base64.urlsafe_b64decode(n + '=='), 'big')
+        e = int.from_bytes(base64.urlsafe_b64decode(e + '=='), 'big')
+        public_key = rsa.RSAPublicNumbers(e, n).public_key(default_backend())
+        return public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo)
+
+    def __validate_id_token(self, id_token):
+        """
+        해당 함수는 id_token을 검증하기 위한 함수입니다.
+        """
+        # id 토큰에서 헤더 정보만 분리
+        header = id_token.split('.')[0]
+        # 헤더에서 kid 부분만 분리
+        header = json.loads(base64.b64decode(header).decode('utf-8'))
+        kid = header['kid']
+        # OIDC api 통해서 공개키 목록 조회
+        # 일치하는 공개키를 찾아서 시크릿 키로 지정
+        key = self.__get_public_pem_key(kid)
+        # jwt 토큰 유효성 검증
+        payload = jwt.decode(id_token, key, algorithms=['RS256'],
+                             options={
+                                 "verify_aud": False,
+                                 "verify_iat": False, # 서버 시간과 미세하게 일치하지 않아 발생하는 오류를 무시합니다.
+                             })
+        payload = self.__validate_payload(payload)
+        return payload
+
+    def __validate_payload(self, payload):
+        """
+        해당 함수는 페이로드의 키별 값을 검증합니다.
+        iss: https://kauth.kakao.com
+        aud: 서비스 앱 키와 일치해야함
+        """
+        valid_aud_list = [
+            KAKAO_TEST_REST_API_KEY,
+            KAKAO_TEST_NATIVE_API_KEY,
+            KAKAO_REAL_REST_API_KEY,
+            KAKAO_REAL_NATIVE_API_KEY,
+        ]
+        iss = payload['iss']
+        aud = payload['aud']
+        if iss != 'https://kauth.kakao.com':
+            return ValidationError('issuer information is invalid')
+        if aud not in valid_aud_list:
+            return ValidationError('application key is invalid')
+        return payload
+
+    def __download_oidc(self):
+        """
+        oidc 코드 DB 저장
+        """
+        # TODO oidc 다운로드 로거 추가
+        end_point = 'https://kauth.kakao.com/.well-known/jwks.json'
+        response = requests.get(end_point)
+        result = response.json()['keys']
+        # OIDC 테이블 초기화
+        OIDC.objects.all().delete()
+
+        for each in result:
+            OIDC.objects.create(
+                kid=each['kid'],
+                n=each['n'],
+                e=each['e']
+            )
+
+
+    def __get_public_pem_key(self, kid):
+        # db에서 kid에 해당하는 아이디를 가져옵니다.
+        try:
+            OIDC.objects.get(kid=kid)
+        except OIDC.DoesNotExist: # 해당하는 키가 없을 때 키 변경을 감지하고 다운로드 진행
+            self.__download_oidc()
+        oidc = None
+        try:
+            oidc = OIDC.objects.get(kid=kid)
+        except OIDC.DoesNotExist: # 오류 발생
+            raise ValidationError("카카오 JWT 헤더 손상 의심")
+        return self.__jwt_to_pem(oidc.n, oidc.e)
+
+
+
 
     def get_or_register_user(self):
         """
@@ -86,4 +190,6 @@ class UserService:
             user = User.objects.create(**data_dict)
         except Exception as e:
             raise Exception(e)
+
+        logger.info(f"{user.username} (sub:{self.sub}) is created")
         return user

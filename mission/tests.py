@@ -1,98 +1,68 @@
+from mission.models import Mission
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from config.settings import KAKAO_TEST_ACCESS_TOKEN
-from mission.models import Mission
-from tour.models import TravelDaysAndPlaces, Place, PlaceImages, Travel
-from django.contrib.auth import get_user_model
-from datetime import date
-from django.core.files.base import ContentFile
+from tour.models import Place
+from config.settings import KAKAO_REFRESH_TOKEN, KAKAO_REST_API_KEY
+from django.test import TestCase
+from usr.models import User
+from services.kakao_token_service import KakaoTokenService
+from tests.base import BaseTestCase
 
-class TestMission(TestCase):
+
+class TestMission(BaseTestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            sub=123456789012345678,  # 필수
-            username="testuser",
-            email="test@example.com",
-            password="testpassword",
-            gender="male",
-            age_range="20-29",
-            profile_image_url="https://example.com/profile.jpg"
+        # 유저 정보 임의 생성
+        user = User.objects.create(
+            sub=3935716527,
+            username='TestUser',
+            gender='male',
+            age_range='1-9',
+            profile_image_url='https://example.org'
+        )
+        user.set_password('test_password112')
+        user.save()
+        # 임의로 미션을 생성합니다.
+        Mission.objects.create(
+            content='예시 사진과 유사하게 사진찍기'
+        )
+        Mission.objects.create(
+            content='손 하트 만든 상태로 사진찍기'
         )
 
-        self.mission1 = Mission.objects.create(content='예시 사진과 유사하게 사진찍기')
-        self.place = Place.objects.create(name="Test Place", mapX=127.001, mapY=37.501)
+        # 장소 생성
+        self.place1 = Place.objects.create(name="사진 X 장소1", mapX=127.001, mapY=37.501)
+        self.place2 = Place.objects.create(name="사진 X 장소2", mapX=127.002, mapY=37.502)
+        self.place3 = Place.objects.create(name="사진 있는 장소", mapX=127.003, mapY=37.503)
 
-        self.place_image = PlaceImages.objects.create(
-            place=self.place,
-            image_url="https://upload.wikimedia.org/wikipedia/commons/5/5f/Alberta_-_Jasper_National_Park.jpg"
-        )
-
-        self.travel = Travel.objects.create(
-            user=self.user,
-            tour_name="부산여행",
-            start_date=date(2024, 1, 1),
-            end_date=date(2024, 1, 3)
-        )
-
-        self.travel_day = TravelDaysAndPlaces.objects.create(
-            travel=self.travel,
-            place=self.place,
-            date=date(2024, 1, 1),
-            mission=self.mission1
-        )
-
-    def test_mission_list_api(self):
-        """ 미션 리스트 GET 테스트 """
+    def test_mission(self):
+        """
+        기본 미션 리스트 조회 테스트
+        """
         end_point = '/mission/list/'
         response = self.client.get(end_point)
         self.assertEqual(response.status_code, 200)
-        print(response.json())
 
-    def test_image_upload_api(self):
-        """ 미션 이미지 업로드 POST 테스트 """
-        url = '/mission/image_upload/'
+    def test_mission_random_create_api(self):
+        """
+        사진이 없는 장소(place)에 대해 임의 미션을 생성하는 POST API 테스트입니다.
+        """
+        url = '/mission/random/'
 
-        # 테스트용 이미지 업로드 준비
-        test_image = SimpleUploadedFile("test.jpg", b"file_content", content_type="image/jpeg")
-
-        data = {
-            'travel_days_id': self.travel_day.id,
-            'image': test_image,
+        headers = {
+            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
         }
 
-        response = self.client.post(url, data)
+        data = {
+            "places": [
+                {"place_id": self.place1.id, "image_url": ""},
+                {"place_id": self.place2.id, "image_url": ""},
+                {"place_id": self.place3.id, "image_url": "https://example.com/image.jpg"}
+            ]
+        }
+
+        response = self.client.post(url, data, headers=headers, content_type='application/json')
         self.assertEqual(response.status_code, 201)
-        print(response.json())
-
-    def test_mission_check_api(self):
-        def test_mission_check_api(self):
-            """
-            미션 성공 여부 검사 POST 검사입니다.
-            """
-
-            # 우선 사용자 이미지 업로드처럼 TravelDaysAndPlaces에 이미지 저장
-            test_image_data = ContentFile(b"dummy image data", name="mission.jpg")
-            self.travel_day.mission_image.save("mission.jpg", test_image_data)
-            self.travel_day.save()
-
-            # 헤더에 카카오 토큰 포함
-            headers = {
-                'Authorization': f'Bearer {KAKAO_TEST_ACCESS_TOKEN}',
-            }
-
-            url = '/mission/check_complete/'
-
-            data = {
-                "travel_id": self.travel_day.id,
-                "place_id": self.place.id,
-                "mission_id": self.mission1.id
-            }
-
-            response = self.client.post(url, data, headers=headers, content_type='application/json')
-
-            self.assertEqual(response.status_code, 200)
-            self.assertIn("result", response.json())
-            self.assertIn("similarity_score", response.json())
-
-            print("유사도 결과:", response.json())
+        self.assertIn("missions", response.json())
+        self.assertEqual(len(response.json()["missions"]), 2)

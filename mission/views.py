@@ -6,6 +6,8 @@ from .models import Mission
 from .serializers import MissionSerializer
 from tour.models import TravelDaysAndPlaces, Place
 from .services import ImageSimilarity
+import random
+from services.tour_api import NearEventInfo
 import math
 
 
@@ -75,8 +77,8 @@ class MissionCheckCompleteView(viewsets.ViewSet):
             user_lat = float(user_lat)
             user_lng = float(user_lng)
 
-            # 거리 계산
-            distance = self._haversine_distance(user_lat, user_lng, place_lat, place_lng)
+            # 거리 계산, 기존에 있던 모듈 사용
+            distance = NearEventInfo.haversine(user_lat, user_lng, place_lat, place_lng)
             location_pass = distance <= 200.0
 
             # 이미지 유사도 검사
@@ -101,16 +103,59 @@ class MissionCheckCompleteView(viewsets.ViewSet):
         except Exception as e:
             return Response({"error": "서버 오류가 발생했습니다."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def _haversine_distance(self, lat1, lon1, lat2, lon2):
-        """
-        두 GPS 좌표 사이의 거리 계산 (미터)
-        """
-        R = 6371000  # 지구 반지름 (m)
-        phi1 = math.radians(lat1)
-        phi2 = math.radians(lat2)
-        d_phi = math.radians(lat2 - lat1)
-        d_lambda = math.radians(lon2 - lon1)
 
-        a = math.sin(d_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
-        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-        return R * c
+class RandomMissionCreateView(viewsets.ModelViewSet):
+    """
+    이미지가 없는 장소(place)에 대해 임의의 미션을 생성합니다.
+    프론트에서 이미지 링크가 빈 문자열("")로 들어오는 장소만 처리 대상입니다.
+    """
+    permission_classes = [IsAuthenticated]  # 인증된 사용자만
+
+    # 임의 미션 문구 리스트
+    RANDOM_MISSIONS = [
+        "근처 구조물과 함께 사진 찍기",
+        "간판이 보이도록 찍어주세요!",
+        "이 장소의 전경이 나오도록 찍어보세요",
+        "내가 방문한 인증샷 남기기",
+        "해당 위치의 분위기를 담아보세요"
+    ]
+
+    def create(self, request, *args, **kwargs):
+        """
+        POST 요청 시 빈 이미지 링크("")를 가진 장소들을 필터링하여
+        랜덤한 미션을 각 장소에 생성해주는 로직입니다.
+        """
+        places = request.data.get("places", [])
+        if not isinstance(places, list):
+            return Response({
+                "error": "places 필드는 리스트여야 합니다."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        created_missions = []
+
+        for item in places:
+            place_id = item.get("place_id")
+            image_url = item.get("image_url", "")
+
+            # 빈 이미지 문자열인 경우만 처리
+            if image_url == "":
+                try:
+                    place = Place.objects.get(id=place_id)
+                except Place.DoesNotExist:
+                    continue  # 잘못된 장소 ID는 무시하고 진행
+
+                # 랜덤 미션 생성 및 저장
+                mission_text = random.choice(self.RANDOM_MISSIONS)
+                mission = Mission.objects.create(content=mission_text)
+
+                # 여기선 연결만 해주고, 나중에 TravelDaysAndPlaces에서 연결해도 OK
+                created_missions.append({
+                    "place_id": place_id,
+                    "mission_content": mission.content,
+                    "mission_id": mission.id
+                })
+
+        return Response({
+            "message": "랜덤 미션 생성 완료",
+            "missions": created_missions
+        }, status=status.HTTP_201_CREATED)
