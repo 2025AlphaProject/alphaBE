@@ -17,6 +17,10 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from authenticate.models import OIDC
 
+from config.settings import APP_LOGGER
+import logging
+logger = logging.getLogger(APP_LOGGER)
+
 
 
 
@@ -186,4 +190,6 @@ class UserService:
             user = User.objects.create(**data_dict)
         except Exception as e:
             raise Exception(e)
+
+        logger.info(f"{user.username} (sub:{self.sub}) is created")
         return user
