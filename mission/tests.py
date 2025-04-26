@@ -3,7 +3,7 @@ from tour.models import Place
 from config.settings import KAKAO_REFRESH_TOKEN, KAKAO_REST_API_KEY
 from django.test import TestCase
 from usr.models import User
-from authenticate.services import KakaoTokenService
+from services.kakao_token_service import KakaoTokenService
 from tests.base import BaseTestCase
 
 

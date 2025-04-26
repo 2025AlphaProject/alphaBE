@@ -1,5 +1,5 @@
 from django.test import TestCase
-from authenticate.services import KakaoTokenService
+from services.kakao_token_service import KakaoTokenService
 from config.settings import KAKAO_REFRESH_TOKEN, KAKAO_REST_API_KEY
 
 class BaseTestCase(TestCase):

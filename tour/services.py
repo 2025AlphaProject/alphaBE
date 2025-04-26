@@ -2,7 +2,7 @@ import requests
 import json
 from config.settings import KAKAO_REST_API_KEY, APP_LOGGER
 import logging
-from tour.modules import tour_api
+from services import tour_api
 
 logger = logging.getLogger(APP_LOGGER)
 

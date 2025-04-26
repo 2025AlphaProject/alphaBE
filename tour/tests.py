@@ -1,6 +1,6 @@
 from django.test import TestCase
 from config.settings import PUBLIC_DATA_PORTAL_API_KEY, KAKAO_REFRESH_TOKEN, KAKAO_REST_API_KEY  # 공공 데이터 포탈 앱 키
-from .modules.tour_api import (
+from services.tour_api import (
     TourApi,
     MobileOS,
     AreaCode,
@@ -10,7 +10,7 @@ from .modules.tour_api import (
 )
 from usr.models import User
 from .models import Travel
-from authenticate.services import KakaoTokenService
+from services.kakao_token_service import KakaoTokenService
 from tests.base import BaseTestCase
 
 # Create your tests here.

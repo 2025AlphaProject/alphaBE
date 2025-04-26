@@ -2,7 +2,7 @@ from django.http import JsonResponse
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 import requests
-from .services import KakaoTokenService
+from services.kakao_token_service import KakaoTokenService
 
 from usr.services import UserService
 

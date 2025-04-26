@@ -2,7 +2,7 @@ from django.test import TestCase
 from .services import UserService
 from config.settings import KAKAO_REFRESH_TOKEN, KAKAO_REST_API_KEY
 from .models import User
-from authenticate.services import KakaoTokenService
+from services.kakao_token_service import KakaoTokenService
 from tests.base import BaseTestCase
 # Create your tests here.
 

@@ -6,7 +6,6 @@ from .models import Mission
 from .serializers import MissionSerializer
 from tour.models import TravelDaysAndPlaces, Place
 from .services import ImageSimilarity
-import math
 import random
 from tour.services import NearEventInfo
 

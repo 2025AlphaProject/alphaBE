@@ -93,6 +93,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'middleware.request_logger.RequestLogMiddleware',
 ]
 
 # TODO 특정 호스트만 접속하도록 허용할것
@@ -289,14 +290,15 @@ LOGGING = {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
             'filename': 'info.log',
-            'formatter': 'verbose'
+            'formatter': 'verbose',
+            'encoding': 'utf-8'
         }
     },
     'loggers': { # 로거 설정, 실제 get_logger를 이용하여 로그 설정 가져옴
         'django': { # 실제 배포 환경에서 사용하는 로거
             'handlers': ['file'],
             'level': 'INFO',
-            'propagate': False,
+            'propagate': True,
         },
         'django_debug': { # 디버그시 사용하는 로거
             'handlers': ['file'],

@@ -8,7 +8,7 @@ from config.settings import (
     KAKAO_REST_API_KEY,
 )
 import logging
-from .services import KakaoTokenService
+from services.kakao_token_service import KakaoTokenService
 from tests.base import BaseTestCase
 logger = logging.getLogger(APP_LOGGER)
 
