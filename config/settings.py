@@ -308,3 +308,6 @@ LOGGING = {
 
 # 앱 기본 로거 설정
 APP_LOGGER='django'
+
+# YOLO 모델 디렉터리 설정
+MODEL_DIR = os.path.join(BASE_DIR, "mission", "yolomodels")
