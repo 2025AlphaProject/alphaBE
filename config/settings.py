@@ -48,7 +48,7 @@ SKIP_TEST = env('SKIP_TEST')
 SECRET_KEY = env('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False # 배포 할 때는 반드시 DEBUG는 False로
 
 # TODO 특정 호스트만 접속 가능하도록 변경
 ALLOWED_HOSTS = ['*'] # 모든 호스트 접속이 가능합니다.
@@ -292,11 +292,17 @@ LOGGING = {
             'filename': 'info.log',
             'formatter': 'verbose',
             'encoding': 'utf-8'
+        },
+        'logstash': {
+            'level': 'INFO',
+            'class': 'logging.handlers.SocketHandler',
+            'host': env('LOGSTASH_HOST'),
+            'port': 5000,
         }
     },
     'loggers': { # 로거 설정, 실제 get_logger를 이용하여 로그 설정 가져옴
         'django': { # 실제 배포 환경에서 사용하는 로거
-            'handlers': ['file'],
+            'handlers': ['logstash'],
             'level': 'INFO',
             'propagate': True,
         },
