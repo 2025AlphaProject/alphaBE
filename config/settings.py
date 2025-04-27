@@ -283,7 +283,10 @@ LOGGING = {
         'simple': {
             'format': '{name} {levelname} {asctime} {message}',
             'style': '{',
-        }
+        },
+        'logstash': {
+            '()': 'logstash_formatter.LogstashFormatterV1',
+        },
     },
     'handlers': { # 로그 핸들러 설정
         'file': {
@@ -295,9 +298,10 @@ LOGGING = {
         },
         'logstash': {
             'level': 'INFO',
-            'class': 'logging.handlers.SocketHandler',
+            'class': 'config.tcp_log_handler.TCPLogstashHandler',
             'host': env('LOGSTASH_HOST'),
             'port': 5000,
+            'formatter': 'logstash'
         }
     },
     'loggers': { # 로거 설정, 실제 get_logger를 이용하여 로그 설정 가져옴
