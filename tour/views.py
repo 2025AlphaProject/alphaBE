@@ -5,11 +5,14 @@ from rest_framework.permissions import IsAuthenticated
 
 from usr.models import User
 from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer
-from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY, KAKAO_REST_API_KEY
+from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY, KAKAO_REST_API_KEY, APP_LOGGER
 from .serializers import EventSerializer
 from .services import TourApi, NearEventInfo, PlaceService
 from .models import Travel, Place, TravelDaysAndPlaces, PlaceImages, Event
 import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TravelViewSet(viewsets.ModelViewSet):
@@ -52,6 +55,7 @@ class NearEventView(viewsets.ModelViewSet):
             return Response({"ERROR": "필수 파라미터 중 일부 혹은 전체가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         if Event.objects.count() == 0: # 주변 행사 정보가 DB에 없을 경우, 코드는 200 OK로 보냅니다.
+            logger.warning("Event Info is not exist in DB") # 해당 오류는 서버 오류에 가깝기 때문에 로그를 남깁니다.
             return Response({"Message": "주변 행사 정보 데이터가 서버 내에 없습니다."}, status=status.HTTP_200_OK)
 
         event_info = NearEventInfo(Event, SEOUL_PUBLIC_DATA_SERVICE_KEY, Event.objects.all())
@@ -90,11 +94,13 @@ class AddTravelerView(viewsets.ModelViewSet):
             travel = Travel.objects.get(id=int(travel_id))
             add_target_user = User.objects.get(sub=int(user_sub))
         except (Travel.DoesNotExist, User.DoesNotExist):
+            logger.warning(f'travel id: {travel_id} or add_traveler_sub: {user_sub} is not exist in DB.')
             return Response({"Error": "여행과 사용자 정보가 올바르지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             travel.user.get(sub=int(request.user.sub))
         except User.DoesNotExist: # 로그인한 사용자의 것이 아닌 여행일 때
+            logger.warning(f'로그인한 사용자와 요청 사용자가 일치하지 않음.')
             return Response({"ERROR": "허가되지 않은 접근"}, status=status.HTTP_403_FORBIDDEN)
 
         travel.user.add(add_target_user)
@@ -148,6 +154,7 @@ class CourseView(viewsets.ViewSet):
         try:
             tour_date = datetime.datetime.strptime(date, "%Y-%m-%d")
         except ValueError:
+            logger.info(f'date: {date} is not date format') # 클라이언트가 잘못 요청 보낸 것이므로
             return 400, "date의 형식이 올바르지 않습니다."
 
         # 실제로 Travel이 존재하는지 확인합니다.
@@ -155,11 +162,13 @@ class CourseView(viewsets.ViewSet):
         try:
             travel = Travel.objects.get(id=int(tour_id), user__sub=user_sub)
         except Travel.DoesNotExist: # travel이 존재하지 않는다면
+            logger.warning(f'travel id: {tour_id} is not exist in DB.')
             return 404, '해당 여행이 존재하지 않습니다.'
 
         end_date = datetime.datetime.strptime(str(travel.end_date), "%Y-%m-%d")
         start_date = datetime.datetime.strptime(str(travel.start_date), "%Y-%m-%d")
         if end_date < tour_date or start_date > tour_date: # tour_date가 등록된 여행 날짜 외라면
+            logger.warning(f'등록 범위 외 날짜 여행 등록 시도')
             return 400, '해당 여행은 등록된 날짜의 여행 날짜 범위 외 날짜 입니다.'
         return 200, 'Validate'
 
@@ -195,6 +204,7 @@ class CourseView(viewsets.ViewSet):
 
             # 장소 필수 정보 누락 시 해당 장소는 스킵
             if not name or not mapX or not mapY:
+                logger.info(f'필수 정보 누락 (place name: {name}, mapX: {mapX}, mapY: {mapY})') # 클라이언트 잘못이므로 info
                 continue
 
             # 장소 저장 (중복 시 get)
@@ -246,6 +256,7 @@ class CourseView(viewsets.ViewSet):
         try:
             travel = Travel.objects.get(id=int(tour_id), user__sub=user_sub)
         except Travel.DoesNotExist:
+            logger.warning(f'travel id: {tour_id} && sub: {user_sub} is not exist in DB.')
             return Response({
                 "error": "403",
                 "message": "해당 여행이 존재하지 않거나 접근 권한이 없습니다."
@@ -254,6 +265,7 @@ class CourseView(viewsets.ViewSet):
         # 해당 여행에 연결된 날짜별 장소 정보 조회
         travel_days = TravelDaysAndPlaces.objects.filter(travel=travel).order_by('date')
         if not travel_days.exists():
+            logger.warning(f'travel id: {tour_id} && sub: {user_sub} has no travel days.')
             return Response({
                 "message": "저장된 여행 경로 정보가 없습니다.",
                 "tour_id": tour_id,
@@ -299,6 +311,7 @@ class CourseView(viewsets.ViewSet):
         try:
             travel = Travel.objects.get(id=tour_id, user__sub=user_sub)
         except Travel.DoesNotExist:
+            logger.warning(f'travel id: {tour_id} && sub: {user_sub} is not exist in DB.')
             return Response({
                 "error": "404",
                 "message": "해당 여행 ID가 존재하지 않거나, 접근 권한이 없습니다."
@@ -314,6 +327,7 @@ class CourseView(viewsets.ViewSet):
         try:
             travels = Travel.objects.filter(user__sub=user_sub)  # 해당 user의 여행 경로들
         except Travel.DoesNotExist:
+            logger.warning(f'sub: {user_sub} has no travels.')
             return Response({
                 "error": "404",
                 "message": "사용자의 여행 경로가 존재하지 않습니다."
