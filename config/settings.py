@@ -292,11 +292,17 @@ LOGGING = {
             'filename': 'info.log',
             'formatter': 'verbose',
             'encoding': 'utf-8'
+        },
+        'logstash': {
+            'level': 'INFO',
+            'class': 'logging.handlers.SocketHandler',
+            'host': env('LOGSTASH_HOST'),
+            'port': 5000,
         }
     },
     'loggers': { # 로거 설정, 실제 get_logger를 이용하여 로그 설정 가져옴
         'django': { # 실제 배포 환경에서 사용하는 로거
-            'handlers': ['file'],
+            'handlers': ['logstash'],
             'level': 'INFO',
             'propagate': True,
         },
