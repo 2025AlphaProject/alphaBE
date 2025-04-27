@@ -7,7 +7,8 @@ from usr.models import User
 from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer
 from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY, KAKAO_REST_API_KEY, APP_LOGGER
 from .serializers import EventSerializer
-from .services import TourApi, NearEventInfo, PlaceService
+from services.tour_api import TourApi, NearEventInfo
+from .services import PlaceService
 from .models import Travel, Place, TravelDaysAndPlaces, PlaceImages, Event
 import datetime
 import logging
