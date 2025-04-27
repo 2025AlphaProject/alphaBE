@@ -1,0 +1,38 @@
+name: Django CD
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Copy docker-compose.yml to ec2
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{secrets.HOST}}
+          username: ${{secrets.USERNAME}}
+          key: ${{secrets.KEY}}
+          port: '22'
+          source: "./docker-compose.yml"
+          target: "~"
+      - name: SSH and run docker-compose
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: 22
+          script: |
+            cd ~
+            sudo docker-compose pull
+            sudo docker-compose down
+            sudo docker-compose up -d --build
+      
+
+            

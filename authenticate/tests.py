@@ -1,18 +1,23 @@
+import  unittest
 from django.test import TestCase
 from config.settings import (
     KAKAO_AUTH_CODE, # 임시 인가 코드를 가져옵니다. 테스트 실행시마다 .env 파일에서 매번 바꿔줘야합니다.
     KAKAO_REFRESH_TOKEN, # 리프레시 토큰. 만료시 바꿔 사용
-    KAKAO_TEST_ACCESS_TOKEN,
-    KAKAO_TEST_ID_TOKEN,
-    APP_LOGGER
+    APP_LOGGER,
+    SKIP_TEST,
+    KAKAO_REST_API_KEY,
 )
 import logging
+from services.kakao_token_service import KakaoTokenService
+from tests.base import BaseTestCase
 logger = logging.getLogger(APP_LOGGER)
 
 # Create your tests here.
 
-class TestAuthenticate(TestCase):
+class TestAuthenticate(BaseTestCase):
     AUTH_CODE = KAKAO_AUTH_CODE # TODO 인가코드를 말하며, 테스트 진행시마다 바꿔줘야합니다.
+
+    @unittest.skipIf(SKIP_TEST == 'True', "Skip Login Callback Test")
     def test_login_callback(self):
         """
         해당 테스트는 카카오 로그인 콜백이 정상적으로 이루어지는지 확인하기 위한 코드입니다.
@@ -22,6 +27,7 @@ class TestAuthenticate(TestCase):
         self.assertEqual(response.status_code, 201)
         print(response.json())
 
+    @unittest.skipIf(SKIP_TEST == 'True', "Skip Login Refresh Test")
     def test_refresh_token(self):
         """
         해당 테스트는 카카오 리프레시 토큰이 제대로 날라오는지 확인하기 위한 테스트입니다.
@@ -53,10 +59,10 @@ class TestAuthenticate(TestCase):
         """
         end_point = '/auth/login/'
         headers = {
-            'Authorization': f'Bearer {KAKAO_TEST_ACCESS_TOKEN}'
+            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}'
         }
         data = {
-            'id_token': KAKAO_TEST_ID_TOKEN,
+            'id_token': self.KAKAO_TEST_ID_TOKEN,
         }
         # register Test
         response = self.client.post(end_point, headers=headers, data=data, content_type='application/json')

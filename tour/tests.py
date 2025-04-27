@@ -1,6 +1,6 @@
 from django.test import TestCase
-from config.settings import PUBLIC_DATA_PORTAL_API_KEY, KAKAO_TEST_ACCESS_TOKEN  # 공공 데이터 포탈 앱 키
-from .modules.tour_api import (
+from config.settings import PUBLIC_DATA_PORTAL_API_KEY, KAKAO_REFRESH_TOKEN, KAKAO_REST_API_KEY  # 공공 데이터 포탈 앱 키
+from services.tour_api import (
     TourApi,
     MobileOS,
     AreaCode,
@@ -10,10 +10,12 @@ from .modules.tour_api import (
 )
 from usr.models import User
 from .models import Travel
+from services.kakao_token_service import KakaoTokenService
+from tests.base import BaseTestCase
 
 # Create your tests here.
 
-class TestTour(TestCase):
+class TestTour(BaseTestCase):
     def setUp(self):
         # 유저 정보 임의 생성
         user = User.objects.create(
@@ -80,7 +82,7 @@ class TestTour(TestCase):
     def test_travel_api(self):
         uri = '/tour/'
         headers = {
-            'Authorization': f'Bearer {KAKAO_TEST_ACCESS_TOKEN}',
+            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
         }
         data = {
             'tour_name': '태근이의 여행',
@@ -94,6 +96,14 @@ class TestTour(TestCase):
         # create test
         response = self.client.post(uri, data, headers=headers, content_type='application/json')
         self.assertEqual(response.status_code, 201)
+
+        # create test - Exception Test
+        exception_data = {
+            'id': 1,
+            'start_date': '2025-0310',
+        }
+        response = self.client.post(uri, exception_data, headers=headers, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
 
         # 인스턴스 임의로 하나 더 생성
         data['tour_name'] = '태근이의 여행2'
@@ -137,7 +147,7 @@ class TestTour(TestCase):
     def test_add_traveler(self):
         end_point = '/tour/'
         headers = {
-            'Authorization': f'Bearer {KAKAO_TEST_ACCESS_TOKEN}',
+            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
         }
         data = {
             'tour_name': '태근이의 여행',
@@ -187,3 +197,205 @@ class TestTour(TestCase):
         response = self.client.get(end_point)
         self.assertEqual(response.status_code, 200)
 
+
+    def test_save_course(self):
+        """
+        해당 테스트는 /tour/course/ 경로 저장 API가 정상적으로 작동하는지 검증합니다.
+        """
+
+        # 1️⃣ 여행 생성
+        headers = {
+            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
+        }
+        travel_data = {
+            'tour_name': '테스트 여행',
+            'start_date': '2025-04-01',
+            'end_date': '2025-04-05'
+        }
+        create_response = self.client.post('/tour/', data=travel_data, headers=headers, content_type='application/json')
+        self.assertEqual(create_response.status_code, 201)
+        tour_id = create_response.json()['id']
+
+        # 2️⃣ 정상적인 코스 저장 요청
+        course_data = {
+            "tour_id": tour_id,
+            "date": "2025-04-02",
+            "places": [
+                {
+                    "name": "광화문",
+                    "mapX": "126.9769",
+                    "mapY": "37.5759",
+                    "image_url": "https://image.example.com/gwanghwamun.jpg"
+                },
+                {
+                    "name": "서울역",
+                    "mapX": "126.9706",
+                    "mapY": "37.5562",
+                    "image_url": "https://image.example.com/seoul.jpg"
+                }
+            ]
+        }
+        response = self.client.post('/tour/course/', data=course_data, headers=headers, content_type='application/json')
+        self.assertEqual(response.status_code, 201)  # ✅ 정상적으로 저장되었는지 확인
+        self.assertEqual(response.json()['date'], "2025-04-02")
+        self.assertEqual(len(response.json()['places']), 2)
+
+        # 예외 케이스: 날짜 범위 오류
+        course_data['date'] = '2025-04-06'
+        response = self.client.post('/tour/course/', data=course_data, headers=headers, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+
+        # 3️⃣ 예외 케이스: 필수 필드 누락 (date 없음)
+        bad_data = {
+            "tour_id": tour_id,
+            "places": [
+                {
+                    "name": "남산타워",
+                    "mapX": "126.9882",
+                    "mapY": "37.5512",
+                    "image_url": "https://image.example.com/namsan.jpg"
+                }
+            ]
+        }
+        response = self.client.post('/tour/course/', data=bad_data, headers=headers, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+
+        # 4️⃣ 예외 케이스: 존재하지 않는 여행 ID
+        wrong_data = {
+            "tour_id": 9999,
+            "date": "2025-04-03",
+            "places": [
+                {
+                    "name": "북촌한옥마을",
+                    "mapX": "126.9870",
+                    "mapY": "37.5825",
+                    "image_url": "https://image.example.com/bukchon.jpg"
+                }
+            ]
+        }
+        response = self.client.post('/tour/course/', data=wrong_data, headers=headers, content_type='application/json')
+        self.assertEqual(response.status_code, 404)
+
+    def test_delete_tour_course(self):
+        """
+        해당 테스트는 내 여행 경로 삭제 API를 검증합니다.
+        """
+        headers = {
+            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
+        }
+
+        # 여행 생성
+        create_endpoint = '/tour/'
+        travel_data = {
+            'tour_name': '삭제 테스트 여행',
+            'start_date': '2025-04-10',
+            'end_date': '2025-04-15',
+        }
+        create_response = self.client.post(create_endpoint, data=travel_data, headers=headers,
+                                           content_type='application/json')
+        self.assertEqual(create_response.status_code, 201)
+
+        # 생성된 여행의 ID 가져오기
+        tour_id = create_response.json()['id']
+
+        # 삭제 요청
+        delete_endpoint = f'/tour/course/{tour_id}/'
+        delete_response = self.client.delete(delete_endpoint, headers=headers)
+        self.assertEqual(delete_response.status_code, 204)
+
+        # 삭제 후 다시 조회 → 404 떠야 정상
+        get_response = self.client.get(f'/tour/{tour_id}/', headers=headers)
+        self.assertEqual(get_response.status_code, 404)
+
+    def test_retrieve_course(self):
+        """
+        해당 테스트는 /tour/course/<tour_id>/ 경로 조회 API가 정상적으로 작동하는지 검증합니다.
+        """
+
+        # 1️⃣ 여행 생성
+        headers = {
+            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
+        }
+        travel_data = {
+            'tour_name': '조회용 여행',
+            'start_date': '2025-04-01',
+            'end_date': '2025-04-05'
+        }
+        create_response = self.client.post('/tour/', data=travel_data, headers=headers, content_type='application/json')
+        self.assertEqual(create_response.status_code, 201)
+        tour_id = create_response.json()['id']
+
+        # 2️⃣ 경로 저장
+        course_data = {
+            "tour_id": tour_id,
+            "date": "2025-04-02",
+            "places": [
+                {
+                    "name": "덕수궁",
+                    "mapX": "126.9751",
+                    "mapY": "37.5658",
+                    "image_url": "https://image.example.com/deoksugung.jpg"
+                },
+                {
+                    "name": "경복궁",
+                    "mapX": "126.9769",
+                    "mapY": "37.5796",
+                    "image_url": "https://image.example.com/gyeongbok.jpg"
+                }
+            ]
+        }
+        save_response = self.client.post('/tour/course/', data=course_data, headers=headers,
+                                         content_type='application/json')
+        self.assertEqual(save_response.status_code, 201)
+
+        # 3️⃣ 저장한 경로 조회 요청
+        retrieve_uri = f'/tour/course/{tour_id}/'
+        response = self.client.get(retrieve_uri, headers=headers)
+        self.assertEqual(response.status_code, 200)
+
+        course_list = response.json()
+        self.assertEqual(len(course_list), 1)
+        self.assertEqual(course_list[0]['date'], "2025-04-02")
+        self.assertEqual(len(course_list[0]['places']), 2)
+        self.assertEqual(course_list[0]['places'][0]['name'], "덕수궁")
+
+        # 4️⃣ 예외 케이스: 존재하지 않는 tour_id
+        wrong_uri = '/tour/course/99999/'
+        response = self.client.get(wrong_uri, headers=headers)
+        self.assertEqual(response.status_code, 403)
+
+    def test_get_tour_course_list(self):
+        """
+        해당 테스트는 여행 경로들을 리스트로 가져오는지 테스트합니다.
+        """
+
+        # 여행 생성
+        create_endpoint = '/tour/'
+        headers = {
+            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
+        }
+        travel_data = {
+            'tour_name': '경로 테스트 여행',
+            'start_date': '2025-04-01',
+            'end_date': '2025-04-05',
+        }
+        create_response = self.client.post(create_endpoint, data=travel_data, headers=headers,
+                                           content_type='application/json')
+        self.assertEqual(create_response.status_code, 201)
+
+        # 200 Test
+        endpoint = '/tour/course/'
+        response = self.client.get(endpoint, headers=headers)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertIn('travels', response.json())
+        travels = response.json()['travels']
+        self.assertIsInstance(travels, list)
+
+        # 데이터가 어케 날아오는지 확인하는 코드 ?
+
+        if travels:
+            self.assertIn('tour_id', travels[0])
+            self.assertIn('start_date', travels[0])
+            self.assertIn('end_date', travels[0])
+            self.assertIn('places', travels[0])
