@@ -48,7 +48,7 @@ SKIP_TEST = env('SKIP_TEST')
 SECRET_KEY = env('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False # 배포 할 때는 반드시 DEBUG는 False로
 
 # TODO 특정 호스트만 접속 가능하도록 변경
 ALLOWED_HOSTS = ['*'] # 모든 호스트 접속이 가능합니다.
