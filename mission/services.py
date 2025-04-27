@@ -175,3 +175,5 @@ similarity_checker.check_mission_success()을 실행시 차례대로 함수 호�
 저 역순으로 다시 값 return 하여 유사도 구함 
      
 """
+
+class ObjectDetection :
