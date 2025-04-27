@@ -70,9 +70,3 @@ class PlaceService:
 
         return response.json()
 
-
-"""
-아래는 서비스 레이어에서도 모듈에 접근 가능하도록 설정합니다.
-"""
-TourApi = tour_api.TourApi
-NearEventInfo = tour_api.NearEventInfo

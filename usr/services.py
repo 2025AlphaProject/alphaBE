@@ -98,7 +98,7 @@ class UserService:
         """
         oidc 코드 DB 저장
         """
-        # TODO oidc 다운로드 로거 추가
+        logger.warning('공개 키 다운로드....') # 다운로드 횟수가 많아지면 감지하기 위해 warning으로 로그를 남김
         end_point = 'https://kauth.kakao.com/.well-known/jwks.json'
         response = requests.get(end_point)
         result = response.json()['keys']
@@ -123,6 +123,7 @@ class UserService:
         try:
             oidc = OIDC.objects.get(kid=kid)
         except OIDC.DoesNotExist: # 오류 발생
+            logger.error('키에 해당하는 공개키 정보 없음. (카카오 id 토큰 헤더 손상 의심)')
             raise ValidationError("카카오 JWT 헤더 손상 의심")
         return self.__jwt_to_pem(oidc.n, oidc.e)
 
@@ -164,6 +165,7 @@ class UserService:
         response = requests.get(kakao_user_info_url, headers=header)  # 요청을 받아옵니다.
         if response.status_code == 200:  # 정상적으로 데이터가 왔다면
             return self.__upload_user(response.json()) # 실제 데이터 업로드를 진행합니다.
+        logger.info(f'sub: {self.sub}에 대한 카카오 회원정보 불러오기 오류') # 프론트가 인위적으로 잘못 요청할 수 있기 때문에 info로 로그 남김
         raise Exception("카카오 회원정보를 불러오는 과정에서 오류가 발생했습니다.")
 
     def __upload_user(self, raw_data):
@@ -171,17 +173,21 @@ class UserService:
         해당 함수는 실제로 DB에 유저를 등록하는 로직이며 private 함수입니다.
         :params raw_data: 카카오에서 날라오는 json 정보 그대로를 말합니다.
         """
-        data_dict = dict() # 실제 데이터가 저장될 정보입니다.
-        raw_data = raw_data['kakao_account'] # 카카오 계정 정보로 대체 저장
-        profile = raw_data['profile'] # 추가 파싱 데이터
-        # sub 저장
-        data_dict['sub'] = self.sub
-        # 닉네임 저장
-        data_dict['username'] = profile['nickname']
-        # 프로필 이미지 url 저장
-        data_dict['profile_image_url'] = profile['profile_image_url']
-        user_dict_keys = ['age_range', # 연령대
-                          'gender'] # 성별
+        try:
+            data_dict = dict() # 실제 데이터가 저장될 정보입니다.
+            raw_data = raw_data['kakao_account'] # 카카오 계정 정보로 대체 저장
+            profile = raw_data['profile'] # 추가 파싱 데이터
+            # sub 저장
+            data_dict['sub'] = self.sub
+            # 닉네임 저장
+            data_dict['username'] = profile['nickname']
+            # 프로필 이미지 url 저장
+            data_dict['profile_image_url'] = profile['profile_image_url']
+            user_dict_keys = ['age_range', # 연령대
+                              'gender'] # 성별
+        except KeyError as e:
+            logger.error(f"유저 회원 정보 가져오기 오류 (추가 동의 항목 확인 의심): {e}")
+            raise KeyError(e)
         for each in user_dict_keys:
             data_dict[each] = raw_data[each]
 
@@ -191,5 +197,5 @@ class UserService:
         except Exception as e:
             raise Exception(e)
 
-        logger.info(f"{user.username} (sub:{self.sub}) is created")
+        logger.info(f"회원가입 완료. 회원명: {user.username} (sub:{self.sub})")
         return user
