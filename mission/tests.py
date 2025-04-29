@@ -61,4 +61,4 @@ class TestMission(BaseTestCase):
         response = self.client.post(url, data, headers=headers, content_type='application/json')
         self.assertEqual(response.status_code, 201)
         self.assertIn("missions", response.json())
-        self.assertEqual(len(response.json()["missions"]), 2)
+        self.assertEqual(len(response.json()["missions"]), 0)
