@@ -48,7 +48,7 @@ SKIP_TEST = env('SKIP_TEST')
 SECRET_KEY = env('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False # 배포 할 때는 반드시 DEBUG는 False로
 
 # TODO 특정 호스트만 접속 가능하도록 변경
 ALLOWED_HOSTS = ['*'] # 모든 호스트 접속이 가능합니다.
@@ -93,6 +93,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'middleware.request_logger.RequestLogMiddleware',
 ]
 
 # TODO 특정 호스트만 접속하도록 허용할것
@@ -282,21 +283,32 @@ LOGGING = {
         'simple': {
             'format': '{name} {levelname} {asctime} {message}',
             'style': '{',
-        }
+        },
+        'logstash': {
+            '()': 'logstash_formatter.LogstashFormatterV1',
+        },
     },
     'handlers': { # 로그 핸들러 설정
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
             'filename': 'info.log',
-            'formatter': 'verbose'
+            'formatter': 'verbose',
+            'encoding': 'utf-8'
+        },
+        'logstash': {
+            'level': 'INFO',
+            'class': 'config.tcp_log_handler.TCPLogstashHandler',
+            'host': env('LOGSTASH_HOST'),
+            'port': 5000,
+            'formatter': 'logstash'
         }
     },
     'loggers': { # 로거 설정, 실제 get_logger를 이용하여 로그 설정 가져옴
         'django': { # 실제 배포 환경에서 사용하는 로거
-            'handlers': ['file'],
+            'handlers': ['logstash'],
             'level': 'INFO',
-            'propagate': False,
+            'propagate': True,
         },
         'django_debug': { # 디버그시 사용하는 로거
             'handlers': ['file'],

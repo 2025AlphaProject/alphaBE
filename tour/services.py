@@ -2,7 +2,7 @@ import requests
 import json
 from config.settings import KAKAO_REST_API_KEY, APP_LOGGER
 import logging
-from tour.modules import tour_api
+from services import tour_api
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -70,9 +70,3 @@ class PlaceService:
 
         return response.json()
 
-
-"""
-아래는 서비스 레이어에서도 모듈에 접근 가능하도록 설정합니다.
-"""
-TourApi = tour_api.TourApi
-NearEventInfo = tour_api.NearEventInfo

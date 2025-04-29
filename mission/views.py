@@ -7,7 +7,7 @@ from .serializers import MissionSerializer
 from tour.models import TravelDaysAndPlaces, Place
 from .services import ImageSimilarity, ObjectDetection
 import random
-from tour.services import NearEventInfo
+from services.tour_api import NearEventInfo
 
 # Create your views here.
 class MissionListView(viewsets.ModelViewSet):

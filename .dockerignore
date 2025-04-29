@@ -1,0 +1,8 @@
+.idea
+.gitattributes
+.dockerignore
+info.log
+db.sqlite3
+.github
+*/migrations
+Dockerfile
