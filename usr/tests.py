@@ -2,23 +2,15 @@ from django.test import TestCase
 from .services import UserService
 from config.settings import KAKAO_REFRESH_TOKEN, KAKAO_REST_API_KEY
 from .models import User
-from authenticate.services import KakaoTokenService
+from services.kakao_token_service import KakaoTokenService
+from tests.base import BaseTestCase
 # Create your tests here.
 
-class TestService(TestCase):
+class TestService(BaseTestCase):
     def setUp(self):
         """
         테스트 환경에서 꼭 필요한 데이터를 업로드 하기 위한 메소드 입니다.
         """
-        token_service = KakaoTokenService()
-        data = {
-            'grant_type': 'refresh_token',
-            'client_id': KAKAO_REST_API_KEY,
-            'refresh_token': KAKAO_REFRESH_TOKEN,
-        }
-        token_service.get_kakao_token_response(data)
-        self.KAKAO_TEST_ACCESS_TOKEN = token_service.access_token
-        self.KAKAO_TEST_ID_TOKEN = token_service.id_token
         # 유저 정보 임의 생성
         user = User.objects.create(
             sub=3935716527,
