@@ -1,15 +1,17 @@
 from mission.models import Mission
 from tour.models import Place
-from config.settings import KAKAO_REFRESH_TOKEN, KAKAO_REST_API_KEY
-from django.test import TestCase
 from usr.models import User
-from services.kakao_token_service import KakaoTokenService
 from tests.base import BaseTestCase
-
+from tour.models import TravelDaysAndPlaces
+from django.core.files import File
+from tour.models import Travel
+from services.tour_api import NearEventInfo
+from mission.services import ObjectDetection
+import shutil
 
 class TestMission(BaseTestCase):
     def setUp(self):
-        # 유저 정보 임의 생성
+        # 유저 정보 임의 생성 및 저장
         user = User.objects.create(
             sub=3935716527,
             username='TestUser',
@@ -19,13 +21,10 @@ class TestMission(BaseTestCase):
         )
         user.set_password('test_password112')
         user.save()
-        # 임의로 미션을 생성합니다.
-        Mission.objects.create(
-            content='예시 사진과 유사하게 사진찍기'
-        )
-        Mission.objects.create(
-            content='손 하트 만든 상태로 사진찍기'
-        )
+
+        # 임의 미션 생성
+        Mission.objects.create(content='예시 사진과 유사하게 사진찍기')
+        Mission.objects.create(content='손 하트 만든 상태로 사진찍기')
 
         # 장소 생성
         self.place1 = Place.objects.create(name="사진 X 장소1", mapX=127.001, mapY=37.501)
@@ -62,3 +61,4 @@ class TestMission(BaseTestCase):
         self.assertEqual(response.status_code, 201)
         self.assertIn("missions", response.json())
         self.assertEqual(len(response.json()["missions"]), 2)
+
