@@ -8,6 +8,7 @@ from tour.models import TravelDaysAndPlaces, Place, PlaceImages
 from .services import ImageSimilarity, ObjectDetection
 import random
 from services.tour_api import NearEventInfo
+import traceback
 
 # Create your views here.
 class MissionListView(viewsets.ModelViewSet):
@@ -43,57 +44,48 @@ class MissionCheckCompleteView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
-        """
-        사용자의 GPS(mapX, mapY)와
-        1) 관광정보에 원래 사진이 있던 경우 → 이미지 유사도
-        2) 관광정보에 사진이 없는 경우 (임의 미션) → 객체 인식
-        을 통해 미션 성공 여부를 판별하는 API입니다.
-        """
-
         travel_id = request.data.get('travel_id')
         place_id = request.data.get('place_id')
         mission_id = request.data.get('mission_id')
-        user_lng = request.data.get('mapX')  # 경도
-        user_lat = request.data.get('mapY')  # 위도
+        user_lng = request.data.get('mapX')
+        user_lat = request.data.get('mapY')
 
-        # 필수값 누락 검사
         if not travel_id or not place_id or not mission_id or not user_lat or not user_lng:
             return Response({"error": "필수 입력값이 누락되었습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             place = Place.objects.get(id=place_id)
-            travel_place = TravelDaysAndPlaces.objects.get(place=place)
+            # ✅ travel_id까지 조건에 포함시켜 다중 객체 예외 방지
+            travel_place = TravelDaysAndPlaces.objects.get(place=place, travel_id=travel_id)
 
-            # 위도, 경도 float 변환
             place_lat = float(place.mapY)
             place_lng = float(place.mapX)
             user_lat = float(user_lat)
             user_lng = float(user_lng)
 
-            # 거리 계산
             distance = NearEventInfo.haversine(user_lat, user_lng, place_lat, place_lng)
             location_pass = distance <= 200.0
 
-            # ✅ 관광지 원본 이미지 유무를 PlaceImages 기준으로 확인
             has_original_image = PlaceImages.objects.filter(place=place).exists()
 
             if has_original_image:
-                # 유사도 검사
                 checker = ImageSimilarity(travel_id, place_id, mission_id)
                 similarity_score = checker.get_similarity_score()
                 image_pass = similarity_score >= 40.0
                 method = "image_similarity"
             else:
-                # YOLO 객체 인식
                 detector = ObjectDetection()
                 mission_content = travel_place.mission.content
+
+                # ✅ 이미지 존재 확인
+                if not travel_place.mission_image:
+                    raise ValueError("업로드된 이미지가 없습니다.")
                 uploaded_image_path = travel_place.mission_image.path
 
                 image_pass = detector.detect_and_check(uploaded_image_path, mission_content)
                 similarity_score = None
                 method = "object_detection"
 
-            # 최종 결과
             is_success = location_pass and image_pass
 
             return Response({
@@ -110,10 +102,8 @@ class MissionCheckCompleteView(viewsets.ViewSet):
             return Response({"error": "place_id가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
         except TravelDaysAndPlaces.DoesNotExist:
             return Response({"error": "여행지 정보가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
-        except ValueError:
-            return Response({"error": "mapX, mapY는 유효한 float 값이어야 합니다."}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"error": f"서버 오류: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except ValueError as ve:
+            return Response({"error": str(ve)}, status=status.HTTP_400_BAD_REQUEST)
 class RandomMissionCreateView(viewsets.ViewSet):
     """
     이미지가 없는 장소(place)에 대해 미리 등록된 Mission 중 랜덤으로 할당합니다.
