@@ -122,7 +122,7 @@ class ImageSimilarity:
     def get_similarity_score(self, weight_hist=0.5, weight_ssim=0.5):
         """ 히스토그램과 SSIM의 가중 평균 유사도 """
         hist_similarity = self.calculate_histogram_similarity()
-        ssim_similarity = self.calculate_ssim()
+        ssim_similarity = self.calculate_ssim
 
         # 가중 평균 유사도 계산
         score = (weight_hist * hist_similarity) + (weight_ssim * ssim_similarity)
