@@ -20,12 +20,15 @@
 # from tour.models import PlaceImages, TravelDaysAndPlaces, Place # 모델을 가져옵니다.
 
 import cv2
+import os
+from ultralytics import YOLO
 import numpy as np
 import requests
 from skimage.metrics import structural_similarity as ssim
 from tour.models import PlaceImages, TravelDaysAndPlaces, Place
 import logging
 from config.settings import APP_LOGGER
+from django.conf import settings
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -119,7 +122,7 @@ class ImageSimilarity:
     def get_similarity_score(self, weight_hist=0.5, weight_ssim=0.5):
         """ 히스토그램과 SSIM의 가중 평균 유사도 """
         hist_similarity = self.calculate_histogram_similarity()
-        ssim_similarity = self.calculate_ssim()
+        ssim_similarity = self.calculate_ssim
 
         # 가중 평균 유사도 계산
         score = (weight_hist * hist_similarity) + (weight_ssim * ssim_similarity)
@@ -175,3 +178,69 @@ similarity_checker.check_mission_success()을 실행시 차례대로 함수 호�
 저 역순으로 다시 값 return 하여 유사도 구함 
      
 """
+
+class ObjectDetection:
+    """
+    - 커스텀 학습한 best.pt 모델로 handheart, peace, smile 인식
+    - COCO pretrained yolov8n.pt 모델로 person 인식
+    - 주어진 미션 문구에 따라 객체 검출 성공 여부를 판단
+    """
+    def __init__(self):
+        # 모델 경로 설정
+        custom_model_path = os.path.join(settings.MODEL_DIR, "best.pt")
+        person_model_path = os.path.join(settings.MODEL_DIR, "yolov8n.pt")
+
+        # YOLO 모델 로드
+        self.model_custom = YOLO(custom_model_path)
+        self.model_person = YOLO(person_model_path)
+
+        # 커스텀 모델 클래스 이름
+        self.class_names_custom = ['handheart', 'peace', 'smile']
+
+    def detect_and_check(self, image_path, mission_content):
+        """
+        :param image_path: 검증할 이미지 파일 경로 (절대경로 또는 MEDIA 경로 기반)
+        :param mission_content: 미션 문구 (ex: '손가락 하트를 하고 사진을 찍어보세요')
+        :return: 성공 여부 (True/False)
+        """
+
+        # 이미지 읽기
+        image = cv2.imread(image_path)
+        if image is None:
+            raise ValueError(f"이미지를 열 수 없습니다: {image_path}")
+
+        # 객체 카운트 초기화
+        counts = {name: 0 for name in self.class_names_custom}
+        counts['person'] = 0
+
+        # 커스텀 모델로 handheart, peace, smile 탐지
+        results_custom = self.model_custom(image, conf=0.5)
+        for result in results_custom:
+            for box in result.boxes:
+                cls_idx = int(box.cls.item())
+                if 0 <= cls_idx < len(self.class_names_custom):
+                    cls_name = self.class_names_custom[cls_idx]
+                    counts[cls_name] += 1
+
+        # 기본 모델로 person 탐지
+        results_person = self.model_person(image, conf=0.5, classes=[0])  # 0번 class = person
+        for result in results_person:
+            for box in result.boxes:
+                counts['person'] += 1
+
+        # 미션에 맞게 성공 여부 판정
+        return self.check_mission(mission_content, counts)
+
+    def check_mission(self, mission_content, counts):
+        """
+        미션 내용에 따라 필요한 객체가 검출되었는지 판단
+        """
+
+        mission_requirements = {
+            "손가락 하트를 하고 사진을 찍어보세요": ["handheart"],
+            "브이 포즈로 사진을 찍어보세요": ["peace"],
+            "여러분이 사진에 꼭 등장해야 해요!": ["person"],
+        }
+        required_objects = mission_requirements.get(mission_content, [])
+
+        return all(counts.get(obj, 0) >= 1 for obj in required_objects)
