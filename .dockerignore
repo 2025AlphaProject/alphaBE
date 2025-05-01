@@ -4,5 +4,4 @@
 info.log
 db.sqlite3
 .github
-*/migrations
 Dockerfile
