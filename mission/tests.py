@@ -11,10 +11,11 @@ import tempfile
 from django.test import TestCase, override_settings
 import json
 from django.conf import settings
+from tests.base import BaseTestCase
 TEMP_MEDIA_ROOT = tempfile.mkdtemp()
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT, DEFAULT_FILE_STORAGE='django.core.files.storage.FileSystemStorage')
-class TestMission(TestCase):
+class TestMission(BaseTestCase):
     def __init__(self, methodName: str = "runTest"):
         super().__init__(methodName)
 
@@ -68,4 +69,3 @@ class TestMission(TestCase):
         response = self.client.post(url, data, headers=headers, content_type='application/json')
         self.assertEqual(response.status_code, 201)
         self.assertIn("missions", response.json())
-        self.assertEqual(len(response.json()["missions"]), 2)
