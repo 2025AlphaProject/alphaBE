@@ -308,17 +308,25 @@ class CourseView(viewsets.ViewSet):
     def destroy(self, request, pk=None):
         user_sub = request.user.sub  # 로그인한 사용자의 sub
         tour_id = pk  # URL에서 받은 여행 ID
-
-        try:
-            travel = Travel.objects.get(id=tour_id, user__sub=user_sub)
-        except Travel.DoesNotExist:
-            logger.warning(f'travel id: {tour_id} && sub: {user_sub} is not exist in DB.')
+        del_date = request.data.get('target_date', None)
+        if not del_date:
             return Response({
-                "error": "404",
-                "message": "해당 여행 ID가 존재하지 않거나, 접근 권한이 없습니다."
-            }, status=status.HTTP_404_NOT_FOUND)
+                "Error": "삭제 할 날짜 정보가 없습니다."
+            }, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            tour_date = datetime.datetime.strptime(del_date, "%Y-%m-%d")
+        except ValueError:
+            logger.info(f'date: {del_date} is not date format') # 클라이언트가 잘못 요청 보낸 것이므로
+            return Response({
+                "Error": "날짜 형식이 올바르지 않습니다."
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-        travel.delete()
+
+        instances = TravelDaysAndPlaces.objects.filter(travel__id=int(tour_id), date=tour_date)
+        if not instances.exists():
+            logger.warning(f'travel id: {tour_id} && sub: {user_sub} has no travel days.')
+            return Response({"Error": "해당 날짜의 여행 정보가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+        instances.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def list(self, request, *args, **kwargs):  # 여행 경로 리스트 조회 API

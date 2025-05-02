@@ -1,6 +1,6 @@
 import requests
 import json
-from config.settings import KAKAO_REST_API_KEY, APP_LOGGER
+from config.settings import KAKAO_REST_API_KEY, APP_LOGGER, GEOCODER_API_KEY
 import logging
 from services import tour_api
 
@@ -23,6 +23,18 @@ class PlaceService:
             raise Exception('Service Key is required')
 
         response = self.__get_kakao_address_response(x=x, y=y)
+        if response is None: # 만약에 한도 초과가 발생했다면
+            response = self.__get_geocoder_response(x=x, y=y)
+            if response['status'] != 'OK':
+                logger.warning(response['message'])
+                return "", ""
+            parcel = response['result'][0].get('text', '')
+            if len(response['result']) == 1:
+                return parcel, ""
+            road = response['result'][1].get('text', '')
+            return parcel, road
+
+
         if response['meta']['total_count'] == 0: # 정보가 아예 존재하지 않을 때
             logger.warning(f'There is no address (x: {x}, y: {y})')
             return "", ""
@@ -65,8 +77,25 @@ class PlaceService:
         headers = {'Authorization': f'KakaoAK {self.service_key}'}
         response = requests.get(end_point, params=kwargs, headers=headers)
         if response.status_code != 200:
-            logger.error('kakao local api error (38)')
-            raise Exception('Kakao API Error')
+            logger.error(response.text)
+            return None
 
         return response.json()
+
+    def __get_geocoder_response(self, **kwargs):
+        end_point = "https://api.vworld.kr/req/address"
+        params = {
+            "service": "address",
+            "request": "getAddress",
+            "point": f"{kwargs['x']},{kwargs['y']}",
+            "type": "BOTH",
+            "key": GEOCODER_API_KEY,
+            "simple": "true"
+        }
+        response = requests.get(end_point, params=params)
+        if response.status_code != 200:
+            logger.error(response.text)
+            raise Exception('Geocoder API Error')
+        return response.json()['response']
+
 
