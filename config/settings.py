@@ -39,6 +39,7 @@ KAKAO_REAL_REST_API_KEY = env('KAKAO_REAL_REST_API_KEY') # 카카오 실제 rest
 KAKAO_REAL_NATIVE_API_KEY = env('KAKAO_REAL_NATIVE_API_KEY') # 카카오 실제 native api 키
 # 아래는 매 실행마다 코드를 변경해줘야하는 테스트 코드를 임의로 차단하기 위한 환경변수 입니다.
 SKIP_TEST = env('SKIP_TEST')
+GEOCODER_API_KEY = env('GEOCODER_API_KEY')
 
 
 # Quick-start development settings - unsuitable for production
