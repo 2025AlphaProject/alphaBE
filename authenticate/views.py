@@ -6,7 +6,7 @@ from services.kakao_token_service import KakaoTokenService
 
 from usr.services import UserService
 
-from config.settings import KAKAO_REST_API_KEY # 환경변수를 가져옵니다.
+from config.settings import KAKAO_TEST_NATIVE_API_KEY, KAKAO_REST_API_KEY # 환경변수를 가져옵니다.
 
 # Create your views here.
 
@@ -65,7 +65,7 @@ class KakaoRefreshTokens(viewsets.ViewSet):
         token_service = KakaoTokenService()
         data = {
             'grant_type': 'refresh_token',
-            'client_id': KAKAO_REST_API_KEY,
+            'client_id': KAKAO_TEST_NATIVE_API_KEY,
             'refresh_token': refresh_token,
         }
         token_service.get_kakao_token_response(data) # 카카오 토큰을 재발급 받습니다.
