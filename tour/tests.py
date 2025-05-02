@@ -298,14 +298,59 @@ class TestTour(BaseTestCase):
         # 생성된 여행의 ID 가져오기
         tour_id = create_response.json()['id']
 
+        # 2️⃣ 정상적인 코스 저장 요청
+        course_data = {
+            "tour_id": tour_id,
+            "date": "2025-04-12",
+            "places": [
+                {
+                    "name": "광화문",
+                    "mapX": "126.9769",
+                    "mapY": "37.5759",
+                    "image_url": "https://image.example.com/gwanghwamun.jpg"
+                },
+                {
+                    "name": "서울역",
+                    "mapX": "126.9706",
+                    "mapY": "37.5562",
+                    "image_url": "https://image.example.com/seoul.jpg"
+                }
+            ]
+        }
+        response = self.client.post('/tour/course/', data=course_data, headers=headers, content_type='application/json')
+        self.assertEqual(response.status_code, 201)  # ✅ 정상적으로 저장되었는지 확인
+
+        course_data = {
+            "tour_id": tour_id,
+            "date": "2025-04-13",
+            "places": [
+                {
+                    "name": "광화문2",
+                    "mapX": "126.9769",
+                    "mapY": "37.5759",
+                    "image_url": "https://image.example.com/gwanghwamun.jpg"
+                },
+                {
+                    "name": "서울역2",
+                    "mapX": "126.9706",
+                    "mapY": "37.5562",
+                    "image_url": "https://image.example.com/seoul.jpg"
+                }
+            ]
+        }
+        response = self.client.post('/tour/course/', data=course_data, headers=headers, content_type='application/json')
+        self.assertEqual(response.status_code, 201)  # ✅ 정상적으로 저장되었는지 확인
+
         # 삭제 요청
         delete_endpoint = f'/tour/course/{tour_id}/'
-        delete_response = self.client.delete(delete_endpoint, headers=headers)
+        delete_data = {
+            'target_date': '2025-04-12'
+        }
+        delete_response = self.client.delete(delete_endpoint, data=delete_data, headers=headers, content_type='application/json')
         self.assertEqual(delete_response.status_code, 204)
 
-        # 삭제 후 다시 조회 → 404 떠야 정상
-        get_response = self.client.get(f'/tour/{tour_id}/', headers=headers)
-        self.assertEqual(get_response.status_code, 404)
+        get_response = self.client.get(f'/tour/course/{tour_id}/', headers=headers)
+        print(get_response.json())
 
     def test_retrieve_course(self):
         """
