@@ -241,6 +241,7 @@ class CourseView(viewsets.ViewSet):
                 "image_url": image_url,
                 "road_address": road_address,
                 "parcel_address": parcel_address,
+                'place_id': place.id,
             })
 
         # 최종 응답 반환
@@ -293,6 +294,7 @@ class CourseView(viewsets.ViewSet):
                 "image_url": image_url,
                 "road_address": entry.place.road_address,
                 "parcel_address": entry.place.address,
+                "place_id": entry.place.id,
             })
 
         # 응답 형태: [{ "date": "YYYY-MM-DD", "places": [...] }, ...]
