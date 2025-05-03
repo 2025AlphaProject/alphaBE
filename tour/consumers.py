@@ -20,6 +20,7 @@ class TaskConsumer(AsyncWebsocketConsumer):
         params = urllib.parse.parse_qs(query_string) # 쿼리 스트링을 파라미터로 변환합니다.
         self.user_id = params.pop('user_id', [None])[0] # user 고유 sub를 가져옵니다.
         self.unique_code = params.pop('unique_code', [""])[0] # 웹소켓 통신을 위한 고유 번호를 가져옵니다.
+        days = params.pop('days', [None])[0] # 여행 기간을 의미합니다.
         self.user_id = self.user_id + '_' + self.unique_code if self.unique_code != "" else self.user_id
 
         if self.user_id is None:
@@ -34,7 +35,7 @@ class TaskConsumer(AsyncWebsocketConsumer):
         # 요청을 celery task로 보냅니다.
         areaCode = params.pop('areaCode', [None])[0] # area_code 가져옴
         sigunguName = params.pop('sigunguName', [None])[0] # 시군구 이름 가져옴
-        if areaCode is None: # areaCode가 존재하지 않는다면
+        if areaCode is None or days is None: # areaCode가 존재하지 않는다면
             await self.send(text_data=json.dumps({
                 'state': 'ERROR',
                 'Message': '필수 파라미터 중 일부가 없습니다.'
@@ -57,7 +58,7 @@ class TaskConsumer(AsyncWebsocketConsumer):
                 sigunguCodes.append(sigunguCode)
 
         task_result = app.send_task('tour.tasks.get_recommended_tour_based_area', args=[self.user_id, # 채널 레이어 그룹 특정을 위해 보냅니다.
-                                                                                        areaCode, Arrange.TITLE_IMAGE.value, sigunguCodes])
+                                                                                        areaCode, days, Arrange.TITLE_IMAGE.value, sigunguCodes])
         await self.send(text_data=json.dumps({
             'state': 'OK',
             'Message': {
@@ -82,8 +83,9 @@ class TaskConsumer(AsyncWebsocketConsumer):
         areaCode = data.get("areaCode", None)
         sigunguName = data.get("sigunguName", None)
         unique_code = data.get('unique_code', "")  # 웹소켓 통신을 위한 고유 번호를 가져옵니다.
-        user_id = unique_code + '_' + self.user_id
-        if user_id is None or areaCode is None:
+        user_id = user_id + '_' + unique_code
+        days = data.get("days", None)
+        if user_id is None or areaCode is None or days is None:
             # 데이터가 없다면 예외 처리
             await self.send(text_data=json.dumps({
                 'state': 'ERROR',
