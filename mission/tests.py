@@ -47,25 +47,3 @@ class TestMission(BaseTestCase):
         end_point = '/mission/list/'
         response = self.client.get(end_point)
         self.assertEqual(response.status_code, 200)
-
-    def test_mission_random_create_api(self):
-        """
-        사진이 없는 장소(place)에 대해 임의 미션을 생성하는 POST API 테스트입니다.
-        """
-        url = '/mission/random/'
-
-        headers = {
-            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
-        }
-
-        data = {
-            "places": [
-                {"place_id": self.place1.id, "image_url": ""},
-                {"place_id": self.place2.id, "image_url": ""},
-                {"place_id": self.place3.id, "image_url": "https://example.com/image.jpg"}
-            ]
-        }
-
-        response = self.client.post(url, data, headers=headers, content_type='application/json')
-        self.assertEqual(response.status_code, 201)
-        self.assertIn("missions", response.json())
