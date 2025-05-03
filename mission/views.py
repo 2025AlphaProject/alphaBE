@@ -133,7 +133,7 @@ class RandomMissionCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
-        places = request.data.get("places", [])
+        places = request.data.get("places", None)
         if not isinstance(places, list):
             return Response({"error": "places 필드는 리스트여야 합니다."},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -149,14 +149,22 @@ class RandomMissionCreateView(viewsets.ViewSet):
         for item in places:
             place_id = item.get("place_id")
             image_url = item.get("image_url", "")
+            date = item.get("date", None)
+            if date is None:
+                return Response({"ERROR": "일부 장소에 대한 날짜 정보가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
             if image_url == "":
                 try:
                     place = Place.objects.get(id=place_id)
-                    tdp = TravelDaysAndPlaces.objects.get(place=place)
+                    tdp = TravelDaysAndPlaces.objects.get(place=place, date=date)
 
                     if tdp.mission is not None:
-                        continue  # 이미 미션이 있으면 건너뜀
+                        created_missions.append({
+                            "place_id": place_id,
+                            "mission_id": tdp.mission.id,
+                            "mission_content": tdp.mission.content,
+                        })
+                        continue
 
                     selected_mission = random.choice(missions_queryset)
                     tdp.mission = selected_mission
@@ -169,7 +177,18 @@ class RandomMissionCreateView(viewsets.ViewSet):
                     })
 
                 except (Place.DoesNotExist, TravelDaysAndPlaces.DoesNotExist):
-                    continue
+                    return Response({"ERROR": "장소 정보 혹은 해당 여행 경로 정보를 불러올 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+            else:
+                try:
+                    place = Place.objects.get(id=place_id)
+                    tdp = TravelDaysAndPlaces.objects.get(place=place)
+                    created_missions.append({
+                        "place_id": place_id,
+                        "mission_id": tdp.mission.id,
+                        "mission_content": '예시 사진과 유사하게 찍기',
+                    })
+                except (Place.DoesNotExist, TravelDaysAndPlaces.DoesNotExist):
+                    return Response({"ERROR": "장소 정보 혹은 해당 여행 경로 정보를 불러올 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
         return Response({
             "message": "랜덤 미션 할당 완료",

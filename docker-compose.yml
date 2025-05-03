@@ -78,44 +78,9 @@ services:
     networks:
       - app_network
 
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
-    container_name: elasticsearch
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - xpack.security.http.ssl.enabled=false
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m # 메모리 제한 설정
-    volumes:
-      - esdata:/usr/share/elasticsearch/data
-    networks:
-      - app_network
-
-
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.10.1
-    container_name: kibana
-    ports:
-      - "5601:5601"
-    environment:
-      ELASTICSEARCH_HOSTS: "http://elasticsearch:9200"
-    networks:
-      - app_network
-
-  logstash:
-    image: docker.elastic.co/logstash/logstash:8.10.0
-    container_name: logstash
-    volumes:
-      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
-    depends_on:
-      - elasticsearch
-    networks:
-      - app_network
-
 volumes:
   db_data:
   static_volume:
-  esdata:
 
 networks:
   app_network:
