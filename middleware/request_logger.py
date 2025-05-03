@@ -10,7 +10,12 @@ class RequestLogMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
 
+        try:
+            content = response.content.decode('utf-8')
+        except Exception as e:
+            content = f"<<Unable to decode content: {e}>>"
+
         logger.info(
-            f"{request.method} {request.path} - {response.status_code} - {request.META.get('REMOTE_ADDR')}"
+            f"{request.method} {request.path} - {response.status_code} - {request.META.get('REMOTE_ADDR')} - Response: {content}"
         )
         return response
