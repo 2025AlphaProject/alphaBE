@@ -221,7 +221,7 @@ class CourseView(viewsets.ViewSet):
             )
 
             # 날짜별 장소 연결 저장
-            TravelDaysAndPlaces.objects.get_or_create(
+            tdp, _ = TravelDaysAndPlaces.objects.get_or_create(
                 travel=travel,
                 place=place,
                 date=date
@@ -242,6 +242,7 @@ class CourseView(viewsets.ViewSet):
                 "road_address": road_address,
                 "parcel_address": parcel_address,
                 'place_id': place.id,
+                'tdp_id': tdp.id,
             })
 
         # 최종 응답 반환
@@ -295,6 +296,7 @@ class CourseView(viewsets.ViewSet):
                 "road_address": entry.place.road_address,
                 "parcel_address": entry.place.address,
                 "place_id": entry.place.id,
+                "tdp_id": entry.id,
             })
 
         # 응답 형태: [{ "date": "YYYY-MM-DD", "places": [...] }, ...]
