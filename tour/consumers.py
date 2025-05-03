@@ -1,9 +1,11 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from config.celery import app
-from config.settings import PUBLIC_DATA_PORTAL_API_KEY
+from config.settings import PUBLIC_DATA_PORTAL_API_KEY, APP_LOGGER
 from services.tour_api import *
 import urllib.parse
+import logging
+logger = logging.getLogger(APP_LOGGER)
 
 class TaskConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -17,12 +19,15 @@ class TaskConsumer(AsyncWebsocketConsumer):
         query_string = self.scope['query_string'].decode() # 쿼리 스트링을 불러들입니다.
         params = urllib.parse.parse_qs(query_string) # 쿼리 스트링을 파라미터로 변환합니다.
         self.user_id = params.pop('user_id', [None])[0] # user 고유 sub를 가져옵니다.
+        self.unique_code = params.pop('unique_code', [""])[0] # 웹소켓 통신을 위한 고유 번호를 가져옵니다.
+        self.user_id = self.unique_code + '_' + self.user_id
 
         if self.user_id is None:
             await self.close()
             return
 
         # 웹소켓 그룹에 가입
+        logger.info(f'channel_id: {self.user_id} 웹소켓 가입')
         await self.channel_layer.group_add(self.user_id, self.channel_name) # user_id를 그룹 이름으로 하고 웹소켓에 가입합니다.
         await self.accept() # 웹소켓 연결
 
@@ -76,6 +81,8 @@ class TaskConsumer(AsyncWebsocketConsumer):
         user_id = data.get("user_id", None)
         areaCode = data.get("areaCode", None)
         sigunguName = data.get("sigunguName", None)
+        unique_code = data.get('unique_code', "")  # 웹소켓 통신을 위한 고유 번호를 가져옵니다.
+        user_id = unique_code + '_' + self.user_id
         if user_id is None or areaCode is None:
             # 데이터가 없다면 예외 처리
             await self.send(text_data=json.dumps({
