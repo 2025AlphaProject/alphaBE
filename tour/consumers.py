@@ -20,7 +20,7 @@ class TaskConsumer(AsyncWebsocketConsumer):
         params = urllib.parse.parse_qs(query_string) # 쿼리 스트링을 파라미터로 변환합니다.
         self.user_id = params.pop('user_id', [None])[0] # user 고유 sub를 가져옵니다.
         self.unique_code = params.pop('unique_code', [""])[0] # 웹소켓 통신을 위한 고유 번호를 가져옵니다.
-        self.user_id = self.unique_code + '_' + self.user_id
+        self.user_id = self.user_id + '_' + self.unique_code if self.unique_code != "" else self.user_id
 
         if self.user_id is None:
             await self.close()
