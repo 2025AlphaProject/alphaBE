@@ -183,7 +183,7 @@ class RandomMissionCreateView(viewsets.ViewSet):
                 try:
                     tdp = TravelDaysAndPlaces.objects.get(id=tdp_id)
                     created_missions.append({
-                        "place_id": tdp_id,
+                        "tdp_id": tdp_id,
                         "mission_content": '예시 사진과 유사하게 찍기',
                     })
                 except TravelDaysAndPlaces.DoesNotExist:
