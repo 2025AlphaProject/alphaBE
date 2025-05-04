@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import MissionListView, MissionImageUploadView, RandomMissionCreateView, MissionCheckCompleteView, IsMissionCompleteView
+from .views import MissionListView, MissionImageUploadView, RandomMissionCreateView, MissionCheckCompleteView, IsMissionCompleteView, MissionImageGetView
 
 urlpatterns = [
     path('list/', MissionListView.as_view({
@@ -16,7 +16,10 @@ urlpatterns = [
     path('check_complete/', MissionCheckCompleteView.as_view({
         'post': 'create',  # 사진을 올리고 검사를 받는 로직 구성
     }), name='mission_check'),
-    path('is_complete/<int:pk>', IsMissionCompleteView.as_view({
+    path('is_complete/<int:pk>/', IsMissionCompleteView.as_view({
+        'get': 'retrieve',
+    })),
+    path('get_mission_img/<int:pk>/', MissionImageGetView.as_view({
         'get': 'retrieve',
     }))
 ]
