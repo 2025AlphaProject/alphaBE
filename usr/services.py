@@ -31,6 +31,7 @@ class UserService:
     """
     user = None
     sub = None # sub는 long 방식의 정수형을 받습니다.
+    nickname = None
 
     def __init__(self, id_token):
         """
@@ -40,6 +41,7 @@ class UserService:
         # payload = jwt.decode(id_token, options={"verify_signature": False})
         payload = self.__validate_id_token(id_token)
         self.sub = payload.get('sub', None) # 회원 번호 저장
+        self.nickname = payload.get('nickname', None) # 닉네임 저장
         if self.sub is None:
             raise Exception("토큰 내 회원정보 일부가 존재하지 않습니다.")
         self.user = self.get_user() # 함수를 이용해서 유저를 가져옵니다.
@@ -187,7 +189,11 @@ class UserService:
                               'gender'] # 성별
         except KeyError as e:
             logger.error(f"유저 회원 정보 가져오기 오류 (추가 동의 항목 확인 의심): {e}")
-            raise KeyError(e)
+            user = User.objects.create(
+                sub=self.sub,
+                username=self.nickname
+            )
+            return user
         for each in user_dict_keys:
             data_dict[each] = raw_data[each]
 
