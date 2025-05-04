@@ -105,6 +105,9 @@ class MissionCheckCompleteView(viewsets.ViewSet):
 
             is_success = location_pass and image_pass
 
+            travel_place.mission_success = is_success
+            travel_place.save()
+
             return Response({
                 "result": "success" if is_success else "fail",
                 "distance_to_place": round(distance, 2),
