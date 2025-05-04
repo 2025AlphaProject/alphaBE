@@ -66,7 +66,7 @@ class MissionCheckCompleteView(viewsets.ViewSet):
 
             # 거리 계산
             distance = NearEventInfo.haversine(user_lat, user_lng, place_lat, place_lng)
-            location_pass = distance <= 200.0
+            location_pass = distance <= 0.2
 
             # 이미지 비교 방식 결정
             has_original_image = PlaceImages.objects.filter(place=place).exists()
