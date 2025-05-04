@@ -378,17 +378,3 @@ class CourseView(viewsets.ViewSet):
             "travels": travel_results
         }, status=status.HTTP_200_OK)
 
-class IsMissionCompleteView(viewsets.ViewSet):
-
-    def retrieve(self, request, *args, **kwargs):
-        tdp = kwargs.get('pk', None)
-        travel_days_and_places = None
-        try:
-            travel_days_and_places = TravelDaysAndPlaces.objects.get(id=tdp)
-        except TravelDaysAndPlaces.DoesNotExist:
-            return Response({'ERROR': '해당 여행 장소를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
-
-        return Response({
-            'tdp_id': tdp,
-            'mission_success': travel_days_and_places.mission_success
-        }, status=status.HTTP_200_OK)

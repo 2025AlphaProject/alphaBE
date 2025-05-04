@@ -132,7 +132,7 @@ class ImageSimilarity:
     def check_mission_success(self):
         """ 유사도 40% 이상이면 미션 성공, 이하면 실패 """
         score = self.get_similarity_score()
-        return 1 if score >= 40 else 0  # 성공이면 1, 실패면 0 반환
+        return 1 if score >= 20 else 0  # 성공이면 1, 실패면 0 반환
 
 """테스트용 코드 """
 # if __name__ == "__main__":
