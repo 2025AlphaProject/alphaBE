@@ -38,4 +38,5 @@ urlpatterns = [
         'get': 'retrieve',  # 개별 조회
         'delete': 'destroy' # 삭제
     }), name='course-detail'),
+
 ]

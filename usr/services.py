@@ -31,6 +31,7 @@ class UserService:
     """
     user = None
     sub = None # sub는 long 방식의 정수형을 받습니다.
+    nickname = None
 
     def __init__(self, id_token):
         """
@@ -40,6 +41,7 @@ class UserService:
         # payload = jwt.decode(id_token, options={"verify_signature": False})
         payload = self.__validate_id_token(id_token)
         self.sub = payload.get('sub', None) # 회원 번호 저장
+        self.nickname = payload.get('nickname', None) # 닉네임 저장
         if self.sub is None:
             raise Exception("토큰 내 회원정보 일부가 존재하지 않습니다.")
         self.user = self.get_user() # 함수를 이용해서 유저를 가져옵니다.
@@ -165,7 +167,7 @@ class UserService:
         response = requests.get(kakao_user_info_url, headers=header)  # 요청을 받아옵니다.
         if response.status_code == 200:  # 정상적으로 데이터가 왔다면
             return self.__upload_user(response.json()) # 실제 데이터 업로드를 진행합니다.
-        logger.info(f'sub: {self.sub}에 대한 카카오 회원정보 불러오기 오류') # 프론트가 인위적으로 잘못 요청할 수 있기 때문에 info로 로그 남김
+        logger.info(f'sub: {self.sub}에 대한 카카오 회원정보 불러오기 오류. error message: {response.text}') # 프론트가 인위적으로 잘못 요청할 수 있기 때문에 info로 로그 남김
         raise Exception("카카오 회원정보를 불러오는 과정에서 오류가 발생했습니다.")
 
     def __upload_user(self, raw_data):
@@ -187,9 +189,13 @@ class UserService:
                               'gender'] # 성별
         except KeyError as e:
             logger.error(f"유저 회원 정보 가져오기 오류 (추가 동의 항목 확인 의심): {e}")
-            raise KeyError(e)
+            user = User.objects.create(
+                sub=self.sub,
+                username=self.nickname
+            )
+            return user
         for each in user_dict_keys:
-            data_dict[each] = raw_data[each]
+            data_dict[each] = raw_data.get(each, None)
 
         # 실제 유저 업로드
         try:

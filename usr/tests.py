@@ -13,7 +13,7 @@ class TestService(BaseTestCase):
         """
         # 유저 정보 임의 생성
         user = User.objects.create(
-            sub=3935716527,
+            sub=3928446869, # 앱 키에 따라 내 고유 정보가 달라짐
             username='TestUser',
             gender='male',
             age_range='1-9',

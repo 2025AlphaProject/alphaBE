@@ -6,7 +6,9 @@ from services.kakao_token_service import KakaoTokenService
 
 from usr.services import UserService
 
-from config.settings import KAKAO_TEST_NATIVE_API_KEY, KAKAO_REST_API_KEY # 환경변수를 가져옵니다.
+from config.settings import KAKAO_REAL_NATIVE_API_KEY, KAKAO_REST_API_KEY, APP_LOGGER # 환경변수를 가져옵니다.
+import logging
+logger = logging.getLogger(APP_LOGGER)
 
 # Create your views here.
 
@@ -49,6 +51,7 @@ def kakao_callback(request):
         data['is_new'] = is_new # 신규 유저인지 알려주는 플래그 입니다.
         # return JsonResponse(data, status=201) # post 요청을 보내줬기 때문에 201 create를 보내줍니다.
         return JsonResponse(token_service.response, status=status.HTTP_201_CREATED) # 모든 정보를 보내줍니다.
+    logger.error(token_service.response)
     return JsonResponse({"Error": token_service.response}, status=status.HTTP_400_BAD_REQUEST)
 
 class KakaoRefreshTokens(viewsets.ViewSet):
@@ -65,7 +68,7 @@ class KakaoRefreshTokens(viewsets.ViewSet):
         token_service = KakaoTokenService()
         data = {
             'grant_type': 'refresh_token',
-            'client_id': KAKAO_TEST_NATIVE_API_KEY,
+            'client_id': KAKAO_REAL_NATIVE_API_KEY,
             'refresh_token': refresh_token,
         }
         token_service.get_kakao_token_response(data) # 카카오 토큰을 재발급 받습니다.

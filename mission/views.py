@@ -66,7 +66,7 @@ class MissionCheckCompleteView(viewsets.ViewSet):
 
             # 거리 계산
             distance = NearEventInfo.haversine(user_lat, user_lng, place_lat, place_lng)
-            location_pass = distance <= 200.0
+            location_pass = distance <= 0.2
 
             # 이미지 비교 방식 결정
             has_original_image = PlaceImages.objects.filter(place=place).exists()
@@ -104,6 +104,9 @@ class MissionCheckCompleteView(viewsets.ViewSet):
                 method = "object_detection"
 
             is_success = location_pass and image_pass
+
+            travel_place.mission_success = is_success
+            travel_place.save()
 
             return Response({
                 "result": "success" if is_success else "fail",
@@ -147,20 +150,18 @@ class RandomMissionCreateView(viewsets.ViewSet):
         created_missions = []
 
         for item in places:
-            place_id = item.get("place_id")
+            tdp_id = item.get("tdp_id", None)
             image_url = item.get("image_url", "")
-            date = item.get("date", None)
-            if date is None:
-                return Response({"ERROR": "일부 장소에 대한 날짜 정보가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
+            if tdp_id is None:
+                return Response({"ERROR": "일부 파라미터에 대한 날짜 정보가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
             if image_url == "":
                 try:
-                    place = Place.objects.get(id=place_id)
-                    tdp = TravelDaysAndPlaces.objects.get(place=place, date=date)
+                    tdp = TravelDaysAndPlaces.objects.get(id=int(tdp_id))
 
                     if tdp.mission is not None:
                         created_missions.append({
-                            "place_id": place_id,
+                            "tdp_id": tdp.id,
                             "mission_id": tdp.mission.id,
                             "mission_content": tdp.mission.content,
                         })
@@ -171,26 +172,54 @@ class RandomMissionCreateView(viewsets.ViewSet):
                     tdp.save()
 
                     created_missions.append({
-                        "place_id": place_id,
+                        "tdp_id": tdp_id,
                         "mission_id": selected_mission.id,
                         "mission_content": selected_mission.content,
                     })
 
-                except (Place.DoesNotExist, TravelDaysAndPlaces.DoesNotExist):
+                except TravelDaysAndPlaces.DoesNotExist:
                     return Response({"ERROR": "장소 정보 혹은 해당 여행 경로 정보를 불러올 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
             else:
                 try:
-                    place = Place.objects.get(id=place_id)
-                    tdp = TravelDaysAndPlaces.objects.get(place=place)
+                    tdp = TravelDaysAndPlaces.objects.get(id=tdp_id)
                     created_missions.append({
-                        "place_id": place_id,
-                        "mission_id": tdp.mission.id,
+                        "tdp_id": tdp_id,
                         "mission_content": '예시 사진과 유사하게 찍기',
                     })
-                except (Place.DoesNotExist, TravelDaysAndPlaces.DoesNotExist):
+                except TravelDaysAndPlaces.DoesNotExist:
                     return Response({"ERROR": "장소 정보 혹은 해당 여행 경로 정보를 불러올 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
         return Response({
             "message": "랜덤 미션 할당 완료",
             "missions": created_missions
         }, status=status.HTTP_201_CREATED)
+
+
+class IsMissionCompleteView(viewsets.ViewSet):
+
+    def retrieve(self, request, *args, **kwargs):
+        tdp = kwargs.get('pk', None)
+        travel_days_and_places = None
+        try:
+            travel_days_and_places = TravelDaysAndPlaces.objects.get(id=tdp)
+        except TravelDaysAndPlaces.DoesNotExist:
+            return Response({'ERROR': '해당 여행 장소를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({
+            'tdp_id': tdp,
+            'mission_success': travel_days_and_places.mission_success
+        }, status=status.HTTP_200_OK)
+
+class MissionImageGetView(viewsets.ViewSet):
+    def retrieve(self, request, *args, **kwargs):
+        tdp = kwargs.get('pk', None)
+        travel_days_and_places = None
+        try:
+            travel_days_and_places = TravelDaysAndPlaces.objects.get(id=tdp)
+        except TravelDaysAndPlaces.DoesNotExist:
+            return Response({'ERROR': '해당 여행 장소를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({
+            'tdp_id': tdp,
+            'mission_image': travel_days_and_places.mission_image.url if travel_days_and_places.mission_image else None
+        }, status=status.HTTP_200_OK)
