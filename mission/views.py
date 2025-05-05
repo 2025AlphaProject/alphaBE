@@ -223,3 +223,24 @@ class MissionImageGetView(viewsets.ViewSet):
             'tdp_id': tdp,
             'mission_image': travel_days_and_places.mission_image.url if travel_days_and_places.mission_image else None
         }, status=status.HTTP_200_OK)
+
+class SaveMissionCompleteView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated] # 로그인 한 사용자만 등록가능
+
+    def create(self, request, *args, **kwargs):
+        tdp_id = request.data.get('tdp_id', None)
+        is_success = request.data.get('is_success', None)
+        tdp = None
+        try:
+            tdp = TravelDaysAndPlaces.objects.get(id=int(tdp_id))
+        except TravelDaysAndPlaces.DoesNotExist:
+            return Response({
+                "Error": "해당 여행 정보(tdp)가 존재하지 않습니다."
+            })
+
+        tdp.mission_success = bool(is_success)
+        tdp.save()
+        return Response({
+            "tdp_id": tdp_id,
+            "is_success": tdp.mission_success,
+        })
