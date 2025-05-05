@@ -10,6 +10,7 @@ class User(AbstractUser):
     gender = models.CharField(max_length=20, null=True, blank=True) # male or female
     age_range = models.CharField(max_length=20, null=True, blank=True) # '1-9' 형식으로 들어옴
     profile_image_url = models.URLField() # 프로필 이미지 링크입니다.
+    username = models.CharField(max_length=100)
 
     USERNAME_FIELD = 'sub'
     REQUIRED_FIELDS = ['username']
