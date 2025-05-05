@@ -48,52 +48,40 @@ class MissionCheckCompleteView(viewsets.ViewSet):
     def create(self, request, *args, **kwargs):
         travel_id = request.data.get('travel_id')
         place_id = request.data.get('place_id')
-        mission_id = request.data.get('mission_id')  # object_detection용일 경우 필요
-        user_lng = request.data.get('mapX')
-        user_lat = request.data.get('mapY')
+        mission_id = request.data.get('mission_id')  # object_detection 용일 경우 필요
 
-        if not travel_id or not place_id or not user_lat or not user_lng:
+        if not travel_id or not place_id:
             return Response({"error": "필수 입력값이 누락되었습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             place = Place.objects.get(id=place_id)
             travel_place = TravelDaysAndPlaces.objects.get(place=place, travel_id=travel_id)
 
-            place_lat = float(place.mapY)
-            place_lng = float(place.mapX)
-            user_lat = float(user_lat)
-            user_lng = float(user_lng)
-
-            # 거리 계산
-            distance = NearEventInfo.haversine(user_lat, user_lng, place_lat, place_lng)
-            location_pass = distance <= 0.2
-
             # 이미지 비교 방식 결정
             has_original_image = PlaceImages.objects.filter(place=place).exists()
 
             if has_original_image:
-                # ✅ 추천 장소 → 유사도 기반 판별, mission_id 없어도 됨
-                checker = ImageSimilarity(travel_id, place_id,mission_id)
+                # ✅ 추천 장소 → 유사도 기반 판별
+                checker = ImageSimilarity(travel_id, place_id, mission_id)
                 similarity_score = checker.get_similarity_score()
                 image_pass = similarity_score >= 40.0
                 method = "image_similarity"
+
             else:
-                # ✅ 랜덤 미션 장소 → 객체 인식 기반 판별, mission_id 필수
+                # ✅ 랜덤 미션 → 객체 인식 기반 판별
                 if not mission_id:
                     raise ValueError("랜덤 미션 판별에는 mission_id가 필요합니다.")
+                if not travel_place.mission_image:
+                    raise ValueError("업로드된 이미지가 없습니다.")
 
                 detector = ObjectDetection()
                 mission_content = travel_place.mission.content
 
-                if not travel_place.mission_image:
-                    raise ValueError("업로드된 이미지가 없습니다.")
-
-                # S3 이미지 다운로드 후 임시 파일로 저장
+                # S3에서 이미지 다운로드 후 임시파일로 저장
                 image_url = travel_place.mission_image.url
                 with requests.get(image_url, stream=True) as r:
                     if r.status_code != 200:
                         raise ValueError("이미지를 불러올 수 없습니다.")
-
                     with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
                         for chunk in r.iter_content(chunk_size=8192):
                             tmp.write(chunk)
@@ -103,19 +91,10 @@ class MissionCheckCompleteView(viewsets.ViewSet):
                 similarity_score = None
                 method = "object_detection"
 
-            is_success = location_pass and image_pass
-
-            travel_place.mission_success = is_success
-            travel_place.save()
-
             return Response({
-                "result": "success" if is_success else "fail",
-                "distance_to_place": round(distance, 2),
                 "image_check_passed": image_pass,
-                "location_check_passed": location_pass,
-                "similarity_score": similarity_score,
                 "method_used": method,
-                "message": "미션 판별 완료"
+                "message": "이미지 판별 완료"
             }, status=status.HTTP_200_OK)
 
         except Place.DoesNotExist:
