@@ -24,8 +24,8 @@ class TestAuthenticate(BaseTestCase):
         """
         redirect_uri = 'http://localhost:8000/auth/login/'
         response = self.client.post(f'/auth/get_token/?code={self.AUTH_CODE}&redirect_uri={redirect_uri}')
-        self.assertEqual(response.status_code, 201)
         print(response.json())
+        self.assertEqual(response.status_code, 201)
 
     @unittest.skipIf(SKIP_TEST == 'True', "Skip Login Refresh Test")
     def test_refresh_token(self):

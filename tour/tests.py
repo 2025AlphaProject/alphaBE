@@ -19,7 +19,7 @@ class TestTour(BaseTestCase):
     def setUp(self):
         # 유저 정보 임의 생성
         user = User.objects.create(
-            sub=3935716527,
+            sub=3928446869,
             username='TestUser',
             gender='male',
             age_range='1-9',

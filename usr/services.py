@@ -167,7 +167,7 @@ class UserService:
         response = requests.get(kakao_user_info_url, headers=header)  # 요청을 받아옵니다.
         if response.status_code == 200:  # 정상적으로 데이터가 왔다면
             return self.__upload_user(response.json()) # 실제 데이터 업로드를 진행합니다.
-        logger.info(f'sub: {self.sub}에 대한 카카오 회원정보 불러오기 오류') # 프론트가 인위적으로 잘못 요청할 수 있기 때문에 info로 로그 남김
+        logger.info(f'sub: {self.sub}에 대한 카카오 회원정보 불러오기 오류. error message: {response.text}') # 프론트가 인위적으로 잘못 요청할 수 있기 때문에 info로 로그 남김
         raise Exception("카카오 회원정보를 불러오는 과정에서 오류가 발생했습니다.")
 
     def __upload_user(self, raw_data):
@@ -195,7 +195,7 @@ class UserService:
             )
             return user
         for each in user_dict_keys:
-            data_dict[each] = raw_data[each]
+            data_dict[each] = raw_data.get(each, None)
 
         # 실제 유저 업로드
         try:
