@@ -222,4 +222,4 @@ class SaveMissionCompleteView(viewsets.ViewSet):
         return Response({
             "tdp_id": tdp_id,
             "is_success": tdp.mission_success,
-        })
+        }, status=status.HTTP_201_CREATED)
