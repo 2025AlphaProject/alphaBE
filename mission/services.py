@@ -67,7 +67,7 @@ class ImageSimilarity:
             # 이미지가 실제로 존재한다면, cv2를 사용하여 이미지 파일을 읽어들입니다.
             if image_obj.mission_image:
                 image_path = image_obj.mission_image.url
-                return cv2.imread(image_path)
+                return self.get_image_from_url(image_path)
             else:
                 logger.warning("There is no mission image")
                 return None
