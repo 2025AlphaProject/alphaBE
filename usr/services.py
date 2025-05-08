@@ -7,6 +7,7 @@ from config.settings import (
     KAKAO_TEST_NATIVE_API_KEY,
     KAKAO_REAL_REST_API_KEY,
     KAKAO_REAL_NATIVE_API_KEY,
+    KAKAO_REAL_JAVASCRIPT_KEY,
 )
 import requests
 import jwt
@@ -87,6 +88,7 @@ class UserService:
             KAKAO_TEST_NATIVE_API_KEY,
             KAKAO_REAL_REST_API_KEY,
             KAKAO_REAL_NATIVE_API_KEY,
+            KAKAO_REAL_JAVASCRIPT_KEY
         ]
         iss = payload['iss']
         aud = payload['aud']
