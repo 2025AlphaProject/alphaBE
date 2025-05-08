@@ -91,9 +91,9 @@ class UserService:
         iss = payload['iss']
         aud = payload['aud']
         if iss != 'https://kauth.kakao.com':
-            return ValidationError('issuer information is invalid')
+            raise ValidationError('issuer information is invalid')
         if aud not in valid_aud_list:
-            return ValidationError('application key is invalid')
+            raise ValidationError('application key is invalid')
         return payload
 
     def __download_oidc(self):
