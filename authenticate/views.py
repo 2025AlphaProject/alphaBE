@@ -1,5 +1,4 @@
 from django.http import JsonResponse
-from pydantic import ValidationError
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 import requests
@@ -102,7 +101,7 @@ class LoginRegisterView(viewsets.ViewSet):
         try:
             user_service = UserService(id_token)
             user, is_new = user_service.get_or_register_user() # 로그인, 회원가입 처리
-        except ValidationError as e:
+        except Exception as e:
             return Response({"Error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({
