@@ -7,6 +7,7 @@ from config.settings import (
     KAKAO_TEST_NATIVE_API_KEY,
     KAKAO_REAL_REST_API_KEY,
     KAKAO_REAL_NATIVE_API_KEY,
+    KAKAO_REAL_JAVASCRIPT_KEY,
 )
 import requests
 import jwt
@@ -87,13 +88,14 @@ class UserService:
             KAKAO_TEST_NATIVE_API_KEY,
             KAKAO_REAL_REST_API_KEY,
             KAKAO_REAL_NATIVE_API_KEY,
+            KAKAO_REAL_JAVASCRIPT_KEY
         ]
         iss = payload['iss']
         aud = payload['aud']
         if iss != 'https://kauth.kakao.com':
-            return ValidationError('issuer information is invalid')
+            raise ValidationError('issuer information is invalid')
         if aud not in valid_aud_list:
-            return ValidationError('application key is invalid')
+            raise ValidationError('application key is invalid')
         return payload
 
     def __download_oidc(self):
