@@ -96,6 +96,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'middleware.request_logger.RequestLogMiddleware',
+    'middleware.exception_middleware.ExceptionMiddleware',
 ]
 
 # TODO 특정 호스트만 접속하도록 허용할것
