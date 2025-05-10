@@ -1,8 +1,13 @@
-from django.core.exceptions import ValidationError
+from services.exception_handler import (
+    get_my_function,
+    get_error_line,
+    ValidationException,
+    ExceptionHandler,
+    NoAttributeException
+)
 
 from .models import User
 from config.settings import (
-    KAKAO_ADMIN_KEY,
     KAKAO_TEST_REST_API_KEY,
     KAKAO_TEST_NATIVE_API_KEY,
     KAKAO_REAL_REST_API_KEY,
@@ -45,7 +50,12 @@ class UserService:
         self.sub = payload.get('sub', None) # 회원 번호 저장
         self.nickname = payload.get('nickname', None) # 닉네임 저장
         if self.sub is None:
-            raise Exception("토큰 내 회원정보 일부가 존재하지 않습니다.")
+            raise NoAttributeException(
+                get_my_function(),
+                get_error_line(),
+                'usr57',
+                "토큰 내 회원정보 일부가 존재하지 않습니다."
+            )
         self.user = self.get_user() # 함수를 이용해서 유저를 가져옵니다.
 
     def __jwt_to_pem(self, n, e):
@@ -94,9 +104,19 @@ class UserService:
         iss = payload['iss']
         aud = payload['aud']
         if iss != 'https://kauth.kakao.com':
-            raise ValidationError('issuer information is invalid')
+            raise ValidationException(
+                get_my_function(),
+                get_error_line(),
+                'usr104',
+                'issuer information is invalid'
+            )
         if aud not in valid_aud_list:
-            raise ValidationError('application key is invalid')
+            raise ValidationException(
+                get_my_function(),
+                get_error_line(),
+                'usr111',
+                'application key is invalid'
+            )
         return payload
 
     def __download_oidc(self):
@@ -129,7 +149,12 @@ class UserService:
             oidc = OIDC.objects.get(kid=kid)
         except OIDC.DoesNotExist: # 오류 발생
             logger.error('키에 해당하는 공개키 정보 없음. (카카오 id 토큰 헤더 손상 의심)')
-            raise ValidationError("카카오 JWT 헤더 손상 의심")
+            raise ValidationException(
+                get_my_function(),
+                get_error_line(),
+                'usr149',
+                "카카오 JWT 헤더 손상 의심"
+            )
         return self.__jwt_to_pem(oidc.n, oidc.e)
 
 
@@ -144,9 +169,6 @@ class UserService:
         return self.user, False
 
     def get_user(self):
-        """
-        :param sub: 카카오 고유 회원번호를 의미합니다.
-        """
         user = None
         try:
             user = User.objects.get(sub=self.sub) # 유저를 가져오는 시도를 합니다.
@@ -195,7 +217,12 @@ class UserService:
         try:
             user = User.objects.create(**data_dict)
         except Exception as e:
-            raise Exception(e)
+            raise ExceptionHandler(
+                get_my_function(),
+                get_error_line(),
+                'Unexpected Error',
+                e
+            )
 
         logger.info(f"회원가입 완료. 회원명: {user.username} (sub:{self.sub})")
         return user
