@@ -9,6 +9,7 @@ from config.settings import (
     KAKAO_REAL_NATIVE_API_KEY,
     KAKAO_REAL_JAVASCRIPT_KEY,
 )
+from services.kakao_http_client import KakaoHttpClient
 import requests
 import jwt
 import base64
@@ -159,18 +160,9 @@ class UserService:
         해당 함수는 신규 유저를 실제로 DB에 등록하는 역할을 합니다.
         """
         # 회원가입 시작
-        # 카카오 개인 유저 정보를 갖고 오기 위한 url
-        kakao_user_info_url = f'https://kapi.kakao.com/v2/user/me?target_id_type=user_id&target_id={self.sub}'
-
-        header = {
-            'Authorization': f'KakaoAK {KAKAO_ADMIN_KEY}',
-            'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8'
-        }
-        response = requests.get(kakao_user_info_url, headers=header)  # 요청을 받아옵니다.
-        if response.status_code == 200:  # 정상적으로 데이터가 왔다면
-            return self.__upload_user(response.json()) # 실제 데이터 업로드를 진행합니다.
-        logger.info(f'sub: {self.sub}에 대한 카카오 회원정보 불러오기 오류. error message: {response.text}') # 프론트가 인위적으로 잘못 요청할 수 있기 때문에 info로 로그 남김
-        raise Exception("카카오 회원정보를 불러오는 과정에서 오류가 발생했습니다.")
+        kakao_http_client = KakaoHttpClient()
+        response = kakao_http_client.get_kakao_user_info(self.sub) # 요청을 받아옵니다.
+        return self.__upload_user(response)
 
     def __upload_user(self, raw_data):
         """

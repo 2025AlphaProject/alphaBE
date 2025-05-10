@@ -97,6 +97,34 @@ class KakaoHttpClient:
             response.text
         )
 
+    def get_kakao_user_info(self, sub: int, kakao_admin_key=None):
+        """
+            해당 함수는 카카오 유저의 정보를 가져오는 함수 입니다.
+        """
+        kakao_user_info_url = f'https://kapi.kakao.com/v2/user/me?target_id_type=user_id&target_id={sub}'
+
+        header = {
+            'Authorization': f'KakaoAK {kakao_admin_key or self.__kakao_admin_key}', # 함수 파라미터 우선
+            'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8'
+        }
+        response = requests.get(kakao_user_info_url, headers=header)  # 요청을 받아옵니다.
+        if response.status_code == 200: # 정상적인 요청이라면
+            return response.json()
+        elif response.status_code // 100 == 4: # 400번대 인경우
+            raise KakaoRequestError(
+                get_my_function(),
+                get_error_line(),
+                response.status_code,
+                response.text
+            )
+
+        raise KakaoHttpClientException(
+            get_my_function(),
+            get_error_line(),
+            response.status_code,
+            response.text
+        )
+
 
 
 if __name__ == "__main__":
