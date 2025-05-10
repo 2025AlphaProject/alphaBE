@@ -10,12 +10,7 @@ class BaseTestCase(TestCase):
             return
         cls.is_issued_token = True
         super().setUpClass()
-        token_service = KakaoTokenService()
-        data = {
-            'grant_type': 'refresh_token',
-            'client_id': KAKAO_REST_API_KEY,
-            'refresh_token': KAKAO_REFRESH_TOKEN,
-        }
-        token_service.get_kakao_token_response(data)
-        cls.KAKAO_TEST_ACCESS_TOKEN = token_service.access_token
-        cls.KAKAO_TEST_ID_TOKEN = token_service.id_token
+        token_service = KakaoTokenService(KAKAO_REST_API_KEY)
+        tokens = token_service.get_new_tokens(KAKAO_REFRESH_TOKEN)
+        cls.KAKAO_TEST_ACCESS_TOKEN = tokens.access_token
+        cls.KAKAO_TEST_ID_TOKEN = tokens.id_token
