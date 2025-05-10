@@ -2,7 +2,7 @@ from typing import Optional
 import requests
 import logging, json
 from config.settings import KAKAO_REST_API_KEY, APP_LOGGER
-from .error_handler import (
+from .exception_handler import (
     get_my_function,
     get_error_line
 )

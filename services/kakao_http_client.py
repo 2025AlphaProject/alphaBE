@@ -9,7 +9,7 @@ from .kakao_error_handler import (
     KakaoHttpClientException,
     KakaoRequestError
 )
-from .error_handler import (
+from .exception_handler import (
     get_my_function,
     get_error_line
 )
