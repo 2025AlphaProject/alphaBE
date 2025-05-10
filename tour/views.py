@@ -12,6 +12,13 @@ from .services import PlaceService
 from .models import Travel, Place, TravelDaysAndPlaces, PlaceImages, Event
 import datetime
 import logging
+from services.exception_handler import (
+    ValidationException,
+    NoAttributeException,
+    NoRequiredParameterException,
+    get_error_line,
+    get_my_function,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +60,8 @@ class NearEventView(viewsets.ModelViewSet):
         end_date = request.GET.get('end_date', None)
 
         if mapX is None or mapY is None: # 필수 파라미터 검증
-            return Response({"ERROR": "필수 파라미터 중 일부 혹은 전체가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
+            raise NoRequiredParameterException(__name__, get_my_function(), get_error_line())
+            # return Response({"ERROR": "필수 파라미터 중 일부 혹은 전체가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         if Event.objects.count() == 0: # 주변 행사 정보가 DB에 없을 경우, 코드는 200 OK로 보냅니다.
             logger.warning("Event Info is not exist in DB") # 해당 오류는 서버 오류에 가깝기 때문에 로그를 남깁니다.
@@ -89,7 +97,8 @@ class AddTravelerView(viewsets.ModelViewSet):
         user_sub = request.data.get('add_traveler_sub', None) # post body에서 add_traveler_sub를 가져옵니다.
         travel_id = request.data.get('travel_id', None) # 추가할 여행
         if user_sub is None or travel_id is None:
-            return Response({"Error": "필수 파라미터가 존재하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
+            raise NoRequiredParameterException(__name__, get_my_function(), get_error_line())
+            # return Response({"Error": "필수 파라미터가 존재하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
         travel = None
         try:
             travel = Travel.objects.get(id=int(travel_id))
