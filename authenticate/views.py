@@ -38,25 +38,6 @@ def kakao_callback(request):
     data['is_new'] = is_new # 신규 유저인지 알려주는 플래그 입니다.
     return JsonResponse(data, status=201) # post 요청을 보내줬기 때문에 201 create를 보내줍니다.
 
-    # if token_service.status_code == 200:
-    #     id_token = token_service.id_token
-    #     # 아이디 토큰이 존재하지 않는다면 -> 예외처리
-    #     if id_token is None:
-    #         return JsonResponse({"Error": "id 토큰이 존재하지 않습니다.", "ErrorResponse": token_service.response}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    #     # TODO 유저 생성하여 회원가입 처리 or 로그인 처리
-    #     user_service = UserService(id_token)
-    #     user, is_new = user_service.get_or_register_user() # 로그인 혹은 회원가입을 처리합니다.
-    #     # data 딕셔너리 객체를 생성하여 액세스, 리프레시 토큰만 골라서 추출
-    #     data = dict()
-    #     data['access_token'] = token_service.access_token  # 액세스 토큰 추가
-    #     data['token_type'] = token_service.token_type  # token 타입 정보 추가
-    #     data['refresh_token'] = token_service.refresh_token  # 리프레시 토큰 정보 추가
-    #     data['is_new'] = is_new # 신규 유저인지 알려주는 플래그 입니다.
-    #     # return JsonResponse(data, status=201) # post 요청을 보내줬기 때문에 201 create를 보내줍니다.
-    #     return JsonResponse(token_service.response, status=status.HTTP_201_CREATED) # 모든 정보를 보내줍니다.
-    # logger.error(token_service.response)
-    # return JsonResponse({"Error": token_service.response}, status=status.HTTP_400_BAD_REQUEST)
-
 class KakaoRefreshTokens(viewsets.ViewSet):
     """
     해당 클래스는 카카오 세션이 만료되었을 때 refresh를 해주기 위한 api view 입니다.
