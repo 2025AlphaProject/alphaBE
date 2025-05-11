@@ -52,14 +52,46 @@ class ValidationException(ExceptionHandler):
     pass
 
 class NoObjectException(ExceptionHandler):
+    """
+        해당 예외는 요청한 Object가 존재하지 않을 때 발생하는 예외입니다.
+        기본으로 404 status code를 반환합니다.
+
+        Attributes:
+            error_file (str): The name of the file where the error occurred.
+            error_func (str): The function name where the error occurred.
+            error_line (int): The line number where the error occurred.
+            error_code (str): Custom error code identifying the error.
+            error_message (str): Detailed error message describing the issue.
+
+    """
     status_code = 404
     default_code = 'NO_OBJECT'
 
 class NoAttributeException(ExceptionHandler):
+    """
+    해당 예외는 요청 객체의 속성이 없을 때 발생하는 예외입니다.
+
+    Attributes:
+        error_file (str): The name of the file where the error occurred.
+        error_func (str): The function name where the error occurred.
+        error_line (int): The line number where the error occurred.
+        error_code (str): Custom error code identifying the error.
+        error_message (str): Detailed error message describing the issue.
+    """
     default_code = 'NO_ATTRIBUTE'
     default_detail = '요청한 속성이 존재하지 않습니다.'
 
 class NoRequiredParameterException(ExceptionHandler):
+    """
+    해당 예외는 필수 파라미터가 존재하지 않을 때 발생하는 예외입니다.
+
+    Attributes:
+        error_file (str): The name of the file where the error occurred.
+        error_func (str): The function name where the error occurred.
+        error_line (int): The line number where the error occurred.
+        error_code (str, optional): Custom error code identifying the error.
+        error_message (str, optional): Detailed error message describing the issue.
+    """
     def __init__(self, error_file, error_func, error_line, error_code=None, error_message=None):
         error_code = error_code or 'NO_REQUIRED_PARAMETER'
         error_message = error_message or '필수 파라미터 중 일부 혹은 전체가 없습니다.'
