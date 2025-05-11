@@ -52,7 +52,8 @@ class ValidationException(ExceptionHandler):
     pass
 
 class NoObjectException(ExceptionHandler):
-    pass
+    status_code = 404
+    default_code = 'NO_OBJECT'
 
 class NoAttributeException(ExceptionHandler):
     pass
@@ -62,4 +63,10 @@ class NoRequiredParameterException(ExceptionHandler):
         error_code = error_code or 'NO_REQUIRED_PARAMETER'
         error_message = error_message or '필수 파라미터 중 일부 혹은 전체가 없습니다.'
         super().__init__(error_file, error_func, error_line, error_code, error_message)
+
+class ValueException(ExceptionHandler):
+    def __init__(self, error_file, error_func, error_line, error_code=None, error_message=None):
+        error_code = error_code or 'VALUE_ERROR'
+        error_message = error_message or '입력 형식이 잘못되었습니다.'
+
 
