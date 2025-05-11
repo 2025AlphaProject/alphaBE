@@ -195,6 +195,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'authenticate.authentications.CustomAuthentication',
     ),
+    'EXCEPTION_HANDLER': 'services.exception_handler.custom_exception_handler'
 }
 
 # 아래는 celery setting을 담당합니다.
