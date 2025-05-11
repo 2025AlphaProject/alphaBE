@@ -56,7 +56,8 @@ class NoObjectException(ExceptionHandler):
     default_code = 'NO_OBJECT'
 
 class NoAttributeException(ExceptionHandler):
-    pass
+    default_code = 'NO_ATTRIBUTE'
+    default_detail = '요청한 속성이 존재하지 않습니다.'
 
 class NoRequiredParameterException(ExceptionHandler):
     def __init__(self, error_file, error_func, error_line, error_code=None, error_message=None):
