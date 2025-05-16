@@ -47,9 +47,14 @@ class ExceptionHandler(APIException):
 
 class ValidationException(ExceptionHandler):
     """
-        Validation Exception
+        해당 예외는 유효성 검사에서 실패가 발생했을 시 발생하는 예외입니다
     """
-    pass
+    default_code = 'VALIDATION_ERROR'
+    default_detail = '유효성 검사 실패.'
+
+    def __init__(self, error_file, error_func, error_line, error_code=None, error_message=None):
+        # 에러 코드와 에러 메시지는 기본값으로 보내는 것이 가능하도록 설정합니다.
+        super().__init__(error_file, error_func, error_line, error_code, error_message)
 
 class NoObjectException(ExceptionHandler):
     """
@@ -98,13 +103,33 @@ class NoRequiredParameterException(ExceptionHandler):
         super().__init__(error_file, error_func, error_line, error_code, error_message)
 
 class ValueException(ExceptionHandler):
+    """
+        해당 예외는 파라미터로 들어와야 할 데이터 타입은 올바르게 들어왔지만, 올바른 형식이 들어오지 않았을 경우에 발생하는 예외 입니다.
+
+        Attributes:
+            error_file (str): The name of the file where the error occurred.
+            error_func (str): The function name where the error occurred.
+            error_line (int): The line number where the error occurred.
+            error_code (str, optional): Custom error code identifying the error.
+            error_message (str, optional): Detailed error message describing the issue.
+    """
     def __init__(self, error_file, error_func, error_line, error_code=None, error_message=None):
         error_code = error_code or 'VALUE_ERROR'
         error_message = error_message or '입력 형식이 잘못되었습니다.'
+        super().__init__(
+            error_file,
+            error_func,
+            error_line,
+            error_code,
+            error_message
+        )
 
 
 
 def custom_exception_handler(exc, context):
+    """
+        DRF의 커스텀 핸들러를 설정하며, detail만 메시지가 갔던 기존 방식에 비해서 status code와 같은 부가 정보를 추가해 보냅니다.
+    """
     # Call REST framework's default exception handler first,
     # to get the standard error response.
     response = exception_handler(exc, context)
