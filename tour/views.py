@@ -12,6 +12,14 @@ from .services import PlaceService
 from .models import Travel, Place, TravelDaysAndPlaces, PlaceImages, Event
 import datetime
 import logging
+from services.exception_handler import (
+    ValidationException,
+    NoAttributeException,
+    NoRequiredParameterException,
+    get_error_line,
+    get_my_function,
+    ValueException, NoObjectException
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +61,8 @@ class NearEventView(viewsets.ModelViewSet):
         end_date = request.GET.get('end_date', None)
 
         if mapX is None or mapY is None: # 필수 파라미터 검증
-            return Response({"ERROR": "필수 파라미터 중 일부 혹은 전체가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
+            raise NoRequiredParameterException(__name__, get_my_function(), get_error_line())
+            # return Response({"ERROR": "필수 파라미터 중 일부 혹은 전체가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         if Event.objects.count() == 0: # 주변 행사 정보가 DB에 없을 경우, 코드는 200 OK로 보냅니다.
             logger.warning("Event Info is not exist in DB") # 해당 오류는 서버 오류에 가깝기 때문에 로그를 남깁니다.
@@ -89,7 +98,8 @@ class AddTravelerView(viewsets.ModelViewSet):
         user_sub = request.data.get('add_traveler_sub', None) # post body에서 add_traveler_sub를 가져옵니다.
         travel_id = request.data.get('travel_id', None) # 추가할 여행
         if user_sub is None or travel_id is None:
-            return Response({"Error": "필수 파라미터가 존재하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
+            raise NoRequiredParameterException(__name__, get_my_function(), get_error_line())
+            # return Response({"Error": "필수 파라미터가 존재하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
         travel = None
         try:
             travel = Travel.objects.get(id=int(travel_id))
@@ -314,22 +324,28 @@ class CourseView(viewsets.ViewSet):
         tour_id = pk  # URL에서 받은 여행 ID
         del_date = request.data.get('target_date', None)
         if not del_date:
-            return Response({
-                "Error": "삭제 할 날짜 정보가 없습니다."
-            }, status=status.HTTP_400_BAD_REQUEST)
+            raise NoRequiredParameterException(__name__, get_my_function(), get_error_line())
         try:
             tour_date = datetime.datetime.strptime(del_date, "%Y-%m-%d")
         except ValueError:
-            logger.info(f'date: {del_date} is not date format') # 클라이언트가 잘못 요청 보낸 것이므로
-            return Response({
-                "Error": "날짜 형식이 올바르지 않습니다."
-            }, status=status.HTTP_400_BAD_REQUEST)
+            raise ValueException(
+                __name__,
+                get_my_function(),
+                get_error_line(),
+                error_message=f'date: {del_date} is not date format'
+            )
 
 
         instances = TravelDaysAndPlaces.objects.filter(travel__id=int(tour_id), date=tour_date)
         if not instances.exists():
             logger.warning(f'travel id: {tour_id} && sub: {user_sub} has no travel days.')
-            return Response({"Error": "해당 날짜의 여행 정보가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+            raise NoObjectException(
+                __name__,
+                get_my_function(),
+                get_error_line(),
+                'No Object exists.',
+                f'해당 날짜의 여행이 존재하지 않습니다.'
+            )
         instances.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -340,11 +356,13 @@ class CourseView(viewsets.ViewSet):
         try:
             travels = Travel.objects.filter(user__sub=user_sub)  # 해당 user의 여행 경로들
         except Travel.DoesNotExist:
-            logger.warning(f'sub: {user_sub} has no travels.')
-            return Response({
-                "error": "404",
-                "message": "사용자의 여행 경로가 존재하지 않습니다."
-            }, status=status.HTTP_404_NOT_FOUND)
+            raise NoObjectException(
+                __name__,
+                get_my_function(),
+                get_error_line(),
+                'No Travel object exists.',
+                f'sub: {user_sub}의 여행이 존재하지 않습니다.'
+            )
 
         # 여행 경로들에 대한 결과 리스트 생성
         travel_results = []
