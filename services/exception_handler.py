@@ -124,6 +124,18 @@ class ValueException(ExceptionHandler):
             error_message
         )
 
+class HttpRequestException(ExceptionHandler):
+    def __init__(self, error_file, error_func, error_line, error_code=None, error_message=None):
+        error_code = error_code or 'Http_Request_Error'
+        error_message = error_message or 'HTTP 서버 통신 오류.'
+        super().__init__(
+            error_file,
+            error_func,
+            error_line,
+            error_code,
+            error_message
+        )
+
 
 
 def custom_exception_handler(exc, context):
