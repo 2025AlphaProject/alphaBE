@@ -6,12 +6,21 @@ from services.kakao_token_service import KakaoTokenService
 from services.kakao_error_handler import KakaoRequestError
 
 from usr.services import UserService
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from config.settings import KAKAO_REAL_NATIVE_API_KEY, KAKAO_REST_API_KEY, APP_LOGGER # 환경변수를 가져옵니다.
 import logging
 logger = logging.getLogger(APP_LOGGER)
 
 # Create your views here.
+
+def get_tokens_for_user(user):
+    refresh = RefreshToken.for_user(user)
+
+    return {
+        'refresh': str(refresh),
+        'access': str(refresh.access_token),
+    }
 
 
 def kakao_callback(request):
@@ -83,6 +92,10 @@ class LoginRegisterView(viewsets.ViewSet):
         except Exception as e:
             return Response({"Error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+        tokens = get_tokens_for_user(user)
+        accessToken = tokens['access']
+        refreshToken = tokens['refresh']
+
         return Response({
             "message": "login or register success",
             "is_new": is_new,
@@ -92,6 +105,10 @@ class LoginRegisterView(viewsets.ViewSet):
                 "profile_image_url": user.profile_image_url,
                 "age_range": user.age_range,
                 "gender": user.gender,
+            },
+            "tokens": {
+                "access_token": accessToken,
+                "refresh_token": refreshToken,
             }
         }, status=status.HTTP_201_CREATED)
 
