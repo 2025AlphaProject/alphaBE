@@ -1,6 +1,7 @@
 import requests
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.tokens import AccessToken
 from usr.models import User
 from config.settings import APP_LOGGER
 
@@ -24,10 +25,10 @@ class CustomAuthentication(BaseAuthentication):
             raise AuthenticationFailed('Invalid Bearer Prefix')
 
         # 액세스 토큰 검증을 시도합니다.
-        payload = self.validate_kakao_access_token(access_token)
+        payload = AccessToken(access_token)
         # 사용자 정보를 받아옵니다.
         try:
-            sub = payload['id']
+            sub = payload['sub']
             user = User.objects.get(sub=sub)
             logger.info(f'username: {user.username}(sub: {sub}) User attempting to access backend Api')
             return user, access_token
