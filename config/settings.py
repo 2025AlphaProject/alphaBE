@@ -41,6 +41,7 @@ KAKAO_REAL_NATIVE_API_KEY = env('KAKAO_REAL_NATIVE_API_KEY') # 카카오 실제 
 SKIP_TEST = env('SKIP_TEST')
 GEOCODER_API_KEY = env('GEOCODER_API_KEY')
 KAKAO_REAL_JAVASCRIPT_KEY = env('KAKAO_REAL_JAVASCRIPT_KEY')
+REFRESH_TOKEN = env('REFRESH_TOKEN')
 
 
 # Quick-start development settings - unsuitable for production

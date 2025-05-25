@@ -18,15 +18,15 @@ from tests.base import BaseTestCase
 class TestTour(BaseTestCase):
     def setUp(self):
         # 유저 정보 임의 생성
-        user = User.objects.create(
-            sub=3928446869,
-            username='TestUser',
-            gender='male',
-            age_range='1-9',
-            profile_image_url='https://example.org'
-        )
-        user.set_password('test_password112')
-        user.save()
+        # user = User.objects.create(
+        #     sub=3928446869,
+        #     username='TestUser',
+        #     gender='male',
+        #     age_range='1-9',
+        #     profile_image_url='https://example.org'
+        # )
+        # user.set_password('test_password112')
+        # user.save()
 
         # 유저 정보 임의 생성2
         user2 = User.objects.create(
