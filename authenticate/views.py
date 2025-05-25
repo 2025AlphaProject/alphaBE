@@ -4,6 +4,8 @@ from rest_framework.response import Response
 import requests
 from services.kakao_token_service import KakaoTokenService
 from services.kakao_error_handler import KakaoRequestError
+from rest_framework_simplejwt.views import TokenRefreshView
+from services.exception_handler import *
 
 from usr.services import UserService
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -112,3 +114,33 @@ class LoginRegisterView(viewsets.ViewSet):
             }
         }, status=status.HTTP_201_CREATED)
 
+class CustomTokenRefreshView(TokenRefreshView):
+    def post(self, request, *args, **kwargs):
+        data = request.data.copy()
+        refresh_token = data.pop('refresh_token', None)
+        if refresh_token is None:
+            raise NoRequiredParameterException(
+                get_error_file(),
+                get_my_function(),
+                get_error_line(),
+                'NO_PARAMETER',
+                'refresh_token 키 값이 존재하지 않습니다.'
+            )
+        data['refresh'] = refresh_token
+        serializer = self.get_serializer(data=data)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception as e:
+            raise ExceptionHandler(
+                get_error_file(),
+                get_my_function(),
+                get_error_line(),
+                'TOKEN_VALIDATION_ERROR',
+                e
+            )
+
+        return Response({
+            'access_token': serializer.validated_data['access'],
+            'token_type': 'Bearer',
+            'refresh_token': serializer.validated_data['refresh'],
+        }, status=status.HTTP_200_OK)
