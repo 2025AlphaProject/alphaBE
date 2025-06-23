@@ -21,15 +21,15 @@ class TestMission(BaseTestCase):
 
     def setUp(self):
         # 유저 정보 임의 생성 및 저장
-        user = User.objects.create(
-            sub=3928446869,
-            username='TestUser',
-            gender='male',
-            age_range='1-9',
-            profile_image_url='https://example.org'
-        )
-        user.set_password('test_password112')
-        user.save()
+        # user = User.objects.create(
+        #     sub=3928446869,
+        #     username='TestUser',
+        #     gender='male',
+        #     age_range='1-9',
+        #     profile_image_url='https://example.org'
+        # )
+        # user.set_password('test_password112')
+        # user.save()
 
         # 임의 미션 생성
         Mission.objects.create(content='예시 사진과 유사하게 사진찍기')
