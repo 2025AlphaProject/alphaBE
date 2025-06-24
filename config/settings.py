@@ -276,6 +276,9 @@ SIMPLE_JWT = {
 }
 
 # 아래는 로그 설정입니다.
+LOG_DIR = './logs'
+os.makedirs(LOG_DIR, exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False, # 기본 로거 설정 유지
@@ -295,8 +298,8 @@ LOGGING = {
     'handlers': { # 로그 핸들러 설정
         'file': {
             'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': 'app.log',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': os.path.join(LOG_DIR, 'app.log'),
             'formatter': 'verbose',
             'encoding': 'utf-8',
             'when': 'midnight', # 자정마다 새 로그파일 생성
