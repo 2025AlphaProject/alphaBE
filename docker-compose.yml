@@ -50,7 +50,7 @@ services:
       - app_network
 
   migrations:
-    image: ytk030305/alpha_be:1.0.3
+    image: ytk030305/alpha_be:1.0.5
     command: sh entrypoint.sh
     depends_on:
       - db
@@ -62,7 +62,7 @@ services:
       - app_network
 
   conever_api: # api 컨테이너
-    image: ytk030305/alpha_be:1.0.3
+    image: ytk030305/alpha_be:1.0.5
     command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
     ports:
       - "8000:8000"
@@ -77,24 +77,50 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     networks:
       - app_network
+    volumes:
+      - log_volume:/code/logs
 
-  conever_web:
-    image: ytk030305/conever_web:0.1.0
-    ports:
-      - "80:80"
+  # 아래부터는 로깅 컨테이너
+  # 아래는 promtail 설정
+  promtail:
+    image: grafana/promtail:latest
+    restart: always
     depends_on:
-      - db
-      - redis
-      - migrations
       - conever_api
-      - celery_beat
+      - migrations
       - celery_worker
-    networks:
-      - app_network
+      - celery_beat
+    volumes:
+      - ./promtail-config.yml:/etc/promtail/config.yml
+      - log_volume:/var/log/django            # 로그 공유
+
+  loki:
+    image: grafana/loki:2.9.2
+    restart: always
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki-config.yaml:/etc/loki/local-config.yaml
+      - loki-storage:/loki
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    depends_on:
+      - loki
+
 
 volumes:
   db_data:
   static_volume:
+  log_volume:
+  grafana-storage:
+  loki-storage:
 
 networks:
   app_network:
