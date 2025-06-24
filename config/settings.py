@@ -296,9 +296,11 @@ LOGGING = {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': 'info.log',
+            'filename': 'app.log',
             'formatter': 'verbose',
-            'encoding': 'utf-8'
+            'encoding': 'utf-8',
+            'when': 'midnight', # 자정마다 새 로그파일 생성
+            'backupCount': 7, # 일주일치만 저장
         },
         'logstash': {
             'level': 'INFO',
