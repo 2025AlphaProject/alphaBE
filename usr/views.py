@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 
-from services.exception_handler import ExceptionHandler
+from services.exception_handler import ExceptionHandler, UnExpectedException
 from .serializers import UserSerializer
 
 from usr.models import User
@@ -25,7 +25,7 @@ class Who(ViewSet):
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
-            raise ExceptionHandler('UnException', e, 3)
+            raise UnExpectedException(error_message=str(e))
 
 class UserListView(viewsets.ModelViewSet):
     """

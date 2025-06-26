@@ -116,9 +116,29 @@ class ValueException(ExceptionHandler):
             error_code (str, optional): Custom error code identifying the error.
             error_message (str, optional): Detailed error message describing the issue.
     """
+    status_code = 400
     def __init__(self, error_code=None, error_message=None):
         error_code = error_code or 'VALUE_ERROR'
         error_message = error_message or '입력 형식이 잘못되었습니다.'
+        super().__init__(
+            error_code,
+            error_message,
+            3
+        )
+
+class UnExpectedException(ExceptionHandler):
+    """
+            해당 예외는 파라미터로 들어와야 할 데이터 타입은 올바르게 들어왔지만, 올바른 형식이 들어오지 않았을 경우에 발생하는 예외 입니다.
+
+            Attributes:
+                error_code (str, optional): Custom error code identifying the error.
+                error_message (str, optional): Detailed error message describing the issue.
+        """
+    status_code = 500
+
+    def __init__(self, error_code=None, error_message=None):
+        error_code = error_code or 'UNEXPECTED_ERROR'
+        error_message = error_message or '예상치 못한 서버 오류 발생'
         super().__init__(
             error_code,
             error_message,
