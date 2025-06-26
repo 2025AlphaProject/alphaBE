@@ -135,6 +135,7 @@ class ValueException(ExceptionHandler):
 class UnExpectedException(ExceptionHandler):
     """
             해당 예외는 예상치 못한 예외가 발생한 경우에 사용합니다.
+            status_code: 500
 
             Attributes:
                 error_code (str, optional): Custom error code identifying the error.
