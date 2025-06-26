@@ -2,6 +2,8 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
+
+from services.exception_handler import ExceptionHandler
 from .serializers import UserSerializer
 
 from usr.models import User
@@ -23,7 +25,7 @@ class Who(ViewSet):
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
-            return Response({"error": f"서버 오류: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            raise ExceptionHandler('UnException', e, 3)
 
 class UserListView(viewsets.ModelViewSet):
     """
