@@ -1,0 +1,20 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /var/lib/promtail/positions.yaml  # 로그 읽은 위치 기록 (volume mount 필수)
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push  # Loki 서버 주소 (docker-compose 기준이면 서비스명 사용)
+
+scrape_configs:
+  - job_name: django-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: django
+          app: conever-api
+          environment: dev
+          __path__: /var/log/django/*.log*

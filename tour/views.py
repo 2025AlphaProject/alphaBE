@@ -16,8 +16,6 @@ from services.exception_handler import (
     ValidationException,
     NoAttributeException,
     NoRequiredParameterException,
-    get_error_line,
-    get_my_function,
     ValueException, NoObjectException
 )
 
@@ -61,7 +59,7 @@ class NearEventView(viewsets.ModelViewSet):
         end_date = request.GET.get('end_date', None)
 
         if mapX is None or mapY is None: # 필수 파라미터 검증
-            raise NoRequiredParameterException(__name__, get_my_function(), get_error_line())
+            raise NoRequiredParameterException()
             # return Response({"ERROR": "필수 파라미터 중 일부 혹은 전체가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         if Event.objects.count() == 0: # 주변 행사 정보가 DB에 없을 경우, 코드는 200 OK로 보냅니다.
@@ -98,7 +96,7 @@ class AddTravelerView(viewsets.ModelViewSet):
         user_sub = request.data.get('add_traveler_sub', None) # post body에서 add_traveler_sub를 가져옵니다.
         travel_id = request.data.get('travel_id', None) # 추가할 여행
         if user_sub is None or travel_id is None:
-            raise NoRequiredParameterException(__name__, get_my_function(), get_error_line())
+            raise NoRequiredParameterException()
             # return Response({"Error": "필수 파라미터가 존재하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
         travel = None
         try:
@@ -324,14 +322,11 @@ class CourseView(viewsets.ViewSet):
         tour_id = pk  # URL에서 받은 여행 ID
         del_date = request.data.get('target_date', None)
         if not del_date:
-            raise NoRequiredParameterException(__name__, get_my_function(), get_error_line())
+            raise NoRequiredParameterException()
         try:
             tour_date = datetime.datetime.strptime(del_date, "%Y-%m-%d")
         except ValueError:
             raise ValueException(
-                __name__,
-                get_my_function(),
-                get_error_line(),
                 error_message=f'date: {del_date} is not date format'
             )
 
@@ -340,9 +335,6 @@ class CourseView(viewsets.ViewSet):
         if not instances.exists():
             logger.warning(f'travel id: {tour_id} && sub: {user_sub} has no travel days.')
             raise NoObjectException(
-                __name__,
-                get_my_function(),
-                get_error_line(),
                 'No Object exists.',
                 f'해당 날짜의 여행이 존재하지 않습니다.'
             )
@@ -357,9 +349,6 @@ class CourseView(viewsets.ViewSet):
             travels = Travel.objects.filter(user__sub=user_sub)  # 해당 user의 여행 경로들
         except Travel.DoesNotExist:
             raise NoObjectException(
-                __name__,
-                get_my_function(),
-                get_error_line(),
                 'No Travel object exists.',
                 f'sub: {user_sub}의 여행이 존재하지 않습니다.'
             )

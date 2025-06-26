@@ -15,7 +15,8 @@ class RequestLogMiddleware:
         except Exception as e:
             content = f"<<Unable to decode content: {e}>>"
 
-        logger.info(
+        logger.debug(
             f"{request.method} {request.path} - {response.status_code} - {request.META.get('REMOTE_ADDR')} - Response: {content}"
         )
+        logger.info(f"{request.method} {request.path} - {response.status_code} - {request.META.get('REMOTE_ADDR')}")
         return response
