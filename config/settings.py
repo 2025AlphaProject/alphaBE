@@ -288,7 +288,7 @@ LOGGING = {
             'style': '{', # str.format
         },
         'simple': {
-            'format': '{name} {levelname} {asctime} {message}',
+            'format': '[{levelname}] | {asctime} | {message}',
             'style': '{',
         },
         'logstash': {
@@ -300,7 +300,7 @@ LOGGING = {
             'level': 'DEBUG',
             'class': 'logging.handlers.TimedRotatingFileHandler',
             'filename': os.path.join(LOG_DIR, 'app.log'),
-            'formatter': 'verbose',
+            'formatter': 'simple',
             'encoding': 'utf-8',
             'when': 'midnight', # 자정마다 새 로그파일 생성
             'backupCount': 7, # 일주일치만 저장
