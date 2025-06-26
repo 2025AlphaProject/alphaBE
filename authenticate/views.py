@@ -120,9 +120,6 @@ class CustomTokenRefreshView(TokenRefreshView):
         refresh_token = data.pop('refresh_token', None)
         if refresh_token is None:
             raise NoRequiredParameterException(
-                get_error_file(),
-                get_my_function(),
-                get_error_line(),
                 'NO_PARAMETER',
                 'refresh_token 키 값이 존재하지 않습니다.'
             )
@@ -132,9 +129,6 @@ class CustomTokenRefreshView(TokenRefreshView):
             serializer.is_valid(raise_exception=True)
         except Exception as e:
             raise ExceptionHandler(
-                get_error_file(),
-                get_my_function(),
-                get_error_line(),
                 'TOKEN_VALIDATION_ERROR',
                 e
             )

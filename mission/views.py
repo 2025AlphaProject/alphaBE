@@ -78,17 +78,11 @@ class MissionCheckCompleteView(viewsets.ViewSet):
                 # ✅ 랜덤 미션 → 객체 인식 기반 판별
                 if not mission_id:
                     raise NoAttributeException(
-                        __name__,
-                        get_my_function(),
-                        get_error_line(),
                         'mission82',
                         "랜덤 미션 판별에는 mission_id가 필요합니다."
                     )
                 if not travel_place.mission_image:
                     raise NoObjectException(
-                        __name__,
-                        get_my_function(),
-                        get_error_line(),
                         'mission90',
                         "업로드된 이미지가 없습니다."
                     )
