@@ -66,6 +66,44 @@ class TaskConsumer(AsyncWebsocketConsumer):
             }
         }))
 
+        categoryName = params.pop('categoryName', [None])[0]  # 예: 음식점, 쇼핑 등
+
+        if areaCode is None or categoryName is None:
+            await self.send(text_data=json.dumps({
+                'state': 'ERROR',
+                'Message': '필수 파라미터 중 일부가 없습니다.'
+            }, ensure_ascii=False))
+            return
+
+        tour = TourApi(MobileOS=MobileOS.ANDROID, MobileApp='AlphaProject2025', service_key=PUBLIC_DATA_PORTAL_API_KEY)
+
+        sigunguCodes = None
+        if sigunguName is not None:
+            sigunguNames = sigunguName.split(',')
+            sigunguCodes = []
+            for each in sigunguNames:
+                sigunguCode = tour.get_sigungu_code(areaCode, each)
+                if sigunguCode is None:
+                    await self.send(text_data=json.dumps({
+                        'state': 'ERROR',
+                        'Message': '해당 시군구 이름에 대응되는 코드를 가져올 수 없습니다. 시군구 이름을 다시 한번 확인 바랍니다.'
+                    }, ensure_ascii=False))
+                    return
+                sigunguCodes.append(sigunguCode)
+
+        task_result = app.send_task(
+            'tour.tasks.get_recommended_place_by_category_task',
+            args=[self.user_id, areaCode, categoryName, sigunguCodes, Arrange.TITLE_IMAGE.value]
+        )
+
+        await self.send(text_data=json.dumps({
+            'state': 'OK',
+            'Message': {
+                'task_id': task_result.task_id,
+            }
+        }))
+
+
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.user_id, self.channel_name)
