@@ -70,7 +70,7 @@ class NearEventView(viewsets.ModelViewSet):
         try:
             events = event_info.get_near_by_events(float(mapY), float(mapX), float(radius)) # 주변 행사 정보를 불러옵니다.
         except ValueError:
-            return Response({"ERROR": "경도, 위도, 반경 정보 일부 혹은 모두가 데이터 형식이 실수형이 아닙니다."}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValueException('Value Error', '경도, 위도, 반경 정보 일부 혹은 모두가 데이터 형식이 실수형이 아닙니다.')
 
         try:
             if start_date is not None:
@@ -78,7 +78,7 @@ class NearEventView(viewsets.ModelViewSet):
             if end_date is not None:
                 events = events.filter(end_date__lte=end_date) # 마지막 날짜보다 더 작거나 같은 데이터를 불러옵니다.
         except ValidationError:
-            return Response({"ERROR": "날짜 값이 날짜 형식이 아닙니다. 반드시 YYYY-MM-DD 형식이어야 합니다."}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationException(error_message="날짜 값이 날짜 형식이 아닙니다. 반드시 YYYY-MM-DD 형식이어야 합니다.")
 
         events = events.order_by('start_date') # 날짜 순 정렬
 
@@ -134,7 +134,7 @@ class GetAreaList(viewsets.ViewSet):
                 code_list.append(int(each['code']))
             area_code = int(area_code)
             if area_code not in code_list:
-                return Response({"There is no area code": f"{area_code}"}, status=status.HTTP_404_NOT_FOUND)
+                raise NoObjectException('No Area Code', f"There is no area code {area_code}")
             area_list = tour.get_sigungu_code_list(area_code)
             response_data[str(area_code)] = area_list
         return Response(response_data, status=status.HTTP_200_OK)
