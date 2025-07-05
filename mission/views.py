@@ -69,7 +69,7 @@ class MissionCheckCompleteView(viewsets.ViewSet):
 
             if has_original_image:
                 # ✅ 추천 장소 → 유사도 기반 판별
-                checker = ImageSimilarity(travel_id, place_id, mission_id)
+                checker = ImageSimilarity(travel_place.id, place_id, mission_id)
                 similarity_score = checker.get_similarity_score()
                 image_pass = similarity_score >= 40.0
                 method = "image_similarity"
@@ -116,8 +116,8 @@ class MissionCheckCompleteView(viewsets.ViewSet):
             raise NoObjectException(error_message="여행지 정보가 존재하지 않습니다.")
         except ValueError as ve:
             return ValueException(error_message=str(ve))
-        except Exception as e:
-            raise UnExpectedException(error_message=str(e))
+        # except Exception as e:
+        #     raise UnExpectedException(error_message=str(e))
 
 class RandomMissionCreateView(viewsets.ViewSet):
     """

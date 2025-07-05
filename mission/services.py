@@ -63,7 +63,7 @@ class ImageSimilarity:
         """ 사용자가 촬영한 미션 이미지를 가져옵니다. """
         try:
             # TravelDaysAndPlaces에서 이미지 객체를 찾고 이미지 경로를 가져옵니다.
-            image_obj = TravelDaysAndPlaces.objects.get(id=self.travel_id, mission=self.mission_id)
+            image_obj = TravelDaysAndPlaces.objects.get(id=self.travel_id)
             # 이미지가 실제로 존재한다면, cv2를 사용하여 이미지 파일을 읽어들입니다.
             if image_obj.mission_image:
                 image_path = image_obj.mission_image.url
