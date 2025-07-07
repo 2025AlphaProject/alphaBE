@@ -1,8 +1,16 @@
 from django.urls import path
-from .views import TravelViewSet, NearEventView, AddTravelerView, GetAreaList, Sido_list, CourseView
+from .views import (
+    TravelViewSet,
+    NearEventView,
+    AddTravelerView,
+    GetAreaList,
+    Sido_list,
+    CourseView,
+    NewTourAddView
+)
 
 urlpatterns = [
-    path('', TravelViewSet.as_view({
+    path('', NewTourAddView.as_view({
         'get': 'list',
         'post': 'create'
     }), name='travel-list-create'),

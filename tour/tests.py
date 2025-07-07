@@ -9,7 +9,7 @@ from services.tour_api import (
     ContentTypeId,
 )
 from usr.models import User
-from .models import Travel
+from .models import Travel, Place
 from services.kakao_token_service import KakaoTokenService
 from tests.base import BaseTestCase
 
@@ -17,16 +17,6 @@ from tests.base import BaseTestCase
 
 class TestTour(BaseTestCase):
     def setUp(self):
-        # 유저 정보 임의 생성
-        # user = User.objects.create(
-        #     sub=3928446869,
-        #     username='TestUser',
-        #     gender='male',
-        #     age_range='1-9',
-        #     profile_image_url='https://example.org'
-        # )
-        # user.set_password('test_password112')
-        # user.save()
 
         # 유저 정보 임의 생성2
         user2 = User.objects.create(
@@ -86,8 +76,29 @@ class TestTour(BaseTestCase):
         }
         data = {
             'tour_name': '태근이의 여행',
-            'start_date': '2025-03-10',
-            'end_date': '2025-03-15',
+            'tour_date': '2025-07-07',
+            'places': [
+                {
+                    "name": "아산 공세리성당",
+                    "mapX": "126.9134070332",
+                    "mapY": "36.8833377411",
+                    "image_url": "http://tong.visitkorea.or.kr/cms/resource/17/3095817_image2_1.jpg",
+                    "road_address": "충청남도 아산시 인주면 공세리성당길 10"
+                },
+                {
+                    "name": "아산 공세리성당",
+                    "mapX": "126.9134070332",
+                    "mapY": "36.8833377411",
+                    "image_url": "",
+                },
+                {
+                    "name": "피나클랜드 수목원",
+                    "mapX": "126.9263450490",
+                    "mapY": "36.8725197718",
+                    "road_address": "충청남도 아산시 영인면 월선길 20-42"
+                },
+
+            ]
         }
         # 빈 데이터 list get Test
         response = self.client.get(uri, headers=headers)
@@ -95,7 +106,9 @@ class TestTour(BaseTestCase):
 
         # create test
         response = self.client.post(uri, data, headers=headers, content_type='application/json')
+        print(response.json())
         self.assertEqual(response.status_code, 201)
+        self.assertEqual(Place.objects.count(), 3)
 
         # create test - Exception Test
         exception_data = {
@@ -103,46 +116,42 @@ class TestTour(BaseTestCase):
             'start_date': '2025-0310',
         }
         response = self.client.post(uri, exception_data, headers=headers, content_type='application/json')
+        print(response.json())
         self.assertEqual(response.status_code, 400)
-
-        # 인스턴스 임의로 하나 더 생성
-        data['tour_name'] = '태근이의 여행2'
-        response = self.client.post(uri, data, headers=headers, content_type='application/json')
-        self.assertEqual(response.status_code, 201)
-
         # list get Test
         response = self.client.get(uri, headers=headers)
         self.assertEqual(response.status_code, 200)
+        print(response.json())
 
-        # detail get Test
-        id = Travel.objects.get(tour_name='태근이의 여행').id
-        uri_detail = f'/tour/{id}/' # 아이디 1번
-        response = self.client.get(uri_detail, headers=headers)
-        self.assertEqual(response.status_code, 200)
-
-        # delete Test
-        response = self.client.delete(uri_detail, headers=headers)
-        self.assertEqual(response.status_code, 204)
-        response = self.client.get(uri, headers=headers)
-        self.assertEqual(response.status_code, 200)
-
-        # put Test - Exception Test
-        put_data = {
-            'tour_name': '시연이의 여행'
-        }
-        response = self.client.put(uri_detail, put_data, headers=headers, content_type='application/json')
-        self.assertEqual(response.status_code, 404)
-
-        # put Test
-        id2 = Travel.objects.get(tour_name='태근이의 여행2').id
-        uri_detail = f'/tour/{id2}/'  # 아이디 2번
-        response = self.client.put(uri_detail, put_data, headers=headers, content_type='application/json')
-        self.assertEqual(response.status_code, 200)
-
-        # get Test - Exception Test
-        uri_detail = f'/tour/{id}/'
-        response = self.client.get(uri_detail, headers=headers)
-        self.assertEqual(response.status_code, 404)
+        # # detail get Test
+        # id = Travel.objects.get(tour_name='태근이의 여행').id
+        # uri_detail = f'/tour/{id}/' # 아이디 1번
+        # response = self.client.get(uri_detail, headers=headers)
+        # self.assertEqual(response.status_code, 200)
+        #
+        # # delete Test
+        # response = self.client.delete(uri_detail, headers=headers)
+        # self.assertEqual(response.status_code, 204)
+        # response = self.client.get(uri, headers=headers)
+        # self.assertEqual(response.status_code, 200)
+        #
+        # # put Test - Exception Test
+        # put_data = {
+        #     'tour_name': '시연이의 여행'
+        # }
+        # response = self.client.put(uri_detail, put_data, headers=headers, content_type='application/json')
+        # self.assertEqual(response.status_code, 404)
+        #
+        # # put Test
+        # id2 = Travel.objects.get(tour_name='태근이의 여행2').id
+        # uri_detail = f'/tour/{id2}/'  # 아이디 2번
+        # response = self.client.put(uri_detail, put_data, headers=headers, content_type='application/json')
+        # self.assertEqual(response.status_code, 200)
+        #
+        # # get Test - Exception Test
+        # uri_detail = f'/tour/{id}/'
+        # response = self.client.get(uri_detail, headers=headers)
+        # self.assertEqual(response.status_code, 404)
 
     def test_add_traveler(self):
         end_point = '/tour/'

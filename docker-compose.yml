@@ -4,8 +4,9 @@ services:
   db:
     image: mysql:latest
     restart: always
-#    ports:
-#      - "3306:3306"
+    # 배포 땐 아래 포트 막을 것
+    ports:
+      - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}

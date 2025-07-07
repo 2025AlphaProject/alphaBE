@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from usr.models import User
-from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer
+from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, PlaceImageSerializer
 from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY, KAKAO_REST_API_KEY, APP_LOGGER
 from .serializers import EventSerializer
 from services.tour_api import TourApi, NearEventInfo
@@ -19,10 +19,13 @@ from services.exception_handler import (
     ValueException, NoObjectException
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(APP_LOGGER)
 
 
 class TravelViewSet(viewsets.ModelViewSet):
+    """
+        해당 API는 사용자의 여행을 등록하는 api입니다.
+    """
     queryset = Travel.objects.all()
     serializer_class = TravelSerializer
     permission_classes = [IsAuthenticated] # 로그인한 사용자만 api를 승인합니다.
@@ -145,6 +148,79 @@ class Sido_list(viewsets.ViewSet):
         tour = TourApi(service_key=PUBLIC_DATA_PORTAL_API_KEY)
         sido_list = tour.get_sigungu_code_list()
         return Response(sido_list, status=status.HTTP_200_OK)
+
+class NewTourAddView(viewsets.ModelViewSet):
+    """
+        해당 뷰는 새로운 여행을 추가하는 뷰를 담당합니다.
+        구현 API:
+            여행 등록
+            사용자 여행 리스트 조회
+    """
+
+    permission_classes = [IsAuthenticated]
+    queryset = Travel.objects.all() # 여행 모델에 대한 정보만 가지고 옵니다.
+    serializer_class = TravelSerializer
+
+    def get_queryset(self):
+        logger.debug("queryset 반환 메소드 실행")
+        return self.queryset.filter(user__sub=self.request.user.sub)
+
+    def create(self, request, *args, **kwargs):
+        logger.debug("/tour/ create 메소드 실행")
+        user_sub = request.user.sub
+        # 파라미터 유효성 검사 - places만
+        if request.data.get('places') is None:
+            raise NoRequiredParameterException("No Object", "places 정보가 없습니다.")
+
+        # 여행 생성
+        cp_dic = request.data.copy()
+        cp_dic.pop('places') # 장소 정보만 삭제
+        serializer = TravelSerializer(data=cp_dic)
+        serializer.is_valid(raise_exception=True)
+        travel = serializer.save()
+        travel.user.add(User.objects.get(sub=user_sub))  # 다대 다 관계시 유저 추가
+        logger.debug("여행 생성")
+        # 장소 생성
+        tour_id = serializer.data.get('id')
+        for each in request.data.get('places'):
+            """
+                {
+                    name
+                    mapX
+                    mapY
+                    image_url
+                    road_address
+                }
+            """
+            plc_cp_dic = each.copy()
+            img_url = plc_cp_dic.pop('image_url', None) # 사진 정보는 따로 저장
+            place_serializer = PlaceSerializer(data=plc_cp_dic)
+            place_serializer.is_valid(raise_exception=True)
+            place_serializer.save()
+            logger.debug(f"장소 저장")
+
+            # 사진 저장
+            plc_id = place_serializer.data.get('id')
+            place = Place.objects.get(id=int(plc_id))
+            if img_url is not None and img_url != "":
+                image_serializer = PlaceImageSerializer(data={
+                    'place': int(plc_id),
+                    'image_url': img_url
+                })
+                image_serializer.is_valid(raise_exception=True)
+                image_serializer.save()
+                logger.debug(f"사진 저장")
+
+            tdp_serializer = TravelDaysAndPlacesSerializer(data={
+                'place': int(plc_id),
+                'travel': int(tour_id)
+            })
+            tdp_serializer.is_valid(raise_exception=True)
+            tdp_serializer.save()
+            logger.debug(f"tdp 저장")
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
 
 
 

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Travel, Place, Event, TravelDaysAndPlaces
+from .models import Travel, Place, Event, TravelDaysAndPlaces, PlaceImages
 from usr.serializers import UserSerializer
 
 class TravelSerializer(serializers.ModelSerializer):
@@ -29,8 +29,13 @@ class PlaceSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class TravelDaysAndPlacesSerializer(serializers.ModelSerializer):
-    place = PlaceSerializer() # 장소 정보는 시리얼라이저를 통해 반환합니다.
+    # place = PlaceSerializer() # 장소 정보는 시리얼라이저를 통해 반환합니다.
 
     class Meta:
         model = TravelDaysAndPlaces
+        fields = '__all__'
+
+class PlaceImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PlaceImages
         fields = '__all__'
