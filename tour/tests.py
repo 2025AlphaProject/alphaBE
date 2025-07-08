@@ -146,7 +146,15 @@ class TestTour(BaseTestCase):
                     'id': 5,
                     'road_address': '도로명주소',
                     'address': '충남 아산시'
-                }
+                },
+                {
+                    'id': 6,
+                    'name': '레일',
+                    'mapX': '126.8673145212',
+                    'mapY': '36.7610121401',
+                    'road_address': '도로명주소'
+                },
+
             ]
         }
         # 삭제 된 데이터 다시 넣기

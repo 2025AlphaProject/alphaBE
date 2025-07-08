@@ -164,6 +164,7 @@ class NewTourAddView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = Travel.objects.all() # 여행 모델에 대한 정보만 가지고 옵니다.
     serializer_class = TravelSerializer
+    place_service = PlaceService(KAKAO_REST_API_KEY) # 주소 저장 서비스
 
     def save_tdp_place_image(self, tour_id, places_list):
         """
@@ -177,10 +178,19 @@ class NewTourAddView(viewsets.ModelViewSet):
                     mapY
                     image_url
                     road_address
+                    address
                 }
             """
+            # 파라미터 검증
+            if each.get('name', None) is None or each.get('mapX', None) is None or each.get('mapY', None) is None:
+                raise NoRequiredParameterException(error_message='장소의 필수 파라미터 누락')
+
             plc_cp_dic = each.copy()
             img_url = plc_cp_dic.pop('image_url', None) # 사진 정보는 따로 저장
+            road_address_kakao, address_kakao = self.place_service.get_parcel_and_road_address(float(each['mapX']), float(each['mapY']))
+            if plc_cp_dic.get('road_address', None) is None:
+                plc_cp_dic['road_address'] = road_address_kakao
+            plc_cp_dic['address'] = address_kakao
             place_serializer = PlaceSerializer(data=plc_cp_dic)
             place_serializer.is_valid(raise_exception=True)
             place_serializer.save()
@@ -205,6 +215,7 @@ class NewTourAddView(viewsets.ModelViewSet):
             tdp_serializer.is_valid(raise_exception=True)
             tdp_serializer.save()
             logger.debug(f"tdp 저장")
+        return TravelSerializer(Travel.objects.get(id=tour_id))
 
     def get_queryset(self):
         logger.debug("queryset 반환 메소드 실행")
@@ -241,7 +252,22 @@ class NewTourAddView(viewsets.ModelViewSet):
             place_id_str = info_data.get('id', None)
             image_url = info_data.pop('image_url', None)
             if place_id_str is None: raise NoRequiredParameterException(error_message='각 장소 정보에 장소 id는 필수입니다.')
-            place = Place.objects.get(id=int(place_id_str))
+
+            place = Place.objects.get(id=int(place_id_str)) # 기존 장소 객체 불러오기
+
+            mapX = info_data.get('mapX', None)
+            mapY = info_data.get('mapY', None)
+            logger.debug('좌표: ' + str(mapX) + ' ' + str(mapY))
+            if info_data.get('mapX', None) is not None or info_data.get('mapY', None) is not None: # 좌표 변경 시
+                logger.debug('좌표 변경에 따른 주소 변경 시작')
+                if mapX is None: mapX = place.mapX
+                if mapY is None: mapY = place.mapY
+
+                road_addr, addr = self.place_service.get_parcel_and_road_address(float(mapX), float(mapY))
+                if info_data.get('road_address') is None: info_data['road_address'] = road_addr
+                info_data['address'] = addr
+
+
             place_serializer = PlaceSerializer(place, data=info_data, partial=True)
             place_serializer.is_valid(raise_exception=True)
             place_serializer.save()
@@ -281,9 +307,9 @@ class NewTourAddView(viewsets.ModelViewSet):
         logger.debug("여행 생성")
         # 장소 생성
         tour_id = serializer.data.get('id')
-        self.save_tdp_place_image(tour_id, request.data.get('places'))
+        ser = self.save_tdp_place_image(tour_id, request.data.get('places'))
 
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(ser.data, status=status.HTTP_201_CREATED)
 
 
 
