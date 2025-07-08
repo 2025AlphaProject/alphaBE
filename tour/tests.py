@@ -86,7 +86,7 @@ class TestTour(BaseTestCase):
                     "road_address": "충청남도 아산시 인주면 공세리성당길 10"
                 },
                 {
-                    "name": "아산 공세리성당",
+                    "name": "아산 공세리",
                     "mapX": "126.9134070332",
                     "mapY": "36.8833377411",
                     "image_url": "",
@@ -138,17 +138,17 @@ class TestTour(BaseTestCase):
             'tour_date': '2025-07-08',
             'places': [
                 {
-                    'id': 4,
+                    'id': Place.objects.get(name='아산 공세리성당').id,
                     'name': '아산 공세리성당2',
                     'image_url': 'https://sports-phinf.pstatic.net/team/kbo/default/LG.png'
                 },
                 {
-                    'id': 5,
+                    'id': Place.objects.get(name='아산 공세리').id,
                     'road_address': '도로명주소',
                     'address': '충남 아산시'
                 },
                 {
-                    'id': 6,
+                    'id': Place.objects.get(name='피나클랜드 수목원').id,
                     'name': '레일',
                     'mapX': '126.8673145212',
                     'mapY': '36.7610121401',
