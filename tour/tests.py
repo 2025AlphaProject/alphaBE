@@ -9,7 +9,7 @@ from services.tour_api import (
     ContentTypeId,
 )
 from usr.models import User
-from .models import Travel, Place
+from .models import Travel, Place, PlaceImages
 from services.kakao_token_service import KakaoTokenService
 from tests.base import BaseTestCase
 
@@ -131,25 +131,38 @@ class TestTour(BaseTestCase):
         self.assertEqual(response.status_code, 204)
         response = self.client.get(uri, headers=headers)
         self.assertEqual(response.status_code, 200)
-        print(response.json())
 
-        # # put Test - Exception Test
-        # put_data = {
-        #     'tour_name': '시연이의 여행'
-        # }
-        # response = self.client.put(uri_detail, put_data, headers=headers, content_type='application/json')
-        # self.assertEqual(response.status_code, 404)
-        #
-        # # put Test
-        # id2 = Travel.objects.get(tour_name='태근이의 여행2').id
-        # uri_detail = f'/tour/{id2}/'  # 아이디 2번
-        # response = self.client.put(uri_detail, put_data, headers=headers, content_type='application/json')
-        # self.assertEqual(response.status_code, 200)
-        #
-        # # get Test - Exception Test
-        # uri_detail = f'/tour/{id}/'
-        # response = self.client.get(uri_detail, headers=headers)
-        # self.assertEqual(response.status_code, 404)
+        # patch Test - Exception Test
+        patch_data = {
+            'tour_name': '시연이의 여행',
+            'tour_date': '2025-07-08',
+            'places': [
+                {
+                    'id': 4,
+                    'name': '아산 공세리성당2',
+                    'image_url': 'https://sports-phinf.pstatic.net/team/kbo/default/LG.png'
+                },
+                {
+                    'id': 5,
+                    'road_address': '도로명주소',
+                    'address': '충남 아산시'
+                }
+            ]
+        }
+        # 삭제 된 데이터 다시 넣기
+        response = self.client.post(uri, data, headers=headers, content_type='application/json')
+        self.assertEqual(response.status_code, 201)
+
+        # patch Test
+        id2 = Travel.objects.get(tour_name='태근이의 여행').id
+        uri_detail = f'/tour/{id2}/'  # 아이디 2번
+        response = self.client.patch(uri_detail, patch_data, headers=headers, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+
+        # No place Parameter Test
+        patch_data['places'][0].pop('id')
+        response = self.client.patch(uri_detail, patch_data, headers=headers, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
 
     def test_add_traveler(self):
         end_point = '/tour/'
@@ -158,8 +171,16 @@ class TestTour(BaseTestCase):
         }
         data = {
             'tour_name': '태근이의 여행',
-            'start_date': '2025-03-10',
-            'end_date': '2025-03-15',
+            'tour_date': '2025-07-07',
+            'places': [
+                {
+                    "name": "아산 공세리성당",
+                    "mapX": "126.9134070332",
+                    "mapY": "36.8833377411",
+                    "image_url": "http://tong.visitkorea.or.kr/cms/resource/17/3095817_image2_1.jpg",
+                    "road_address": "충청남도 아산시 인주면 공세리성당길 10"
+                }
+            ]
         }
         response = self.client.post(end_point, headers=headers, data=data, content_type='application/json')
 

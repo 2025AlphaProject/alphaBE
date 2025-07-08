@@ -157,7 +157,7 @@ class NewTourAddView(viewsets.ModelViewSet):
             여행 등록
             사용자 여행 리스트 조회
             해당 여행 상세 조회
-            TODO 여행 정보 수정(장소 정보 포함)
+            여행 정보 수정(장소 정보 포함)
             여행 삭제
     """
 
@@ -165,42 +165,11 @@ class NewTourAddView(viewsets.ModelViewSet):
     queryset = Travel.objects.all() # 여행 모델에 대한 정보만 가지고 옵니다.
     serializer_class = TravelSerializer
 
-    def get_queryset(self):
-        logger.debug("queryset 반환 메소드 실행")
-        return self.queryset.filter(user__sub=self.request.user.sub)
-
-    def retrieve(self, request, *args, **kwargs):
+    def save_tdp_place_image(self, tour_id, places_list):
         """
-            여행 상세정보 조회 API
+            해당 함수는 장소들 리스트를 부여받으면 장소, 사진, tdp를 저장해주는 함수입니다.
         """
-        tour_id = int(kwargs.get('pk'))
-        travel_object = Travel.objects.get(id=tour_id)
-        deserializer = TravelSerializer(travel_object)
-        return Response(deserializer.data, status=status.HTTP_200_OK)
-
-
-
-    def create(self, request, *args, **kwargs):
-        """
-            여행 상세등록 API
-        """
-        logger.debug("/tour/ create 메소드 실행")
-        user_sub = request.user.sub
-        # 파라미터 유효성 검사 - places만
-        if request.data.get('places') is None:
-            raise NoRequiredParameterException("No Object", "places 정보가 없습니다.")
-
-        # 여행 생성
-        cp_dic = request.data.copy()
-        cp_dic.pop('places') # 장소 정보만 삭제
-        serializer = TravelSerializer(data=cp_dic)
-        serializer.is_valid(raise_exception=True)
-        travel = serializer.save()
-        travel.user.add(User.objects.get(sub=user_sub))  # 다대 다 관계시 유저 추가
-        logger.debug("여행 생성")
-        # 장소 생성
-        tour_id = serializer.data.get('id')
-        for each in request.data.get('places'):
+        for each in places_list:
             """
                 {
                     name
@@ -236,6 +205,83 @@ class NewTourAddView(viewsets.ModelViewSet):
             tdp_serializer.is_valid(raise_exception=True)
             tdp_serializer.save()
             logger.debug(f"tdp 저장")
+
+    def get_queryset(self):
+        logger.debug("queryset 반환 메소드 실행")
+        return self.queryset.filter(user__sub=self.request.user.sub)
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+            여행 상세정보 조회 API
+        """
+        tour_id = int(kwargs.get('pk'))
+        travel_object = Travel.objects.get(id=tour_id)
+        deserializer = TravelSerializer(travel_object)
+        return Response(deserializer.data, status=status.HTTP_200_OK)
+
+    def partial_update(self, request, *args, **kwargs):
+        tour_id = int(kwargs.get('pk'))
+        if request.data.get('places', None) is None: return super().partial_update(request, *args, **kwargs)
+        logger.debug('places_update')
+        data = request.data.copy()
+        places_info = data.pop('places')
+        serializer = TravelSerializer(Travel.objects.get(id=tour_id))
+        if len(data) != 0: # 장소 제외 정보가 존재한다면
+            # 여행 시리얼라이저 이용해서 저장
+            serializer = TravelSerializer(Travel.objects.get(id=tour_id), # 원래 object
+                                         data=data, # 요청 data
+                                         partial=True) # 일부 업데이트
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+
+        # self.save_tdp_place_image(tour_id, places_info)
+        logger.debug('partial 장소 정보 수정 시작')
+        for each in places_info:
+            info_data = each.copy()
+            place_id_str = info_data.get('id', None)
+            image_url = info_data.pop('image_url', None)
+            if place_id_str is None: raise NoRequiredParameterException(error_message='각 장소 정보에 장소 id는 필수입니다.')
+            place = Place.objects.get(id=int(place_id_str))
+            place_serializer = PlaceSerializer(place, data=info_data, partial=True)
+            place_serializer.is_valid(raise_exception=True)
+            place_serializer.save()
+
+            if image_url is not None:
+                logger.debug('partial 사진저장 시작')
+                place_image_serializer = PlaceImageSerializer(
+                    PlaceImages.objects.get(place_id=int(place_id_str)),
+                    data={"image_url": image_url}, partial=True
+                )
+                place_image_serializer.is_valid(raise_exception=True)
+                place_image_serializer.save()
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+
+
+    def create(self, request, *args, **kwargs):
+        """
+            여행 상세등록 API
+        """
+        logger.debug("/tour/ create 메소드 실행")
+        user_sub = request.user.sub
+        # 파라미터 유효성 검사 - places만
+        if request.data.get('places') is None:
+            raise NoRequiredParameterException("No Object", "places 정보가 없습니다.")
+
+        # 여행 생성
+        cp_dic = request.data.copy()
+        cp_dic.pop('places') # 장소 정보만 삭제
+        serializer = TravelSerializer(data=cp_dic)
+        serializer.is_valid(raise_exception=True)
+        travel = serializer.save()
+        travel.user.add(User.objects.get(sub=user_sub))  # 다대 다 관계시 유저 추가
+        logger.debug("여행 생성")
+        # 장소 생성
+        tour_id = serializer.data.get('id')
+        self.save_tdp_place_image(tour_id, request.data.get('places'))
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
