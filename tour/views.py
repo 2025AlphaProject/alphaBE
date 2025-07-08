@@ -4,7 +4,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from usr.models import User
-from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, PlaceImageSerializer
+from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, PlaceImageSerializer, \
+    TravelListSerializer
 from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY, KAKAO_REST_API_KEY, APP_LOGGER
 from .serializers import EventSerializer
 from services.tour_api import TourApi, NearEventInfo
@@ -279,3 +280,7 @@ class NewTourAddView(viewsets.ModelViewSet):
         ser = self.save_tdp_place_image(tour_id, request.data.get('places'))
 
         return Response(ser.data, status=status.HTTP_201_CREATED)
+
+    def list(self, request, *args, **kwargs):
+        self.serializer_class = TravelListSerializer
+        return super().list(request, *args, **kwargs)

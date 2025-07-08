@@ -119,6 +119,7 @@ class TestTour(BaseTestCase):
         # list get Test
         response = self.client.get(uri, headers=headers)
         self.assertEqual(response.status_code, 200)
+        print(response.json())
 
         # detail get Test
         id = Travel.objects.get(tour_name='태근이의 여행').id

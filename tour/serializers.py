@@ -24,6 +24,17 @@ class TravelSerializer(serializers.ModelSerializer):
             Place.objects.filter(traveldaysandplaces__travel=instance.id), many=True).data
         return data
 
+class TravelListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Travel
+        fields = '__all__'
+        read_only_fields = ('user',)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data.pop('user')
+        return data
+
 class EventSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
