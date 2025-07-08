@@ -38,7 +38,7 @@ class TravelDaysAndPlaces(models.Model):
     mission_success = models.BooleanField(null = True, blank = True)
 
     def __str__(self):
-        return self.travel.tour_name + " " + self.place.name + " " + str(self.date)
+        return self.travel.tour_name + " " + self.place.name + " " + str(self.travel.tour_date)
 
 class PlaceImages(models.Model):
     # id: pk
