@@ -1,6 +1,10 @@
 from rest_framework import serializers
 from .models import Travel, Place, Event, TravelDaysAndPlaces, PlaceImages
 from usr.serializers import UserSerializer
+from config.settings import APP_LOGGER
+import logging
+
+logger = logging.getLogger(APP_LOGGER)
 
 class TravelSerializer(serializers.ModelSerializer):
 
@@ -10,9 +14,14 @@ class TravelSerializer(serializers.ModelSerializer):
         read_only_fields = ('user',)
 
     def to_representation(self, instance):
+        logger.debug('Tour 시리얼라이저 to_representation 실행')
         data = super().to_representation(instance)
         data['user'] = UserSerializer(instance.user.all(), many=True).data
         # data['user'] = instance.user.all().values_list('username', flat=True) # 사용자 username만 가져옵니다.
+        # instance는 DB 객체가 들어옴
+        # 여행 id, tour_name, tour_date만 들어왔음
+        data['places'] = PlaceSerializer(
+            Place.objects.filter(traveldaysandplaces__travel=instance.id), many=True).data
         return data
 
 class EventSerializer(serializers.ModelSerializer):

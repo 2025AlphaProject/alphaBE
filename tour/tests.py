@@ -106,7 +106,6 @@ class TestTour(BaseTestCase):
 
         # create test
         response = self.client.post(uri, data, headers=headers, content_type='application/json')
-        print(response.json())
         self.assertEqual(response.status_code, 201)
         self.assertEqual(Place.objects.count(), 3)
 
@@ -116,25 +115,24 @@ class TestTour(BaseTestCase):
             'start_date': '2025-0310',
         }
         response = self.client.post(uri, exception_data, headers=headers, content_type='application/json')
-        print(response.json())
         self.assertEqual(response.status_code, 400)
         # list get Test
         response = self.client.get(uri, headers=headers)
         self.assertEqual(response.status_code, 200)
+
+        # detail get Test
+        id = Travel.objects.get(tour_name='태근이의 여행').id
+        uri_detail = f'/tour/{id}/' # 아이디 1번
+        response = self.client.get(uri_detail, headers=headers)
+        self.assertEqual(response.status_code, 200)
+
+        # delete Test
+        response = self.client.delete(uri_detail, headers=headers)
+        self.assertEqual(response.status_code, 204)
+        response = self.client.get(uri, headers=headers)
+        self.assertEqual(response.status_code, 200)
         print(response.json())
 
-        # # detail get Test
-        # id = Travel.objects.get(tour_name='태근이의 여행').id
-        # uri_detail = f'/tour/{id}/' # 아이디 1번
-        # response = self.client.get(uri_detail, headers=headers)
-        # self.assertEqual(response.status_code, 200)
-        #
-        # # delete Test
-        # response = self.client.delete(uri_detail, headers=headers)
-        # self.assertEqual(response.status_code, 204)
-        # response = self.client.get(uri, headers=headers)
-        # self.assertEqual(response.status_code, 200)
-        #
         # # put Test - Exception Test
         # put_data = {
         #     'tour_name': '시연이의 여행'

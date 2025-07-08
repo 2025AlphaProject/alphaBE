@@ -3,6 +3,7 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
+import tour
 from usr.models import User
 from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, PlaceImageSerializer
 from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY, KAKAO_REST_API_KEY, APP_LOGGER
@@ -155,6 +156,9 @@ class NewTourAddView(viewsets.ModelViewSet):
         구현 API:
             여행 등록
             사용자 여행 리스트 조회
+            해당 여행 상세 조회
+            TODO 여행 정보 수정(장소 정보 포함)
+            여행 삭제
     """
 
     permission_classes = [IsAuthenticated]
@@ -165,7 +169,21 @@ class NewTourAddView(viewsets.ModelViewSet):
         logger.debug("queryset 반환 메소드 실행")
         return self.queryset.filter(user__sub=self.request.user.sub)
 
+    def retrieve(self, request, *args, **kwargs):
+        """
+            여행 상세정보 조회 API
+        """
+        tour_id = int(kwargs.get('pk'))
+        travel_object = Travel.objects.get(id=tour_id)
+        deserializer = TravelSerializer(travel_object)
+        return Response(deserializer.data, status=status.HTTP_200_OK)
+
+
+
     def create(self, request, *args, **kwargs):
+        """
+            여행 상세등록 API
+        """
         logger.debug("/tour/ create 메소드 실행")
         user_sub = request.user.sub
         # 파라미터 유효성 검사 - places만

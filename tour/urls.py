@@ -15,9 +15,9 @@ urlpatterns = [
         'post': 'create'
     }), name='travel-list-create'),
 
-    path('<int:pk>/', TravelViewSet.as_view({
+    path('<int:pk>/', NewTourAddView.as_view({
         'get': 'retrieve',
-        'put': 'partial_update',
+        'patch': 'partial_update', # 메소드를 일부 업데이트인 patch로 변경
         'delete': 'destroy'
     }), name='travel-detail'),
 
