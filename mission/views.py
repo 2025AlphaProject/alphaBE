@@ -18,6 +18,12 @@ from services.exception_handler import (
     get_my_function,
     NoAttributeException, NoRequiredParameterException, ValueException, UnExpectedException
 )
+from config.settings import (
+    APP_LOGGER
+)
+import logging
+
+logger = logging.getLogger(APP_LOGGER)
 
 # Create your views here.
 class MissionListView(viewsets.ModelViewSet):
@@ -103,6 +109,10 @@ class MissionCheckCompleteView(viewsets.ViewSet):
                 image_pass = detector.detect_and_check(tmp_path, mission_content)
                 similarity_score = None
                 method = "object_detection"
+
+            if image_pass == False: # 미션 실패시 S3 사진 삭제
+                logger.debug('사진 삭제')
+                travel_place.mission_image.delete()
 
             return Response({
                 "image_check_passed": image_pass,
