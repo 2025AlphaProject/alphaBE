@@ -4,8 +4,8 @@ services:
   db:
     image: mysql:latest
     restart: always
-    ports:
-      - "3306:3306"
+#    ports:
+#      - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
@@ -50,7 +50,7 @@ services:
       - app_network
 
   migrations:
-    image: ytk030305/alpha_be:0.9.0
+    image: ytk030305/alpha_be:1.0.8
     command: sh entrypoint.sh
     depends_on:
       - db
@@ -62,10 +62,10 @@ services:
       - app_network
 
   conever_api: # api 컨테이너
-    image: ytk030305/alpha_be:0.9.0
+    image: ytk030305/alpha_be:1.0.8
     command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
-    ports:
-      - "8000:8000"
+#    ports:
+#      - "8000:8000"
 #    volumes:
 #      - .:/code
     depends_on:
@@ -77,45 +77,62 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     networks:
       - app_network
-
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
-    container_name: elasticsearch
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - xpack.security.http.ssl.enabled=false
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m # 메모리 제한 설정
     volumes:
-      - esdata:/usr/share/elasticsearch/data
-    networks:
-      - app_network
+      - log_volume:/code/logs
 
-
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.10.1
-    container_name: kibana
+  nginx:
+    image: nginx:latest
+    container_name: nginx
     ports:
-      - "5601:5601"
-    environment:
-      ELASTICSEARCH_HOSTS: "http://elasticsearch:9200"
+      - "80:80"  # 외부 접근 포트
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - conever_api
     networks:
       - app_network
 
-  logstash:
-    image: docker.elastic.co/logstash/logstash:8.10.0
-    container_name: logstash
-    volumes:
-      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+  # 아래부터는 로깅 컨테이너
+  # 아래는 promtail 설정
+  promtail:
+    image: grafana/promtail:latest
+    restart: always
     depends_on:
-      - elasticsearch
-    networks:
-      - app_network
+      - conever_api
+      - migrations
+      - celery_worker
+      - celery_beat
+    volumes:
+      - ./promtail-config.yml:/etc/promtail/config.yml
+      - log_volume:/var/log/django            # 로그 공유
+
+  loki:
+    image: grafana/loki:2.9.2
+    restart: always
+#    ports:
+#      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki-config.yaml:/etc/loki/local-config.yaml
+      - loki-storage:/loki
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    depends_on:
+      - loki
+
 
 volumes:
   db_data:
   static_volume:
-  esdata:
+  log_volume:
+  grafana-storage:
+  loki-storage:
 
 networks:
   app_network:

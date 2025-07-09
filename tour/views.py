@@ -12,6 +12,12 @@ from .services import PlaceService
 from .models import Travel, Place, TravelDaysAndPlaces, PlaceImages, Event
 import datetime
 import logging
+from services.exception_handler import (
+    ValidationException,
+    NoAttributeException,
+    NoRequiredParameterException,
+    ValueException, NoObjectException
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +59,8 @@ class NearEventView(viewsets.ModelViewSet):
         end_date = request.GET.get('end_date', None)
 
         if mapX is None or mapY is None: # 필수 파라미터 검증
-            return Response({"ERROR": "필수 파라미터 중 일부 혹은 전체가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
+            raise NoRequiredParameterException()
+            # return Response({"ERROR": "필수 파라미터 중 일부 혹은 전체가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         if Event.objects.count() == 0: # 주변 행사 정보가 DB에 없을 경우, 코드는 200 OK로 보냅니다.
             logger.warning("Event Info is not exist in DB") # 해당 오류는 서버 오류에 가깝기 때문에 로그를 남깁니다.
@@ -63,7 +70,7 @@ class NearEventView(viewsets.ModelViewSet):
         try:
             events = event_info.get_near_by_events(float(mapY), float(mapX), float(radius)) # 주변 행사 정보를 불러옵니다.
         except ValueError:
-            return Response({"ERROR": "경도, 위도, 반경 정보 일부 혹은 모두가 데이터 형식이 실수형이 아닙니다."}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValueException('Value Error', '경도, 위도, 반경 정보 일부 혹은 모두가 데이터 형식이 실수형이 아닙니다.')
 
         try:
             if start_date is not None:
@@ -71,7 +78,7 @@ class NearEventView(viewsets.ModelViewSet):
             if end_date is not None:
                 events = events.filter(end_date__lte=end_date) # 마지막 날짜보다 더 작거나 같은 데이터를 불러옵니다.
         except ValidationError:
-            return Response({"ERROR": "날짜 값이 날짜 형식이 아닙니다. 반드시 YYYY-MM-DD 형식이어야 합니다."}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationException(error_message="날짜 값이 날짜 형식이 아닙니다. 반드시 YYYY-MM-DD 형식이어야 합니다.")
 
         events = events.order_by('start_date') # 날짜 순 정렬
 
@@ -89,7 +96,8 @@ class AddTravelerView(viewsets.ModelViewSet):
         user_sub = request.data.get('add_traveler_sub', None) # post body에서 add_traveler_sub를 가져옵니다.
         travel_id = request.data.get('travel_id', None) # 추가할 여행
         if user_sub is None or travel_id is None:
-            return Response({"Error": "필수 파라미터가 존재하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
+            raise NoRequiredParameterException()
+            # return Response({"Error": "필수 파라미터가 존재하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
         travel = None
         try:
             travel = Travel.objects.get(id=int(travel_id))
@@ -126,7 +134,7 @@ class GetAreaList(viewsets.ViewSet):
                 code_list.append(int(each['code']))
             area_code = int(area_code)
             if area_code not in code_list:
-                return Response({"There is no area code": f"{area_code}"}, status=status.HTTP_404_NOT_FOUND)
+                raise NoObjectException('No Area Code', f"There is no area code {area_code}")
             area_list = tour.get_sigungu_code_list(area_code)
             response_data[str(area_code)] = area_list
         return Response(response_data, status=status.HTTP_200_OK)
@@ -221,7 +229,7 @@ class CourseView(viewsets.ViewSet):
             )
 
             # 날짜별 장소 연결 저장
-            TravelDaysAndPlaces.objects.get_or_create(
+            tdp, _ = TravelDaysAndPlaces.objects.get_or_create(
                 travel=travel,
                 place=place,
                 date=date
@@ -241,6 +249,8 @@ class CourseView(viewsets.ViewSet):
                 "image_url": image_url,
                 "road_address": road_address,
                 "parcel_address": parcel_address,
+                'place_id': place.id,
+                'tdp_id': tdp.id,
             })
 
         # 최종 응답 반환
@@ -293,6 +303,8 @@ class CourseView(viewsets.ViewSet):
                 "image_url": image_url,
                 "road_address": entry.place.road_address,
                 "parcel_address": entry.place.address,
+                "place_id": entry.place.id,
+                "tdp_id": entry.id,
             })
 
         # 응답 형태: [{ "date": "YYYY-MM-DD", "places": [...] }, ...]
@@ -308,17 +320,25 @@ class CourseView(viewsets.ViewSet):
     def destroy(self, request, pk=None):
         user_sub = request.user.sub  # 로그인한 사용자의 sub
         tour_id = pk  # URL에서 받은 여행 ID
-
+        del_date = request.data.get('target_date', None)
+        if not del_date:
+            raise NoRequiredParameterException()
         try:
-            travel = Travel.objects.get(id=tour_id, user__sub=user_sub)
-        except Travel.DoesNotExist:
-            logger.warning(f'travel id: {tour_id} && sub: {user_sub} is not exist in DB.')
-            return Response({
-                "error": "404",
-                "message": "해당 여행 ID가 존재하지 않거나, 접근 권한이 없습니다."
-            }, status=status.HTTP_404_NOT_FOUND)
+            tour_date = datetime.datetime.strptime(del_date, "%Y-%m-%d")
+        except ValueError:
+            raise ValueException(
+                error_message=f'date: {del_date} is not date format'
+            )
 
-        travel.delete()
+
+        instances = TravelDaysAndPlaces.objects.filter(travel__id=int(tour_id), date=tour_date)
+        if not instances.exists():
+            logger.warning(f'travel id: {tour_id} && sub: {user_sub} has no travel days.')
+            raise NoObjectException(
+                'No Object exists.',
+                f'해당 날짜의 여행이 존재하지 않습니다.'
+            )
+        instances.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def list(self, request, *args, **kwargs):  # 여행 경로 리스트 조회 API
@@ -328,11 +348,10 @@ class CourseView(viewsets.ViewSet):
         try:
             travels = Travel.objects.filter(user__sub=user_sub)  # 해당 user의 여행 경로들
         except Travel.DoesNotExist:
-            logger.warning(f'sub: {user_sub} has no travels.')
-            return Response({
-                "error": "404",
-                "message": "사용자의 여행 경로가 존재하지 않습니다."
-            }, status=status.HTTP_404_NOT_FOUND)
+            raise NoObjectException(
+                'No Travel object exists.',
+                f'sub: {user_sub}의 여행이 존재하지 않습니다.'
+            )
 
         # 여행 경로들에 대한 결과 리스트 생성
         travel_results = []
@@ -365,3 +384,4 @@ class CourseView(viewsets.ViewSet):
         return Response({
             "travels": travel_results
         }, status=status.HTTP_200_OK)
+

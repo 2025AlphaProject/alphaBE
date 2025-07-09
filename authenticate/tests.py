@@ -24,8 +24,8 @@ class TestAuthenticate(BaseTestCase):
         """
         redirect_uri = 'http://localhost:8000/auth/login/'
         response = self.client.post(f'/auth/get_token/?code={self.AUTH_CODE}&redirect_uri={redirect_uri}')
-        self.assertEqual(response.status_code, 201)
         print(response.json())
+        self.assertEqual(response.status_code, 201)
 
     @unittest.skipIf(SKIP_TEST == 'True', "Skip Login Refresh Test")
     def test_refresh_token(self):
@@ -53,6 +53,7 @@ class TestAuthenticate(BaseTestCase):
         response = self.client.post(target_uri, data=data, content_type='application/json')
         self.assertEqual(response.status_code, 400)
 
+    @unittest.skipIf(SKIP_TEST == 'True', "Skip Login Test")
     def test_login(self):
         """
         해당 함수는 flutter sdk로 발급받은 액세스 토큰과 아이디 토큰을 활용하여 로그인 혹은 회원가입 진행이 되는지 확인합니다.

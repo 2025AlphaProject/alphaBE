@@ -4,10 +4,20 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Mission
 from .serializers import MissionSerializer
-from tour.models import TravelDaysAndPlaces, Place
-from .services import ImageSimilarity
+from tour.models import TravelDaysAndPlaces, Place, PlaceImages
+from .services import ImageSimilarity, ObjectDetection
 import random
 from services.tour_api import NearEventInfo
+import requests
+import tempfile
+import traceback
+from services.exception_handler import (
+    ValidationException,
+    NoObjectException,
+    get_error_line,
+    get_my_function,
+    NoAttributeException, NoRequiredParameterException, ValueException, UnExpectedException
+)
 
 # Create your views here.
 class MissionListView(viewsets.ModelViewSet):
@@ -26,11 +36,11 @@ class MissionImageUploadView(viewsets.ModelViewSet):
         travel_days_and_places_id = request.data.get('travel_days_id', None)
         image = request.FILES.get('image', None)
         if travel_days_and_places_id is None or image is None:
-            return Response({"Error": "travel_days_and_places_id or image is missing"}, status=status.HTTP_400_BAD_REQUEST)
+            raise NoRequiredParameterException(error_message="travel_days_and_places_id or image is missing")
         try:
             travel_days_and_places = TravelDaysAndPlaces.objects.get(id=travel_days_and_places_id)
         except TravelDaysAndPlaces.DoesNotExist:
-            return Response({"Error": "travel_days_id is not exist"}, status=status.HTTP_404_NOT_FOUND)
+            raise NoObjectException(error_message="travel_days_id is not exist")
         travel_days_and_places.mission_image = image
         travel_days_and_places.save()
         return Response({
@@ -43,117 +53,182 @@ class MissionCheckCompleteView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
-        """
-        사용자의 GPS(mapX, mapY)와 이미지 유사도를 통해
-        미션 성공 여부를 판별하는 API입니다.
-        """
         travel_id = request.data.get('travel_id')
         place_id = request.data.get('place_id')
-        mission_id = request.data.get('mission_id')
-        user_lng = request.data.get('mapX')  # 경도
-        user_lat = request.data.get('mapY')  # 위도
+        mission_id = request.data.get('mission_id')  # object_detection 용일 경우 필요
 
-        # 필수값 누락 검사
-        if not travel_id:
-            return Response({"error": "travel_id is required"}, status=status.HTTP_400_BAD_REQUEST)
-        if not place_id:
-            return Response({"error": "place_id is required"}, status=status.HTTP_400_BAD_REQUEST)
-        if not mission_id:
-            return Response({"error": "mission_id is required"}, status=status.HTTP_400_BAD_REQUEST)
-        if not user_lat or not user_lng:
-            return Response({"error": "mapX and mapY are required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not travel_id or not place_id:
+            raise NoRequiredParameterException()
 
         try:
             place = Place.objects.get(id=place_id)
-        except Place.DoesNotExist:
-            return Response({"error": "place_id does not exist"}, status=status.HTTP_404_NOT_FOUND)
+            travel_place = TravelDaysAndPlaces.objects.get(place=place, travel_id=travel_id)
 
-        try:
-            # 위도 경도 float 변환
-            place_lat = float(place.mapY)
-            place_lng = float(place.mapX)
-            user_lat = float(user_lat)
-            user_lng = float(user_lng)
+            # 이미지 비교 방식 결정
+            has_original_image = PlaceImages.objects.filter(place=place).exists()
 
-            # 거리 계산, 기존에 있던 모듈 사용
-            distance = NearEventInfo.haversine(user_lat, user_lng, place_lat, place_lng)
-            location_pass = distance <= 200.0
+            if has_original_image:
+                # ✅ 추천 장소 → 유사도 기반 판별
+                checker = ImageSimilarity(travel_place.id, place_id, mission_id)
+                similarity_score = checker.get_similarity_score()
+                image_pass = similarity_score >= 40.0
+                method = "image_similarity"
 
-            # 이미지 유사도 검사
-            checker = ImageSimilarity(travel_id, place_id, mission_id)
-            similarity_score = checker.get_similarity_score()
-            image_pass = similarity_score >= 40.0
+            else:
+                # ✅ 랜덤 미션 → 객체 인식 기반 판별
+                if not mission_id:
+                    raise NoAttributeException(
+                        'mission82',
+                        "랜덤 미션 판별에는 mission_id가 필요합니다."
+                    )
+                if not travel_place.mission_image:
+                    raise NoObjectException(
+                        'mission90',
+                        "업로드된 이미지가 없습니다."
+                    )
 
-            # 최종 판단
-            is_success = location_pass and image_pass
+                detector = ObjectDetection()
+                mission_content = travel_place.mission.content
+
+                # S3에서 이미지 다운로드 후 임시파일로 저장
+                image_url = travel_place.mission_image.url
+                with requests.get(image_url, stream=True) as r:
+                    if r.status_code != 200:
+                        raise ValueError("이미지를 불러올 수 없습니다.")
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
+                        for chunk in r.iter_content(chunk_size=8192):
+                            tmp.write(chunk)
+                        tmp_path = tmp.name
+
+                image_pass = detector.detect_and_check(tmp_path, mission_content)
+                similarity_score = None
+                method = "object_detection"
 
             return Response({
-                "result": "success" if is_success else "fail",
-                "similarity_score": similarity_score,
-                "distance_to_place": round(distance, 2),
                 "image_check_passed": image_pass,
-                "location_check_passed": location_pass,
-                "message": "미션 판별 완료"
+                "method_used": method,
+                "message": "이미지 판별 완료"
             }, status=status.HTTP_200_OK)
 
-        except ValueError:
-            return Response({"error": "mapX and mapY must be valid float values"}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"error": "서버 오류가 발생했습니다."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Place.DoesNotExist:
+            raise NoObjectException(error_message="place_id가 존재하지 않습니다.")
+        except TravelDaysAndPlaces.DoesNotExist:
+            raise NoObjectException(error_message="여행지 정보가 존재하지 않습니다.")
+        except ValueError as ve:
+            return ValueException(error_message=str(ve))
+        # except Exception as e:
+        #     raise UnExpectedException(error_message=str(e))
 
-
-class RandomMissionCreateView(viewsets.ModelViewSet):
+class RandomMissionCreateView(viewsets.ViewSet):
     """
-    이미지가 없는 장소(place)에 대해 임의의 미션을 생성합니다.
-    프론트에서 이미지 링크가 빈 문자열("")로 들어오는 장소만 처리 대상입니다.
+    이미지가 없는 장소(place)에 대해 미리 등록된 Mission 중 랜덤으로 할당합니다.
+    TravelDaysAndPlaces에 mission 필드를 설정합니다.
     """
-    permission_classes = [IsAuthenticated]  # 인증된 사용자만
-
-    # 임의 미션 문구 리스트
-    RANDOM_MISSIONS = [
-        "근처 구조물과 함께 사진 찍기",
-        "간판이 보이도록 찍어주세요!",
-        "이 장소의 전경이 나오도록 찍어보세요",
-        "내가 방문한 인증샷 남기기",
-        "해당 위치의 분위기를 담아보세요"
-    ]
+    permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
-        """
-        POST 요청 시 빈 이미지 링크("")를 가진 장소들을 필터링하여
-        랜덤한 미션을 각 장소에 생성해주는 로직입니다.
-        """
-        places = request.data.get("places", [])
+        places = request.data.get("places", None)
         if not isinstance(places, list):
-            return Response({
-                "error": "places 필드는 리스트여야 합니다."
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "places 필드는 리스트여야 합니다."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # 관리자 등록 미션들
+        missions_queryset = Mission.objects.all()
+        if not missions_queryset.exists():
+            raise UnExpectedException(error_code='NO_MISSION', error_message="Mission 테이블에 등록된 미션이 없습니다.")
 
         created_missions = []
 
         for item in places:
-            place_id = item.get("place_id")
+            tdp_id = item.get("tdp_id", None)
             image_url = item.get("image_url", "")
+            if tdp_id is None:
+                raise NoRequiredParameterException()
 
-            # 빈 이미지 문자열인 경우만 처리
             if image_url == "":
                 try:
-                    place = Place.objects.get(id=place_id)
-                except Place.DoesNotExist:
-                    continue  # 잘못된 장소 ID는 무시하고 진행
+                    tdp = TravelDaysAndPlaces.objects.get(id=int(tdp_id))
 
-                # 랜덤 미션 생성 및 저장
-                mission_text = random.choice(self.RANDOM_MISSIONS)
-                mission = Mission.objects.create(content=mission_text)
+                    if tdp.mission is not None:
+                        created_missions.append({
+                            "tdp_id": tdp.id,
+                            "mission_id": tdp.mission.id,
+                            "mission_content": tdp.mission.content,
+                        })
+                        continue
 
-                # 여기선 연결만 해주고, 나중에 TravelDaysAndPlaces에서 연결해도 OK
-                created_missions.append({
-                    "place_id": place_id,
-                    "mission_content": mission.content,
-                    "mission_id": mission.id
-                })
+                    selected_mission = random.choice(missions_queryset)
+                    tdp.mission = selected_mission
+                    tdp.save()
+
+                    created_missions.append({
+                        "tdp_id": tdp_id,
+                        "mission_id": selected_mission.id,
+                        "mission_content": selected_mission.content,
+                    })
+
+                except TravelDaysAndPlaces.DoesNotExist:
+                    raise NoObjectException(error_message="장소 정보 혹은 해당 여행 경로 정보를 불러올 수 없습니다.")
+            else:
+                try:
+                    tdp = TravelDaysAndPlaces.objects.get(id=tdp_id)
+                    created_missions.append({
+                        "tdp_id": tdp_id,
+                        "mission_content": '예시 사진과 유사하게 찍기',
+                    })
+                except TravelDaysAndPlaces.DoesNotExist:
+                    raise NoObjectException(error_message="장소 정보 혹은 해당 여행 경로 정보를 불러올 수 없습니다.")
 
         return Response({
-            "message": "랜덤 미션 생성 완료",
+            "message": "랜덤 미션 할당 완료",
             "missions": created_missions
+        }, status=status.HTTP_201_CREATED)
+
+
+class IsMissionCompleteView(viewsets.ViewSet):
+
+    def retrieve(self, request, *args, **kwargs):
+        tdp = kwargs.get('pk', None)
+        travel_days_and_places = None
+        try:
+            travel_days_and_places = TravelDaysAndPlaces.objects.get(id=tdp)
+        except TravelDaysAndPlaces.DoesNotExist:
+            raise NoObjectException(error_message="해당 여행 장소를 찾을 수 없습니다.")
+
+        return Response({
+            'tdp_id': tdp,
+            'mission_success': travel_days_and_places.mission_success
+        }, status=status.HTTP_200_OK)
+
+class MissionImageGetView(viewsets.ViewSet):
+    def retrieve(self, request, *args, **kwargs):
+        tdp = kwargs.get('pk', None)
+        travel_days_and_places = None
+        try:
+            travel_days_and_places = TravelDaysAndPlaces.objects.get(id=tdp)
+        except TravelDaysAndPlaces.DoesNotExist:
+            raise NoObjectException(error_message="해당 여행 장소를 찾을 수 없습니다.")
+
+        return Response({
+            'tdp_id': tdp,
+            'mission_image': travel_days_and_places.mission_image.url if travel_days_and_places.mission_image else None
+        }, status=status.HTTP_200_OK)
+
+class SaveMissionCompleteView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated] # 로그인 한 사용자만 등록가능
+
+    def create(self, request, *args, **kwargs):
+        tdp_id = request.data.get('tdp_id', None)
+        is_success = request.data.get('is_success', None)
+        tdp = None
+        try:
+            tdp = TravelDaysAndPlaces.objects.get(id=int(tdp_id))
+        except TravelDaysAndPlaces.DoesNotExist:
+            raise NoObjectException(error_message="해당 여행 정보(tdp)가 존재하지 않습니다.")
+
+        tdp.mission_success = bool(is_success)
+        tdp.save()
+        return Response({
+            "tdp_id": tdp_id,
+            "is_success": tdp.mission_success,
         }, status=status.HTTP_201_CREATED)

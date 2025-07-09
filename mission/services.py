@@ -20,12 +20,17 @@
 # from tour.models import PlaceImages, TravelDaysAndPlaces, Place # 모델을 가져옵니다.
 
 import cv2
+import os
+from ultralytics import YOLO
 import numpy as np
 import requests
 from skimage.metrics import structural_similarity as ssim
+
+from services.exception_handler import FatalError, NoObjectException, ValueException
 from tour.models import PlaceImages, TravelDaysAndPlaces, Place
 import logging
 from config.settings import APP_LOGGER
+from django.conf import settings
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -50,27 +55,23 @@ class ImageSimilarity:
                 img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)  # 이미지 디코딩
                 return img
             else:
-                logger.error("Failed Image Request")
-                return None
+                raise FatalError(error_message="Failed Image Request")
         except Exception as e:
-            logger.error(f"Image Download Error {e}")
-            return None
+            raise FatalError(error_message=f"Image Download Error {e}")
 
     def get_user_image(self):
         """ 사용자가 촬영한 미션 이미지를 가져옵니다. """
         try:
             # TravelDaysAndPlaces에서 이미지 객체를 찾고 이미지 경로를 가져옵니다.
-            image_obj = TravelDaysAndPlaces.objects.get(id=self.travel_id, mission=self.mission_id)
+            image_obj = TravelDaysAndPlaces.objects.get(id=self.travel_id)
             # 이미지가 실제로 존재한다면, cv2를 사용하여 이미지 파일을 읽어들입니다.
             if image_obj.mission_image:
-                image_path = image_obj.mission_image.path
-                return cv2.imread(image_path)
+                image_path = image_obj.mission_image.url
+                return self.get_image_from_url(image_path)
             else:
-                logger.warning("There is no mission image")
-                return None
+                raise NoObjectException(error_message="There is no mission image")
         except TravelDaysAndPlaces.DoesNotExist:
-            logger.error("Failed to get user image. Mission image does not exist.")
-            return None
+            raise NoObjectException(error_message="Failed to get user image. Mission image does not exist.")
 
     def get_reference_image(self):
         """ 장소의 예시 이미지를 가져옵니다. """
@@ -80,7 +81,7 @@ class ImageSimilarity:
             image_url = image_obj.image_url  # 이미지 URL 가져오기
             return self.get_image_from_url(image_url)
         except (Place.DoesNotExist, PlaceImages.DoesNotExist):
-            logger.error("Failed to get reference image.")
+            raise FatalError(error_message="Failed to get reference image.")
             return None
 
     def calculate_histogram_similarity(self):
@@ -119,7 +120,7 @@ class ImageSimilarity:
     def get_similarity_score(self, weight_hist=0.5, weight_ssim=0.5):
         """ 히스토그램과 SSIM의 가중 평균 유사도 """
         hist_similarity = self.calculate_histogram_similarity()
-        ssim_similarity = self.calculate_ssim()
+        ssim_similarity = self.calculate_ssim
 
         # 가중 평균 유사도 계산
         score = (weight_hist * hist_similarity) + (weight_ssim * ssim_similarity)
@@ -129,7 +130,7 @@ class ImageSimilarity:
     def check_mission_success(self):
         """ 유사도 40% 이상이면 미션 성공, 이하면 실패 """
         score = self.get_similarity_score()
-        return 1 if score >= 40 else 0  # 성공이면 1, 실패면 0 반환
+        return 1 if score >= 20 else 0  # 성공이면 1, 실패면 0 반환
 
 """테스트용 코드 """
 # if __name__ == "__main__":
@@ -175,3 +176,69 @@ similarity_checker.check_mission_success()을 실행시 차례대로 함수 호�
 저 역순으로 다시 값 return 하여 유사도 구함 
      
 """
+
+class ObjectDetection:
+    """
+    - 커스텀 학습한 best.pt 모델로 handheart, peace, smile 인식
+    - COCO pretrained yolov8n.pt 모델로 person 인식
+    - 주어진 미션 문구에 따라 객체 검출 성공 여부를 판단
+    """
+    def __init__(self):
+        # 모델 경로 설정
+        custom_model_path = os.path.join(settings.MODEL_DIR, "best.pt")
+        person_model_path = os.path.join(settings.MODEL_DIR, "yolov8n.pt")
+
+        # YOLO 모델 로드
+        self.model_custom = YOLO(custom_model_path)
+        self.model_person = YOLO(person_model_path)
+
+        # 커스텀 모델 클래스 이름
+        self.class_names_custom = ['handheart', 'peace', 'smile']
+
+    def detect_and_check(self, image_path, mission_content):
+        """
+        :param image_path: 검증할 이미지 파일 경로 (절대경로 또는 MEDIA 경로 기반)
+        :param mission_content: 미션 문구 (ex: '손가락 하트를 하고 사진을 찍어보세요')
+        :return: 성공 여부 (True/False)
+        """
+
+        # 이미지 읽기
+        image = cv2.imread(image_path)
+        if image is None:
+            raise ValueException(error_message=f"이미지를 열 수 없습니다: {image_path}")
+
+        # 객체 카운트 초기화
+        counts = {name: 0 for name in self.class_names_custom}
+        counts['person'] = 0
+
+        # 커스텀 모델로 handheart, peace, smile 탐지
+        results_custom = self.model_custom(image, conf=0.5)
+        for result in results_custom:
+            for box in result.boxes:
+                cls_idx = int(box.cls.item())
+                if 0 <= cls_idx < len(self.class_names_custom):
+                    cls_name = self.class_names_custom[cls_idx]
+                    counts[cls_name] += 1
+
+        # 기본 모델로 person 탐지
+        results_person = self.model_person(image, conf=0.5, classes=[0])  # 0번 class = person
+        for result in results_person:
+            for box in result.boxes:
+                counts['person'] += 1
+
+        # 미션에 맞게 성공 여부 판정
+        return self.check_mission(mission_content, counts)
+
+    def check_mission(self, mission_content, counts):
+        """
+        미션 내용에 따라 필요한 객체가 검출되었는지 판단
+        """
+
+        mission_requirements = {
+            "손가락 하트를 하고 사진을 찍어보세요": ["handheart"],
+            "브이 포즈로 사진을 찍어보세요": ["peace"],
+            "여러분이 사진에 꼭 등장해야 해요!": ["person"],
+        }
+        required_objects = mission_requirements.get(mission_content, [])
+
+        return all(counts.get(obj, 0) >= 1 for obj in required_objects)

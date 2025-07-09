@@ -11,6 +11,9 @@ class Travel(models.Model):
     start_date = models.DateField() # 여행 시작 날짜
     end_date = models.DateField() # 여행 마감 날짜
 
+    def __str__(self):
+        return self.tour_name
+
 class Place(models.Model):
     # id: pk
     name = models.CharField(max_length=100) # 장소 이름, 글자 수 제한
@@ -19,6 +22,9 @@ class Place(models.Model):
     road_address = models.TextField(blank=True, null=True) # 도로명 주소
     address = models.TextField(blank=True, null=True) # 지번 주소
 
+    def __str__(self):
+        return self.name
+
 class TravelDaysAndPlaces(models.Model):
     # id: pk
     travel = models.ForeignKey(Travel, on_delete=models.CASCADE) # 여행 제거시 해당 일차도 제거
@@ -26,11 +32,18 @@ class TravelDaysAndPlaces(models.Model):
     date = models.DateField() # 여행 날짜
     mission = models.ForeignKey(Mission, on_delete=models.SET_NULL, blank=True, null=True) # 미션을 추가합니다. 미션 제거시 해당 일차 미션 NULL
     mission_image = models.ImageField(upload_to='', blank=True, null=True) # 이미지 필드를 추가합니다.
+    mission_success = models.BooleanField(null = True, blank = True)
+
+    def __str__(self):
+        return self.travel.tour_name + " " + self.place.name + " " + str(self.date)
 
 class PlaceImages(models.Model):
     # id: pk
     place = models.ForeignKey(Place, on_delete=models.CASCADE)
     image_url = models.URLField() # 이미지 url 정보를 저장합니다.
+
+    def __str__(self):
+        return self.place.name
 
 class Event(models.Model):
     # id: pk
@@ -43,5 +56,8 @@ class Event(models.Model):
     mapX = models.FloatField() # 행사 경도 정보
     mapY = models.FloatField() # 행사 위도 정보
     homepage_url = models.URLField() # 홈페이지 URL
+
+    def __str__(self):
+        return self.title
 
 

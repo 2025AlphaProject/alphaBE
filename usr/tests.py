@@ -12,15 +12,15 @@ class TestService(BaseTestCase):
         테스트 환경에서 꼭 필요한 데이터를 업로드 하기 위한 메소드 입니다.
         """
         # 유저 정보 임의 생성
-        user = User.objects.create(
-            sub=3935716527,
-            username='TestUser',
-            gender='male',
-            age_range='1-9',
-            profile_image_url='https://example.org'
-        )
-        user.set_password('test_password112')
-        user.save()
+        # user = User.objects.create(
+        #     sub=3928446869, # 앱 키에 따라 내 고유 정보가 달라짐
+        #     username='TestUser',
+        #     gender='male',
+        #     age_range='1-9',
+        #     profile_image_url='https://example.org'
+        # )
+        # user.set_password('test_password112')
+        # user.save()
 
         user2 = User.objects.create(
             sub=1,

@@ -39,6 +39,9 @@ KAKAO_REAL_REST_API_KEY = env('KAKAO_REAL_REST_API_KEY') # 카카오 실제 rest
 KAKAO_REAL_NATIVE_API_KEY = env('KAKAO_REAL_NATIVE_API_KEY') # 카카오 실제 native api 키
 # 아래는 매 실행마다 코드를 변경해줘야하는 테스트 코드를 임의로 차단하기 위한 환경변수 입니다.
 SKIP_TEST = env('SKIP_TEST')
+GEOCODER_API_KEY = env('GEOCODER_API_KEY')
+KAKAO_REAL_JAVASCRIPT_KEY = env('KAKAO_REAL_JAVASCRIPT_KEY')
+REFRESH_TOKEN = env('REFRESH_TOKEN')
 
 
 # Quick-start development settings - unsuitable for production
@@ -192,6 +195,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'authenticate.authentications.CustomAuthentication',
     ),
+    'EXCEPTION_HANDLER': 'services.exception_handler.custom_exception_handler'
 }
 
 # 아래는 celery setting을 담당합니다.
@@ -272,6 +276,9 @@ SIMPLE_JWT = {
 }
 
 # 아래는 로그 설정입니다.
+LOG_DIR = './logs'
+os.makedirs(LOG_DIR, exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False, # 기본 로거 설정 유지
@@ -281,7 +288,7 @@ LOGGING = {
             'style': '{', # str.format
         },
         'simple': {
-            'format': '{name} {levelname} {asctime} {message}',
+            'format': '[{levelname}] | {asctime} | {message}',
             'style': '{',
         },
         'logstash': {
@@ -291,22 +298,24 @@ LOGGING = {
     'handlers': { # 로그 핸들러 설정
         'file': {
             'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': 'info.log',
-            'formatter': 'verbose',
-            'encoding': 'utf-8'
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': os.path.join(LOG_DIR, 'app.log'),
+            'formatter': 'simple',
+            'encoding': 'utf-8',
+            'when': 'midnight', # 자정마다 새 로그파일 생성
+            'backupCount': 7, # 일주일치만 저장
         },
         'logstash': {
             'level': 'INFO',
             'class': 'config.tcp_log_handler.TCPLogstashHandler',
             'host': env('LOGSTASH_HOST'),
-            'port': 5000,
+            'port': 3306,
             'formatter': 'logstash'
         }
     },
     'loggers': { # 로거 설정, 실제 get_logger를 이용하여 로그 설정 가져옴
         'django': { # 실제 배포 환경에서 사용하는 로거
-            'handlers': ['logstash'],
+            'handlers': ['file'],
             'level': 'INFO',
             'propagate': True,
         },
@@ -320,3 +329,6 @@ LOGGING = {
 
 # 앱 기본 로거 설정
 APP_LOGGER='django'
+
+# YOLO 모델 디렉터리 설정
+MODEL_DIR = os.path.join(BASE_DIR, "mission", "yolomodels")

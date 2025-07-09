@@ -1,13 +1,20 @@
-from django.core.exceptions import ValidationError
+from services.exception_handler import (
+    get_my_function,
+    get_error_line,
+    ValidationException,
+    ExceptionHandler,
+    NoAttributeException
+)
 
 from .models import User
 from config.settings import (
-    KAKAO_ADMIN_KEY,
     KAKAO_TEST_REST_API_KEY,
     KAKAO_TEST_NATIVE_API_KEY,
     KAKAO_REAL_REST_API_KEY,
     KAKAO_REAL_NATIVE_API_KEY,
+    KAKAO_REAL_JAVASCRIPT_KEY,
 )
+from services.kakao_http_client import KakaoHttpClient
 import requests
 import jwt
 import base64
@@ -31,6 +38,7 @@ class UserService:
     """
     user = None
     sub = None # sub는 long 방식의 정수형을 받습니다.
+    nickname = None
 
     def __init__(self, id_token):
         """
@@ -40,8 +48,12 @@ class UserService:
         # payload = jwt.decode(id_token, options={"verify_signature": False})
         payload = self.__validate_id_token(id_token)
         self.sub = payload.get('sub', None) # 회원 번호 저장
+        self.nickname = payload.get('nickname', None) # 닉네임 저장
         if self.sub is None:
-            raise Exception("토큰 내 회원정보 일부가 존재하지 않습니다.")
+            raise NoAttributeException(
+                'usr57',
+                "토큰 내 회원정보 일부가 존재하지 않습니다."
+            )
         self.user = self.get_user() # 함수를 이용해서 유저를 가져옵니다.
 
     def __jwt_to_pem(self, n, e):
@@ -85,13 +97,20 @@ class UserService:
             KAKAO_TEST_NATIVE_API_KEY,
             KAKAO_REAL_REST_API_KEY,
             KAKAO_REAL_NATIVE_API_KEY,
+            KAKAO_REAL_JAVASCRIPT_KEY
         ]
         iss = payload['iss']
         aud = payload['aud']
         if iss != 'https://kauth.kakao.com':
-            return ValidationError('issuer information is invalid')
+            raise ValidationException(
+                'usr104',
+                'issuer information is invalid'
+            )
         if aud not in valid_aud_list:
-            return ValidationError('application key is invalid')
+            raise ValidationException(
+                'usr111',
+                'application key is invalid'
+            )
         return payload
 
     def __download_oidc(self):
@@ -124,7 +143,10 @@ class UserService:
             oidc = OIDC.objects.get(kid=kid)
         except OIDC.DoesNotExist: # 오류 발생
             logger.error('키에 해당하는 공개키 정보 없음. (카카오 id 토큰 헤더 손상 의심)')
-            raise ValidationError("카카오 JWT 헤더 손상 의심")
+            raise ValidationException(
+                'usr149',
+                "카카오 JWT 헤더 손상 의심"
+            )
         return self.__jwt_to_pem(oidc.n, oidc.e)
 
 
@@ -139,9 +161,6 @@ class UserService:
         return self.user, False
 
     def get_user(self):
-        """
-        :param sub: 카카오 고유 회원번호를 의미합니다.
-        """
         user = None
         try:
             user = User.objects.get(sub=self.sub) # 유저를 가져오는 시도를 합니다.
@@ -155,18 +174,9 @@ class UserService:
         해당 함수는 신규 유저를 실제로 DB에 등록하는 역할을 합니다.
         """
         # 회원가입 시작
-        # 카카오 개인 유저 정보를 갖고 오기 위한 url
-        kakao_user_info_url = f'https://kapi.kakao.com/v2/user/me?target_id_type=user_id&target_id={self.sub}'
-
-        header = {
-            'Authorization': f'KakaoAK {KAKAO_ADMIN_KEY}',
-            'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8'
-        }
-        response = requests.get(kakao_user_info_url, headers=header)  # 요청을 받아옵니다.
-        if response.status_code == 200:  # 정상적으로 데이터가 왔다면
-            return self.__upload_user(response.json()) # 실제 데이터 업로드를 진행합니다.
-        logger.info(f'sub: {self.sub}에 대한 카카오 회원정보 불러오기 오류') # 프론트가 인위적으로 잘못 요청할 수 있기 때문에 info로 로그 남김
-        raise Exception("카카오 회원정보를 불러오는 과정에서 오류가 발생했습니다.")
+        kakao_http_client = KakaoHttpClient()
+        response = kakao_http_client.get_kakao_user_info(self.sub) # 요청을 받아옵니다.
+        return self.__upload_user(response)
 
     def __upload_user(self, raw_data):
         """
@@ -187,15 +197,22 @@ class UserService:
                               'gender'] # 성별
         except KeyError as e:
             logger.error(f"유저 회원 정보 가져오기 오류 (추가 동의 항목 확인 의심): {e}")
-            raise KeyError(e)
+            user = User.objects.create(
+                sub=self.sub,
+                username=self.nickname
+            )
+            return user
         for each in user_dict_keys:
-            data_dict[each] = raw_data[each]
+            data_dict[each] = raw_data.get(each, None)
 
         # 실제 유저 업로드
         try:
             user = User.objects.create(**data_dict)
         except Exception as e:
-            raise Exception(e)
+            raise ExceptionHandler(
+                'Unexpected Error',
+                e
+            )
 
         logger.info(f"회원가입 완료. 회원명: {user.username} (sub:{self.sub})")
         return user
