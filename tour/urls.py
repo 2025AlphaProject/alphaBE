@@ -1,15 +1,22 @@
 from django.urls import path
-from .views import TravelViewSet, NearEventView, AddTravelerView, GetAreaList, Sido_list, CourseView
+from .views import (
+    NearEventView,
+    AddTravelerView,
+    GetAreaList,
+    Sido_list,
+    NewTourAddView,
+    TourSnapshotsView
+)
 
 urlpatterns = [
-    path('', TravelViewSet.as_view({
+    path('', NewTourAddView.as_view({
         'get': 'list',
         'post': 'create'
     }), name='travel-list-create'),
 
-    path('<int:pk>/', TravelViewSet.as_view({
+    path('<int:pk>/', NewTourAddView.as_view({
         'get': 'retrieve',
-        'put': 'partial_update',
+        'patch': 'partial_update', # 메소드를 일부 업데이트인 patch로 변경
         'delete': 'destroy'
     }), name='travel-detail'),
 
@@ -28,15 +35,13 @@ urlpatterns = [
     path('get_sido_list/', Sido_list.as_view({
         'get': 'retrieve'
     })),
-
-    path('course/', CourseView.as_view({
-        'post': 'create',   # 저장
-        'get': 'list'       # 전체 조회
-    }), name='course-list-create'),
-
-    path('course/<int:pk>/', CourseView.as_view({
-        'get': 'retrieve',  # 개별 조회
-        'delete': 'destroy' # 삭제
-    }), name='course-detail'),
+    path('snapshot/', TourSnapshotsView.as_view({
+        'get': 'list',
+        'post': 'create',
+    })),
+    path('snapshot/<int:pk>/', TourSnapshotsView.as_view({
+        'get': 'retrieve',
+        'delete': 'destroy',
+    })),
 
 ]
