@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Travel, Place, Event, TravelDaysAndPlaces, PlaceImages
+from .models import Travel, Place, Event, TravelDaysAndPlaces, PlaceImages, UserTourImages
 from usr.serializers import UserSerializer
 from config.settings import APP_LOGGER
 import logging
@@ -59,3 +59,14 @@ class PlaceImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = PlaceImages
         fields = '__all__'
+
+class TourSnapshotsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserTourImages
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        # 사진 날짜 보여주기
+        data = super().to_representation(instance)
+        data['tour_date'] = instance.tour.tour_date
+        return data

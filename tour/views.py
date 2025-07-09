@@ -1,16 +1,17 @@
 from django.core.exceptions import ValidationError
 from rest_framework import viewsets, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 
 from usr.models import User
 from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, PlaceImageSerializer, \
-    TravelListSerializer
+    TravelListSerializer, TourSnapshotsSerializer
 from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY, KAKAO_REST_API_KEY, APP_LOGGER
 from .serializers import EventSerializer
 from services.tour_api import TourApi, NearEventInfo
 from .services import PlaceService
-from .models import Travel, Place, PlaceImages, Event
+from .models import Travel, Place, PlaceImages, Event, UserTourImages
 import logging
 from services.exception_handler import (
     ValidationException,
@@ -284,3 +285,50 @@ class NewTourAddView(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         self.serializer_class = TravelListSerializer
         return super().list(request, *args, **kwargs)
+
+class TourSnapshotsView(viewsets.ModelViewSet):
+    serializer_class = TourSnapshotsSerializer
+    queryset = UserTourImages.objects.all()
+    permission_classes = [IsAuthenticated] # 로그인 사용자만 허용
+
+    def get_queryset(self):
+        return self.queryset.filter(user__sub=self.request.user.sub)
+
+    def create(self, request, *args, **kwargs):
+        """
+            사진 저장 API
+        """
+        image = request.FILES.get('image', None)
+        if image is None:
+            raise NoRequiredParameterException(error_message='사진은 필수 입니다.')
+
+        data = request.data.copy()
+        data['user'] = request.user.sub
+        data['tour'] = data.pop('tour_id', None)
+        logger.debug('tour: ' + str(data['tour']))
+        if data['tour'] is None:
+            raise NoRequiredParameterException()
+        data['tour'] = int(data['tour'][0])
+
+        logger.debug('사진 저장 시작')
+        logger.debug('request: ' + str(data))
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def destroy(self, request, *args, **kwargs):
+        snapshot_id = kwargs.get('pk')
+        # 사진 S3에서도 삭제
+        try:
+            snapshot_object = UserTourImages.objects.get(id=int(snapshot_id))
+            if snapshot_object.user != request.user:
+                raise PermissionDenied(detail='본인의 사진만 저장할 수 있습니다.')
+            # 사진 삭제
+            snapshot_object.image.delete()
+        except UserTourImages.DoesNotExist:
+            raise NoObjectException(error_message='해당 id에 해당하는 사진이 없습니다.')
+        return super().destroy(request, *args, **kwargs)
+

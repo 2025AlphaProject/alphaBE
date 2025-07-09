@@ -4,7 +4,8 @@ from .views import (
     AddTravelerView,
     GetAreaList,
     Sido_list,
-    NewTourAddView
+    NewTourAddView,
+    TourSnapshotsView
 )
 
 urlpatterns = [
@@ -33,6 +34,14 @@ urlpatterns = [
 
     path('get_sido_list/', Sido_list.as_view({
         'get': 'retrieve'
+    })),
+    path('snapshot/', TourSnapshotsView.as_view({
+        'get': 'list',
+        'post': 'create',
+    })),
+    path('snapshot/<int:pk>/', TourSnapshotsView.as_view({
+        'get': 'retrieve',
+        'delete': 'destroy',
     })),
 
 ]
