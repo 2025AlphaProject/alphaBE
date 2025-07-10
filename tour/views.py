@@ -395,7 +395,6 @@ class CategoryListView(viewsets.ViewSet):
             {"contentTypeId": 12, "name": "관광지"},
             {"contentTypeId": 14, "name": "문화시설"},
             {"contentTypeId": 15, "name": "축제/공연/행사"},
-            {"contentTypeId": 25, "name": "여행코스"},
             {"contentTypeId": 28, "name": "레포츠"},
             {"contentTypeId": 32, "name": "숙박"},
             {"contentTypeId": 38, "name": "쇼핑"},
