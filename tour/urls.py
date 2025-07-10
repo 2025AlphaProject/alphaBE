@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import TravelViewSet, NearEventView, AddTravelerView, GetAreaList, Sido_list, CourseView
+from .views import TravelViewSet, NearEventView, AddTravelerView, GetAreaList, Sido_list, CourseView, CategoryListView
 
 urlpatterns = [
     path('', TravelViewSet.as_view({
@@ -38,5 +38,9 @@ urlpatterns = [
         'get': 'retrieve',  # 개별 조회
         'delete': 'destroy' # 삭제
     }), name='course-detail'),
+
+    path('category/', CategoryListView.as_view({
+        'get': 'retrieve'  # 카테고리 리스트 조회
+    }), name='category-list'),
 
 ]
