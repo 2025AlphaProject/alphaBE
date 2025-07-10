@@ -35,6 +35,7 @@ class TaskConsumer(AsyncWebsocketConsumer):
         # 요청을 celery task로 보냅니다.
         areaCode = params.pop('areaCode', [None])[0] # area_code 가져옴
         sigunguName = params.pop('sigunguName', [None])[0] # 시군구 이름 가져옴
+        categoryName = params.pop('categoryName', [None])[0] # 카테고리 파라미터 가져옴
         if areaCode is None or days is None: # areaCode가 존재하지 않는다면
             await self.send(text_data=json.dumps({
                 'state': 'ERROR',
@@ -56,6 +57,18 @@ class TaskConsumer(AsyncWebsocketConsumer):
                     }, ensure_ascii=False))
                     return
                 sigunguCodes.append(sigunguCode)
+
+        if categoryName:
+            task_result = app.send_task(
+                'tour.tasks.get_recommended_place_by_category_task',
+                args=[self.user_id, areaCode, categoryName, sigunguCodes, Arrange.TITLE_IMAGE.value]
+            )
+        else:
+            await self.send(text_data=json.dumps({
+                'state': 'ERROR',
+                'Message': 'categoryName 파라미터가 누락되었습니다.'
+            }, ensure_ascii=False))
+            return
 
         task_result = app.send_task('tour.tasks.get_recommended_tour_based_area', args=[self.user_id, # 채널 레이어 그룹 특정을 위해 보냅니다.
                                                                                         areaCode, days, Arrange.TITLE_IMAGE.value, sigunguCodes])
