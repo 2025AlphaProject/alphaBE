@@ -98,6 +98,7 @@ class TaskConsumer(AsyncWebsocketConsumer):
         unique_code = data.get('unique_code', "")  # 웹소켓 통신을 위한 고유 번호를 가져옵니다.
         user_id = user_id + '_' + unique_code
         days = data.get("days", None)
+        categoryName = data.get("categoryName", None)
         if user_id is None or areaCode is None or days is None:
             # 데이터가 없다면 예외 처리
             await self.send(text_data=json.dumps({
@@ -121,9 +122,10 @@ class TaskConsumer(AsyncWebsocketConsumer):
                     return
                 sigunguCodes.append(sigunguCode)
 
-        task_result = app.send_task('tour.tasks.get_recommended_tour_based_area',
-                                    args=[self.user_id,  # 채널 레이어 그룹 특정을 위해 보냅니다.
-                                          areaCode, Arrange.TITLE_IMAGE.value, sigunguCodes])
+        task_result = app.send_task(
+            'tour.tasks.get_recommended_place_by_category_task',
+            args=[user_id, areaCode, categoryName, sigunguCodes, Arrange.TITLE_IMAGE.value]
+        )
         await self.send(text_data=json.dumps({
             'state': 'OK',
             'Message': {
