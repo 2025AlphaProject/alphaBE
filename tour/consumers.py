@@ -83,32 +83,32 @@ class TaskConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data=None, bytes_data=None):
         """
-        재시도를 위한 메시지 입니다.
+        재시도를 위한 메시지입니다.
         """
         data = json.loads(text_data)
         user_id = data.get("user_id", None)
         areaCode = data.get("areaCode", None)
         sigunguName = data.get("sigunguName", None)
-        unique_code = data.get('unique_code', "")  # 웹소켓 통신을 위한 고유 번호를 가져옵니다.
-        user_id = user_id + '_' + unique_code
-        days = data.get("days", None)
+        unique_code = data.get("unique_code", "")  # 웹소켓 통신을 위한 고유 번호를 가져옵니다.
         categoryName = data.get("categoryName", None)
-        if user_id is None or areaCode is None or days is None:
-            # 데이터가 없다면 예외 처리
+        user_id = user_id + '_' + unique_code if unique_code else user_id
+
+        if user_id is None or areaCode is None or categoryName is None:
             await self.send(text_data=json.dumps({
                 'state': 'ERROR',
                 'Message': '필수 파라미터 중 일부가 없거나 잘못되었습니다.'
             }, ensure_ascii=False))
             return
 
+        # 시군구 코드 파싱
         tour = TourApi(MobileOS=MobileOS.ANDROID, MobileApp='AlphaProject2025', service_key=PUBLIC_DATA_PORTAL_API_KEY)
         sigunguCodes = None
-        if sigunguName is not None:
-            sigunguCodes = []
+        if sigunguName:
             sigunguNames = sigunguName.split(',')
+            sigunguCodes = []
             for each in sigunguNames:
-                sigunguCode = tour.get_sigungu_code(areaCode, each)  # 시군구 이름에 대응되는 코드를 가져옵니다.
-                if sigunguCode is None:  # 시군구 코드가 없다면
+                sigunguCode = tour.get_sigungu_code(areaCode, each)
+                if sigunguCode is None:
                     await self.send(text_data=json.dumps({
                         'state': 'ERROR',
                         'Message': '해당 시군구 이름에 대응되는 코드를 가져올 수 없습니다. 시군구 이름을 다시 한번 확인 바랍니다.'
@@ -116,10 +116,14 @@ class TaskConsumer(AsyncWebsocketConsumer):
                     return
                 sigunguCodes.append(sigunguCode)
 
+        # 카테고리 파라미터를 리스트로 변환
+        categoryNames = categoryName.split(',')
+
         task_result = app.send_task(
             'tour.tasks.get_recommended_place_by_category_task',
-            args=[user_id, areaCode, categoryName, sigunguCodes, Arrange.TITLE_IMAGE.value]
+            args=[user_id, areaCode, categoryNames, sigunguCodes, Arrange.TITLE_IMAGE.value]
         )
+
         await self.send(text_data=json.dumps({
             'state': 'OK',
             'Message': {
