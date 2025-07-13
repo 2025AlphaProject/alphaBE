@@ -246,10 +246,11 @@ class SaveMissionCompleteView(viewsets.ViewSet):
 class DeleteMissionImageView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     def partial_update(self, request, *args, **kwargs):
-        tdp_id = request.data.get('tdp_id', None)
-        if tdp_id is None: raise NoRequiredParameterException()
+        travel_id = request.data.get('travel_id', None)
+        place_id = request.data.get('place_id', None)
+        if travel_id is None or place_id is None: raise NoRequiredParameterException()
         # 이미 백에서 삭제 작업 진행했을 수도 있음
-        tdp = TravelDaysAndPlaces.objects.get(id=int(tdp_id))
+        tdp = TravelDaysAndPlaces.objects.get(travel_id=travel_id, place_id=place_id)
         if tdp.mission_image is not None and tdp.mission_image != "":
             tdp.mission_image.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
