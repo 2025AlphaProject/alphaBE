@@ -1,5 +1,6 @@
 from django.urls import path
-from .views import MissionListView, MissionImageUploadView, RandomMissionCreateView, MissionCheckCompleteView, IsMissionCompleteView, MissionImageGetView, SaveMissionCompleteView
+from .views import MissionListView, MissionImageUploadView, RandomMissionCreateView, MissionCheckCompleteView, \
+    IsMissionCompleteView, MissionImageGetView, SaveMissionCompleteView, DeleteMissionImageView
 
 urlpatterns = [
     path('list/', MissionListView.as_view({
@@ -24,5 +25,8 @@ urlpatterns = [
     })),
     path('save_mission_complete/', SaveMissionCompleteView.as_view({
         'post': 'create',
+    })),
+    path('delete_mission_image/', DeleteMissionImageView.as_view({
+        'patch': 'partial_update',
     }))
 ]
