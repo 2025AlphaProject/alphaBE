@@ -48,6 +48,15 @@ class PlaceSerializer(serializers.ModelSerializer):
         model = Place
         fields = '__all__'
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        try:
+            tdp = TravelDaysAndPlaces.objects.get(place_id=instance.id)
+            data['tdp_id'] = tdp.id
+        except TravelDaysAndPlaces.DoesNotExist:
+            pass
+        return data
+
 class TravelDaysAndPlacesSerializer(serializers.ModelSerializer):
     # place = PlaceSerializer() # 장소 정보는 시리얼라이저를 통해 반환합니다.
 
