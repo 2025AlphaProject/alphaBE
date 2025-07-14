@@ -64,7 +64,7 @@ class TaskConsumer(AsyncWebsocketConsumer):
         categoryNames = categoryName.split(',')
         task_result = app.send_task(
             'tour.tasks.get_recommended_place_by_category_task',
-            args=[self.user_id, areaCode, categoryNames, sigunguCodes, Arrange.TITLE_IMAGE.value]
+            args=[self.user_id, areaCode, categoryNames, sigunguCodes, Arrange.TITLE_IMAGE.value, self.user_id]  # ← 추가됨
         )
 
         await self.send(text_data=json.dumps({
@@ -121,7 +121,7 @@ class TaskConsumer(AsyncWebsocketConsumer):
 
         task_result = app.send_task(
             'tour.tasks.get_recommended_place_by_category_task',
-            args=[user_id, areaCode, categoryNames, sigunguCodes, Arrange.TITLE_IMAGE.value]
+            args=[user_id, areaCode, categoryNames, sigunguCodes, Arrange.TITLE_IMAGE.value, user_id]  # ← 추가됨
         )
 
         await self.send(text_data=json.dumps({

@@ -135,12 +135,8 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # 기본 데이터 베이스를 mysql로 설정합니다.
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': env('DB_NAME'), # DB 이름을 설정합니다.
-        'USER': env('DB_USER'), # 접근 사용자 이름을 지정합니다.
-        'PASSWORD': env('DB_PASSWORD'), # 접근 비밀번호를 지정합니다.
-        'HOST': env('DB_HOST'), # mysql 접근 호스트를 의미합니다.
-        'PORT': env('DB_PORT'), # 접근 포트 번호를 의미합니다.
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -309,7 +305,7 @@ LOGGING = {
     },
     'loggers': { # 로거 설정, 실제 get_logger를 이용하여 로그 설정 가져옴
         'django': { # 실제 배포 환경에서 사용하는 로거
-            'handlers': ['logstash'],
+            'handlers': ['file'],
             'level': 'INFO',
             'propagate': True,
         },
