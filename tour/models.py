@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models import ForeignKey
+
 from usr.models import User
 from mission.models import Mission
 
@@ -8,8 +10,9 @@ class Travel(models.Model):
     # id: pk
     user = models.ManyToManyField(User) # 유저 제거시 해당 여행도 제거
     tour_name = models.CharField(max_length=255)  # 여행 이름 필드 추가
-    start_date = models.DateField() # 여행 시작 날짜
-    end_date = models.DateField() # 여행 마감 날짜
+    # start_date = models.DateField() # 여행 시작 날짜
+    # end_date = models.DateField() # 여행 마감 날짜
+    tour_date = models.DateField() # 여행 날짜
 
     def __str__(self):
         return self.tour_name
@@ -29,13 +32,13 @@ class TravelDaysAndPlaces(models.Model):
     # id: pk
     travel = models.ForeignKey(Travel, on_delete=models.CASCADE) # 여행 제거시 해당 일차도 제거
     place = models.ForeignKey(Place, on_delete=models.CASCADE) # 장소 제거시 해당 일차도 제거
-    date = models.DateField() # 여행 날짜
+    # date = models.DateField() # 여행 날짜
     mission = models.ForeignKey(Mission, on_delete=models.SET_NULL, blank=True, null=True) # 미션을 추가합니다. 미션 제거시 해당 일차 미션 NULL
     mission_image = models.ImageField(upload_to='', blank=True, null=True) # 이미지 필드를 추가합니다.
     mission_success = models.BooleanField(null = True, blank = True)
 
     def __str__(self):
-        return self.travel.tour_name + " " + self.place.name + " " + str(self.date)
+        return self.travel.tour_name + " " + self.place.name + " " + str(self.travel.tour_date)
 
 class PlaceImages(models.Model):
     # id: pk
@@ -60,4 +63,12 @@ class Event(models.Model):
     def __str__(self):
         return self.title
 
+class UserTourImages(models.Model):
+    # id: pk
+    tour = ForeignKey(Travel, on_delete=models.CASCADE)
+    user = ForeignKey(User, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='', blank=True, null=True) # 이미지 필드를 추가합니다.
+
+    def __str__(self):
+        return f"{self.tour.tour_name} - {self.tour.tour_date}"
 

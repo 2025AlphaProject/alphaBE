@@ -45,7 +45,7 @@ class ExceptionHandler(APIException):
 
     def get_full_details(self):
         exception_str = f"error file: {self.error_file}, error_func: {self.error_func}, error_line: {self.error_line}, error_code: {self.error_code}, error_message: {self.error_message}"
-        logger.warning(exception_str)
+        logger.info(exception_str)
         # 코드 보안을 지키기 위해 에러 메시지만 노출합니다.
         return self.error_message
 
@@ -55,9 +55,11 @@ class ExceptionHandler(APIException):
 class ValidationException(ExceptionHandler):
     """
         해당 예외는 유효성 검사에서 실패가 발생했을 시 발생하는 예외입니다
+        status_code: 400
     """
     default_code = 'VALIDATION_ERROR'
     default_detail = '유효성 검사 실패.'
+    status_code = 400
 
     def __init__(self, error_code=None, error_message=None):
         # 에러 코드와 에러 메시지는 기본값으로 보내는 것이 가능하도록 설정합니다.
@@ -83,6 +85,7 @@ class NoObjectException(ExceptionHandler):
 class NoAttributeException(ExceptionHandler):
     """
     해당 예외는 요청 객체의 속성이 없을 때 발생하는 예외입니다.
+    status_code: 400
 
     Attributes:
         error_code (str): Custom error code identifying the error.
@@ -90,6 +93,7 @@ class NoAttributeException(ExceptionHandler):
     """
     default_code = 'NO_ATTRIBUTE'
     default_detail = '요청한 속성이 존재하지 않습니다.'
+    status_code = 400
 
     def __init__(self, error_code=None, error_message=None):
         # 에러 코드와 에러 메시지는 기본값으로 보내는 것이 가능하도록 설정합니다.
@@ -98,11 +102,13 @@ class NoAttributeException(ExceptionHandler):
 class NoRequiredParameterException(ExceptionHandler):
     """
     해당 예외는 필수 파라미터가 존재하지 않을 때 발생하는 예외입니다.
+    status_code: 400
 
     Attributes:
         error_code (str, optional): Custom error code identifying the error.
         error_message (str, optional): Detailed error message describing the issue.
     """
+    status_code = 400
     def __init__(self, error_code=None, error_message=None):
         error_code = error_code or 'NO_REQUIRED_PARAMETER'
         error_message = error_message or '필수 파라미터 중 일부 혹은 전체가 없습니다.'
@@ -116,6 +122,7 @@ class ValueException(ExceptionHandler):
             error_code (str, optional): Custom error code identifying the error.
             error_message (str, optional): Detailed error message describing the issue.
     """
+    status_code = 400
     def __init__(self, error_code=None, error_message=None):
         error_code = error_code or 'VALUE_ERROR'
         error_message = error_message or '입력 형식이 잘못되었습니다.'
@@ -124,6 +131,57 @@ class ValueException(ExceptionHandler):
             error_message,
             3
         )
+
+class UnExpectedException(ExceptionHandler):
+    """
+            해당 예외는 예상치 못한 예외가 발생한 경우에 사용합니다.
+            status_code: 500
+
+            Attributes:
+                error_code (str, optional): Custom error code identifying the error.
+                error_message (str, optional): Detailed error message describing the issue.
+        """
+    status_code = 500
+
+    def __init__(self, error_code=None, error_message=None):
+        error_code = error_code or 'UNEXPECTED_EXCEPTION'
+        error_message = error_message or '예상치 못한 예외 발생'
+        super().__init__(
+            error_code,
+            error_message,
+            3
+        )
+
+    def get_full_details(self):
+        exception_str = f"error file: {self.error_file}, error_func: {self.error_func}, error_line: {self.error_line}, error_code: {self.error_code}, error_message: {self.error_message}"
+        logger.warning(exception_str)
+        # 코드 보안을 지키기 위해 에러 메시지만 노출합니다.
+        return self.error_message
+
+class FatalError(ExceptionHandler):
+    """
+        해당 예외는 예상치 못한 심각한 오류가 발생한 경우에 사용합니다.
+
+            Attributes:
+                error_code (str, optional): Custom error code identifying the error.
+                error_message (str, optional): Detailed error message describing the issue.
+    """
+    status_code = 500
+
+    def __init__(self, error_code=None, error_message=None):
+        error_code = error_code or 'UNEXPECTED_ERROR'
+        error_message = error_message or '예상치 못한 서버 오류 발생'
+        super().__init__(
+            error_code,
+            error_message,
+            3
+        )
+
+    def get_full_details(self):
+        exception_str = f"error file: {self.error_file}, error_func: {self.error_func}, error_line: {self.error_line}, error_code: {self.error_code}, error_message: {self.error_message}"
+        logger.error(exception_str)
+        # 코드 보안을 지키기 위해 에러 메시지만 노출합니다.
+        return self.error_message
 
 
 
