@@ -41,6 +41,7 @@ KAKAO_REAL_NATIVE_API_KEY = env('KAKAO_REAL_NATIVE_API_KEY') # 카카오 실제 
 SKIP_TEST = env('SKIP_TEST')
 GEOCODER_API_KEY = env('GEOCODER_API_KEY')
 KAKAO_REAL_JAVASCRIPT_KEY = env('KAKAO_REAL_JAVASCRIPT_KEY')
+REFRESH_TOKEN = env('REFRESH_TOKEN')
 
 
 # Quick-start development settings - unsuitable for production
@@ -135,8 +136,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # 기본 데이터 베이스를 mysql로 설정합니다.
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': env('DB_NAME'), # DB 이름을 설정합니다.
+        'USER': env('DB_USER'), # 접근 사용자 이름을 지정합니다.
+        'PASSWORD': env('DB_PASSWORD'), # 접근 비밀번호를 지정합니다.
+        'HOST': env('DB_HOST'), # mysql 접근 호스트를 의미합니다.
+        'PORT': env('DB_PORT'), # 접근 포트 번호를 의미합니다.
     }
 }
 
@@ -231,8 +236,8 @@ STORAGES = {
 
 # simple jwt setting
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1), # 토큰 유효시간 설정 1시간으로 설정
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=5), # 리프레시 토큰 유효기간 설정 리프레시 토큰 유효기간은 5일로 설정
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=5), # 토큰 유효기간 5일로 설정
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30), # 리프레시 토큰 유효기간 설정 리프레시 토큰 유효기간은 5일로 설정
     "ROTATE_REFRESH_TOKENS": True, # 리프레시 토큰도 같이 반환됩니다.
     "BLACKLIST_AFTER_ROTATION": True, # 이전 토큰 블랙리스트 적용, 사용시 설치앱에 rest_framework_simplejwt.token_blacklist 추가 필요
     "UPDATE_LAST_LOGIN": False, # last_login field가 업데이트 됩니다. (커스텀 모델이라 X)
@@ -241,7 +246,7 @@ SIMPLE_JWT = {
     "SIGNING_KEY": SECRET_KEY, # 장고 자체의 시크릿 키로 signing key 지정
     "VERIFYING_KEY": "",
     "AUDIENCE": None,
-    "ISSUER": None, # 토큰 발급자 명시
+    "ISSUER": "Conever", # 토큰 발급자 명시
     "JSON_ENCODER": None,
     "JWK_URL": None,
     "LEEWAY": 0,
@@ -271,6 +276,9 @@ SIMPLE_JWT = {
 }
 
 # 아래는 로그 설정입니다.
+LOG_DIR = './logs'
+os.makedirs(LOG_DIR, exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False, # 기본 로거 설정 유지
@@ -280,7 +288,7 @@ LOGGING = {
             'style': '{', # str.format
         },
         'simple': {
-            'format': '{name} {levelname} {asctime} {message}',
+            'format': '[{levelname}] | {asctime} | {message}',
             'style': '{',
         },
         'logstash': {
@@ -290,10 +298,12 @@ LOGGING = {
     'handlers': { # 로그 핸들러 설정
         'file': {
             'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': 'info.log',
-            'formatter': 'verbose',
-            'encoding': 'utf-8'
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': os.path.join(LOG_DIR, 'app.log'),
+            'formatter': 'simple',
+            'encoding': 'utf-8',
+            'when': 'midnight', # 자정마다 새 로그파일 생성
+            'backupCount': 7, # 일주일치만 저장
         },
         'logstash': {
             'level': 'INFO',
