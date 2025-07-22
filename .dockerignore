@@ -5,3 +5,5 @@ info.log
 db.sqlite3
 .github
 Dockerfile
+logs
+nginx.conf

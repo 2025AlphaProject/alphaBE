@@ -51,9 +51,6 @@ class UserService:
         self.nickname = payload.get('nickname', None) # 닉네임 저장
         if self.sub is None:
             raise NoAttributeException(
-                __name__,
-                get_my_function(),
-                get_error_line(),
                 'usr57',
                 "토큰 내 회원정보 일부가 존재하지 않습니다."
             )
@@ -106,17 +103,11 @@ class UserService:
         aud = payload['aud']
         if iss != 'https://kauth.kakao.com':
             raise ValidationException(
-                __name__,
-                get_my_function(),
-                get_error_line(),
                 'usr104',
                 'issuer information is invalid'
             )
         if aud not in valid_aud_list:
             raise ValidationException(
-                __name__,
-                get_my_function(),
-                get_error_line(),
                 'usr111',
                 'application key is invalid'
             )
@@ -153,9 +144,6 @@ class UserService:
         except OIDC.DoesNotExist: # 오류 발생
             logger.error('키에 해당하는 공개키 정보 없음. (카카오 id 토큰 헤더 손상 의심)')
             raise ValidationException(
-                __name__,
-                get_my_function(),
-                get_error_line(),
                 'usr149',
                 "카카오 JWT 헤더 손상 의심"
             )
@@ -222,9 +210,6 @@ class UserService:
             user = User.objects.create(**data_dict)
         except Exception as e:
             raise ExceptionHandler(
-                __name__,
-                get_my_function(),
-                get_error_line(),
                 'Unexpected Error',
                 e
             )

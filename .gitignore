@@ -14,3 +14,5 @@ db.sqlite3
 *.dir
 # 로그파일 무시
 *.log
+/logs
+nginx.conf

@@ -4,14 +4,25 @@ from rest_framework.response import Response
 import requests
 from services.kakao_token_service import KakaoTokenService
 from services.kakao_error_handler import KakaoRequestError
+from rest_framework_simplejwt.views import TokenRefreshView
+from services.exception_handler import *
 
 from usr.services import UserService
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from config.settings import KAKAO_REAL_NATIVE_API_KEY, KAKAO_REST_API_KEY, APP_LOGGER # 환경변수를 가져옵니다.
 import logging
 logger = logging.getLogger(APP_LOGGER)
 
 # Create your views here.
+
+def get_tokens_for_user(user):
+    refresh = RefreshToken.for_user(user)
+
+    return {
+        'refresh': str(refresh),
+        'access': str(refresh.access_token),
+    }
 
 
 def kakao_callback(request):
@@ -83,6 +94,10 @@ class LoginRegisterView(viewsets.ViewSet):
         except Exception as e:
             return Response({"Error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+        tokens = get_tokens_for_user(user)
+        accessToken = tokens['access']
+        refreshToken = tokens['refresh']
+
         return Response({
             "message": "login or register success",
             "is_new": is_new,
@@ -92,6 +107,34 @@ class LoginRegisterView(viewsets.ViewSet):
                 "profile_image_url": user.profile_image_url,
                 "age_range": user.age_range,
                 "gender": user.gender,
+            },
+            "tokens": {
+                "access_token": accessToken,
+                "refresh_token": refreshToken,
             }
         }, status=status.HTTP_201_CREATED)
 
+class CustomTokenRefreshView(TokenRefreshView):
+    def post(self, request, *args, **kwargs):
+        data = request.data.copy()
+        refresh_token = data.pop('refresh_token', None)
+        if refresh_token is None:
+            raise NoRequiredParameterException(
+                'NO_PARAMETER',
+                'refresh_token 키 값이 존재하지 않습니다.'
+            )
+        data['refresh'] = refresh_token
+        serializer = self.get_serializer(data=data)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception as e:
+            raise ExceptionHandler(
+                'TOKEN_VALIDATION_ERROR',
+                e
+            )
+
+        return Response({
+            'access_token': serializer.validated_data['access'],
+            'token_type': 'Bearer',
+            'refresh_token': serializer.validated_data['refresh'],
+        }, status=status.HTTP_200_OK)

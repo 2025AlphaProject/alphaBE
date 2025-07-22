@@ -25,6 +25,8 @@ from ultralytics import YOLO
 import numpy as np
 import requests
 from skimage.metrics import structural_similarity as ssim
+
+from services.exception_handler import FatalError, NoObjectException, ValueException
 from tour.models import PlaceImages, TravelDaysAndPlaces, Place
 import logging
 from config.settings import APP_LOGGER
@@ -53,27 +55,23 @@ class ImageSimilarity:
                 img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)  # 이미지 디코딩
                 return img
             else:
-                logger.error("Failed Image Request")
-                return None
+                raise FatalError(error_message="Failed Image Request")
         except Exception as e:
-            logger.error(f"Image Download Error {e}")
-            return None
+            raise FatalError(error_message=f"Image Download Error {e}")
 
     def get_user_image(self):
         """ 사용자가 촬영한 미션 이미지를 가져옵니다. """
         try:
             # TravelDaysAndPlaces에서 이미지 객체를 찾고 이미지 경로를 가져옵니다.
-            image_obj = TravelDaysAndPlaces.objects.get(id=self.travel_id, mission=self.mission_id)
+            image_obj = TravelDaysAndPlaces.objects.get(id=self.travel_id)
             # 이미지가 실제로 존재한다면, cv2를 사용하여 이미지 파일을 읽어들입니다.
             if image_obj.mission_image:
                 image_path = image_obj.mission_image.url
                 return self.get_image_from_url(image_path)
             else:
-                logger.warning("There is no mission image")
-                return None
+                raise NoObjectException(error_message="There is no mission image")
         except TravelDaysAndPlaces.DoesNotExist:
-            logger.error("Failed to get user image. Mission image does not exist.")
-            return None
+            raise NoObjectException(error_message="Failed to get user image. Mission image does not exist.")
 
     def get_reference_image(self):
         """ 장소의 예시 이미지를 가져옵니다. """
@@ -83,7 +81,7 @@ class ImageSimilarity:
             image_url = image_obj.image_url  # 이미지 URL 가져오기
             return self.get_image_from_url(image_url)
         except (Place.DoesNotExist, PlaceImages.DoesNotExist):
-            logger.error("Failed to get reference image.")
+            raise FatalError(error_message="Failed to get reference image.")
             return None
 
     def calculate_histogram_similarity(self):
@@ -207,7 +205,7 @@ class ObjectDetection:
         # 이미지 읽기
         image = cv2.imread(image_path)
         if image is None:
-            raise ValueError(f"이미지를 열 수 없습니다: {image_path}")
+            raise ValueException(error_message=f"이미지를 열 수 없습니다: {image_path}")
 
         # 객체 카운트 초기화
         counts = {name: 0 for name in self.class_names_custom}

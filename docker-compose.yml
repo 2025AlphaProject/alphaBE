@@ -4,6 +4,7 @@ services:
   db:
     image: mysql:latest
     restart: always
+    # 배포 땐 아래 포트 막을 것
     ports:
       - "3306:3306"
     environment:
@@ -50,7 +51,7 @@ services:
       - app_network
 
   migrations:
-    image: ytk030305/alpha_be:1.0.3
+    image: ytk030305/alpha_be:1.0.8
     command: sh entrypoint.sh
     depends_on:
       - db
@@ -62,10 +63,10 @@ services:
       - app_network
 
   conever_api: # api 컨테이너
-    image: ytk030305/alpha_be:1.0.3
+    image: ytk030305/alpha_be:1.0.8
     command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
-    ports:
-      - "8000:8000"
+#    ports:
+#      - "8000:8000"
 #    volumes:
 #      - .:/code
     depends_on:
@@ -77,24 +78,62 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     networks:
       - app_network
+    volumes:
+      - log_volume:/code/logs
 
-  conever_web:
-    image: ytk030305/conever_web:0.1.0
+  nginx:
+    image: nginx:latest
+    container_name: nginx
     ports:
-      - "80:80"
+      - "80:80"  # 외부 접근 포트
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - db
-      - redis
-      - migrations
       - conever_api
-      - celery_beat
-      - celery_worker
     networks:
       - app_network
+
+  # 아래부터는 로깅 컨테이너
+  # 아래는 promtail 설정
+  promtail:
+    image: grafana/promtail:latest
+    restart: always
+    depends_on:
+      - conever_api
+      - migrations
+      - celery_worker
+      - celery_beat
+    volumes:
+      - ./promtail-config.yml:/etc/promtail/config.yml
+      - log_volume:/var/log/django            # 로그 공유
+
+  loki:
+    image: grafana/loki:2.9.2
+    restart: always
+#    ports:
+#      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki-config.yaml:/etc/loki/local-config.yaml
+      - loki-storage:/loki
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    depends_on:
+      - loki
+
 
 volumes:
   db_data:
   static_volume:
+  log_volume:
+  grafana-storage:
+  loki-storage:
 
 networks:
   app_network:
