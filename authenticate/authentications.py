@@ -1,6 +1,7 @@
 import requests
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.tokens import AccessToken
 from usr.models import User
 from config.settings import APP_LOGGER
 
@@ -23,17 +24,21 @@ class CustomAuthentication(BaseAuthentication):
         if prefix != 'Bearer':
             raise AuthenticationFailed('Invalid Bearer Prefix')
 
-        # 액세스 토큰 검증을 시도합니다.
-        payload = self.validate_kakao_access_token(access_token)
+
         # 사용자 정보를 받아옵니다.
         try:
-            sub = payload['id']
+            # 액세스 토큰 검증을 시도합니다.
+            payload = AccessToken(access_token)
+            sub = payload['sub']
             user = User.objects.get(sub=sub)
             logger.info(f'username: {user.username}(sub: {sub}) User attempting to access backend Api')
             return user, access_token
         except User.DoesNotExist: # 사용자 정보가 없을 경우
             logger.info('New User attempting to access backend Api')
             return None
+        except Exception as e:
+            logger.info(f'Authentication Failed: {e} - Exception code (a40)')
+            raise AuthenticationFailed(f'Authentication Failed - {e}')
 
     def validate_kakao_access_token(self, access_token):
         end_point = 'https://kapi.kakao.com/v1/user/access_token_info' # 유효성 검증 url

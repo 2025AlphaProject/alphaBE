@@ -16,8 +16,14 @@ from services.exception_handler import (
     NoObjectException,
     get_error_line,
     get_my_function,
-    NoAttributeException
+    NoAttributeException, NoRequiredParameterException, ValueException, UnExpectedException
 )
+from config.settings import (
+    APP_LOGGER
+)
+import logging
+
+logger = logging.getLogger(APP_LOGGER)
 
 # Create your views here.
 class MissionListView(viewsets.ModelViewSet):
@@ -36,11 +42,11 @@ class MissionImageUploadView(viewsets.ModelViewSet):
         travel_days_and_places_id = request.data.get('travel_days_id', None)
         image = request.FILES.get('image', None)
         if travel_days_and_places_id is None or image is None:
-            return Response({"Error": "travel_days_and_places_id or image is missing"}, status=status.HTTP_400_BAD_REQUEST)
+            raise NoRequiredParameterException(error_message="travel_days_and_places_id or image is missing")
         try:
             travel_days_and_places = TravelDaysAndPlaces.objects.get(id=travel_days_and_places_id)
         except TravelDaysAndPlaces.DoesNotExist:
-            return Response({"Error": "travel_days_id is not exist"}, status=status.HTTP_404_NOT_FOUND)
+            raise NoObjectException(error_message="travel_days_id is not exist")
         travel_days_and_places.mission_image = image
         travel_days_and_places.save()
         return Response({
@@ -58,7 +64,7 @@ class MissionCheckCompleteView(viewsets.ViewSet):
         mission_id = request.data.get('mission_id')  # object_detection 용일 경우 필요
 
         if not travel_id or not place_id:
-            return Response({"error": "필수 입력값이 누락되었습니다."}, status=status.HTTP_400_BAD_REQUEST)
+            raise NoRequiredParameterException()
 
         try:
             place = Place.objects.get(id=place_id)
@@ -69,7 +75,7 @@ class MissionCheckCompleteView(viewsets.ViewSet):
 
             if has_original_image:
                 # ✅ 추천 장소 → 유사도 기반 판별
-                checker = ImageSimilarity(travel_id, place_id, mission_id)
+                checker = ImageSimilarity(travel_place.id, place_id, mission_id)
                 similarity_score = checker.get_similarity_score()
                 image_pass = similarity_score >= 40.0
                 method = "image_similarity"
@@ -78,17 +84,11 @@ class MissionCheckCompleteView(viewsets.ViewSet):
                 # ✅ 랜덤 미션 → 객체 인식 기반 판별
                 if not mission_id:
                     raise NoAttributeException(
-                        __name__,
-                        get_my_function(),
-                        get_error_line(),
                         'mission82',
                         "랜덤 미션 판별에는 mission_id가 필요합니다."
                     )
                 if not travel_place.mission_image:
                     raise NoObjectException(
-                        __name__,
-                        get_my_function(),
-                        get_error_line(),
                         'mission90',
                         "업로드된 이미지가 없습니다."
                     )
@@ -110,6 +110,10 @@ class MissionCheckCompleteView(viewsets.ViewSet):
                 similarity_score = None
                 method = "object_detection"
 
+            if image_pass == False: # 미션 실패시 S3 사진 삭제
+                logger.debug('사진 삭제')
+                travel_place.mission_image.delete()
+
             return Response({
                 "image_check_passed": image_pass,
                 "method_used": method,
@@ -117,14 +121,13 @@ class MissionCheckCompleteView(viewsets.ViewSet):
             }, status=status.HTTP_200_OK)
 
         except Place.DoesNotExist:
-            return Response({"error": "place_id가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+            raise NoObjectException(error_message="place_id가 존재하지 않습니다.")
         except TravelDaysAndPlaces.DoesNotExist:
-            return Response({"error": "여행지 정보가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+            raise NoObjectException(error_message="여행지 정보가 존재하지 않습니다.")
         except ValueError as ve:
-            return Response({"error": str(ve)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            traceback.print_exc()
-            return Response({"error": f"서버 내부 오류: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return ValueException(error_message=str(ve))
+        # except Exception as e:
+        #     raise UnExpectedException(error_message=str(e))
 
 class RandomMissionCreateView(viewsets.ViewSet):
     """
@@ -142,8 +145,7 @@ class RandomMissionCreateView(viewsets.ViewSet):
         # 관리자 등록 미션들
         missions_queryset = Mission.objects.all()
         if not missions_queryset.exists():
-            return Response({"error": "Mission 테이블에 등록된 미션이 없습니다."},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            raise UnExpectedException(error_code='NO_MISSION', error_message="Mission 테이블에 등록된 미션이 없습니다.")
 
         created_missions = []
 
@@ -151,7 +153,7 @@ class RandomMissionCreateView(viewsets.ViewSet):
             tdp_id = item.get("tdp_id", None)
             image_url = item.get("image_url", "")
             if tdp_id is None:
-                return Response({"ERROR": "일부 파라미터에 대한 날짜 정보가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
+                raise NoRequiredParameterException()
 
             if image_url == "":
                 try:
@@ -176,7 +178,7 @@ class RandomMissionCreateView(viewsets.ViewSet):
                     })
 
                 except TravelDaysAndPlaces.DoesNotExist:
-                    return Response({"ERROR": "장소 정보 혹은 해당 여행 경로 정보를 불러올 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+                    raise NoObjectException(error_message="장소 정보 혹은 해당 여행 경로 정보를 불러올 수 없습니다.")
             else:
                 try:
                     tdp = TravelDaysAndPlaces.objects.get(id=tdp_id)
@@ -185,7 +187,7 @@ class RandomMissionCreateView(viewsets.ViewSet):
                         "mission_content": '예시 사진과 유사하게 찍기',
                     })
                 except TravelDaysAndPlaces.DoesNotExist:
-                    return Response({"ERROR": "장소 정보 혹은 해당 여행 경로 정보를 불러올 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+                    raise NoObjectException(error_message="장소 정보 혹은 해당 여행 경로 정보를 불러올 수 없습니다.")
 
         return Response({
             "message": "랜덤 미션 할당 완료",
@@ -201,7 +203,7 @@ class IsMissionCompleteView(viewsets.ViewSet):
         try:
             travel_days_and_places = TravelDaysAndPlaces.objects.get(id=tdp)
         except TravelDaysAndPlaces.DoesNotExist:
-            return Response({'ERROR': '해당 여행 장소를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+            raise NoObjectException(error_message="해당 여행 장소를 찾을 수 없습니다.")
 
         return Response({
             'tdp_id': tdp,
@@ -215,7 +217,7 @@ class MissionImageGetView(viewsets.ViewSet):
         try:
             travel_days_and_places = TravelDaysAndPlaces.objects.get(id=tdp)
         except TravelDaysAndPlaces.DoesNotExist:
-            return Response({'ERROR': '해당 여행 장소를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+            raise NoObjectException(error_message="해당 여행 장소를 찾을 수 없습니다.")
 
         return Response({
             'tdp_id': tdp,
@@ -232,9 +234,7 @@ class SaveMissionCompleteView(viewsets.ViewSet):
         try:
             tdp = TravelDaysAndPlaces.objects.get(id=int(tdp_id))
         except TravelDaysAndPlaces.DoesNotExist:
-            return Response({
-                "Error": "해당 여행 정보(tdp)가 존재하지 않습니다."
-            })
+            raise NoObjectException(error_message="해당 여행 정보(tdp)가 존재하지 않습니다.")
 
         tdp.mission_success = bool(is_success)
         tdp.save()
@@ -242,3 +242,14 @@ class SaveMissionCompleteView(viewsets.ViewSet):
             "tdp_id": tdp_id,
             "is_success": tdp.mission_success,
         }, status=status.HTTP_201_CREATED)
+
+class DeleteMissionImageView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    def partial_update(self, request, *args, **kwargs):
+        tdp_id = request.data.get('tdp_id', None)
+        if tdp_id is None: raise NoRequiredParameterException()
+        # 이미 백에서 삭제 작업 진행했을 수도 있음
+        tdp = TravelDaysAndPlaces.objects.get(id=int(tdp_id))
+        if tdp.mission_image is not None and tdp.mission_image != "":
+            tdp.mission_image.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
