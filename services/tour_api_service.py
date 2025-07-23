@@ -1,3 +1,4 @@
+from services.public_data_portal_http_client import HttpRequestException
 from .tour_api_http_client import *
 from dataclasses import dataclass
 from .exception_handler import *
@@ -68,13 +69,7 @@ class TourAPIService:
         try:
             items = raw_data['response']['body']['items']['item']
         except KeyError:
-            raise HttpRequestException(
-                get_error_file(),
-                get_my_function(),
-                get_error_line(),
-                'tour api server exception',
-                f'raw data: {raw_data}'
-            )
+            raise HttpRequestException('tour api server exception')
         # 올바르게 데이터가 넘어왔다고 가정.
 
         places = []
