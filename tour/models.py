@@ -72,3 +72,5 @@ class UserTourImages(models.Model):
     def __str__(self):
         return f"{self.tour.tour_name} - {self.tour.tour_date}"
 
+    def __str__(self):
+        return f"{self.tour.tour_name} - {self.tour.tour_date}"

@@ -184,7 +184,6 @@ class FatalError(ExceptionHandler):
         return self.error_message
 
 
-
 def custom_exception_handler(exc, context):
     """
         DRF의 커스텀 핸들러를 설정하며, detail만 메시지가 갔던 기존 방식에 비해서 status code와 같은 부가 정보를 추가해 보냅니다.
