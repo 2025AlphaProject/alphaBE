@@ -227,7 +227,10 @@ class NewTourAddView(viewsets.ModelViewSet):
             image_url = info_data.pop('image_url', None)
             if place_id_str is None: raise NoRequiredParameterException(error_message='각 장소 정보에 장소 id는 필수입니다.')
 
-            place = Place.objects.get(id=int(place_id_str)) # 기존 장소 객체 불러오기
+            try:
+                place = Place.objects.get(id=int(place_id_str)) # 기존 장소 객체 불러오기
+            except Place.DoesNotExist:
+                raise NoObjectException(error_code='No place', error_message='id에 맞는 장소 정보가 없습니다.')
 
             mapX = info_data.get('mapX', None)
             mapY = info_data.get('mapY', None)
