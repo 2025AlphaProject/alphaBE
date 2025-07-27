@@ -332,3 +332,15 @@ APP_LOGGER='django'
 
 # YOLO 모델 디렉터리 설정
 MODEL_DIR = os.path.join(BASE_DIR, "mission", "yolomodels")
+
+# 캐시 설정
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': f'redis://{env('CHANNEL_HOST')}:6379/1',
+        'OPTION': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'TIMEOUT': 600, # cache 유효 기간을 10분으로 설정합니다.
+        }
+    }
+}
