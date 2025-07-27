@@ -12,7 +12,7 @@ urlpatterns = [
     path('', NewTourAddView.as_view({
         'get': 'list',
         'post': 'create'
-    }), name='travel-list-create'),
+    }), name='create-tour'),
 
     path('<int:pk>/', NewTourAddView.as_view({
         'get': 'retrieve',
