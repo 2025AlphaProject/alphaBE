@@ -12,38 +12,87 @@ from django.test import TestCase, override_settings
 import json
 from django.conf import settings
 from tests.base import BaseTestCase
-TEMP_MEDIA_ROOT = tempfile.mkdtemp()
+import io
+from PIL import Image
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.urls import reverse
+from config.settings import APP_LOGGER
+import logging
 
-@override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT, DEFAULT_FILE_STORAGE='django.core.files.storage.FileSystemStorage')
+logger = logging.getLogger(APP_LOGGER)
+
 class TestMission(BaseTestCase):
-    def __init__(self, methodName: str = "runTest"):
-        super().__init__(methodName)
 
-    def setUp(self):
-        # 유저 정보 임의 생성 및 저장
-        # user = User.objects.create(
-        #     sub=3928446869,
-        #     username='TestUser',
-        #     gender='male',
-        #     age_range='1-9',
-        #     profile_image_url='https://example.org'
-        # )
-        # user.set_password('test_password112')
-        # user.save()
-
-        # 임의 미션 생성
-        Mission.objects.create(content='예시 사진과 유사하게 사진찍기')
-        Mission.objects.create(content='손 하트 만든 상태로 사진찍기')
-
-        # 장소 생성
-        self.place1 = Place.objects.create(name="사진 X 장소1", mapX=127.001, mapY=37.501)
-        self.place2 = Place.objects.create(name="사진 X 장소2", mapX=127.002, mapY=37.502)
-        self.place3 = Place.objects.create(name="사진 있는 장소", mapX=127.003, mapY=37.503)
-
-    def test_mission(self):
+    @classmethod
+    def setUpTestData(cls):
         """
-        기본 미션 리스트 조회 테스트
+            테스트에 필요한 테스트 인스턴스를 구축합니다.
         """
-        end_point = '/mission/list/'
-        response = self.client.get(end_point)
+        super().setUpTestData()
+        place = Place.objects.create(
+            name="test place",
+            mapX="136.1",
+            mapY="136.2",
+        )
+        PlaceImages.objects.create(
+            place_id=place.id,
+            image_url = "http://tong.visitkorea.or.kr/cms/resource/82/3084482_image2_1.JPG"
+        )
+        travel = Travel.objects.create(
+            tour_name="test tour",
+            tour_date='2025-07-30',
+        )
+        travel.user.add(User.objects.get(sub=3928446869))
+        tdp = TravelDaysAndPlaces.objects.create(
+            travel_id=travel.id,
+            place_id=place.id,
+        )
+
+    @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+    def test_mission_image_upload_success(self):
+        """
+            미션 이미지 업로드 테스트
+        """
+        file = io.BytesIO()
+        image = Image.new('RGB', (100, 100), (255, 0, 0))
+        image.save(file, 'JPEG')
+        file.seek(0)
+        image =  SimpleUploadedFile('test.jpg', file.read(), content_type='image/jpeg')
+        uri = reverse('mission_image_upload')
+        data = {
+            'image': image,
+            'travel_days_id': TravelDaysAndPlaces.objects.first().id,
+        }
+        headers = {
+            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}'
+        }
+        response = self.client.post(uri, data=data, headers=headers, format='multipart')
+        self.assertEqual(response.status_code, 201)
+        logger.debug('result: ' + str(response.content))
+
+    def test_mission_evaluation_success(self):
+        """
+            미션 판단 조사
+        """
+        pass
+
+    def test_mission_evaluation_failure(self):
+        """
+            미션 실패 판단 테스트
+        """
+        uri = reverse('mission_check')
+        self.test_mission_image_upload_success()
+        tdp = TravelDaysAndPlaces.objects.first()
+        data = {
+            'travel_id': tdp.travel_id,
+            'place_id': tdp.place_id,
+            'mission_id': 1,
+        }
+        headers = {
+            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}'
+        }
+        response = self.client.post(uri, data=data, headers=headers, content_type='application/json')
+        logger.debug('mission evaluation failure result: ' + str(response.content))
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json().get('image_check_passed'), False)
+        logger.debug('mission evaluation failure result: ' + str(response.content))
