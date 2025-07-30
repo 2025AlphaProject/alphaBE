@@ -231,8 +231,8 @@ class TestTour(BaseTestCase):
         self.test_tour_create_success() # 여행 추가
         uri = reverse('add_traveler')
         data = {
-            'add_traveler_sub': 1,
-            'travel_id': 1,
+            'add_traveler_sub': User.objects.first().sub,
+            'travel_id': Travel.objects.first().id,
         }
         response = self.client.post(uri, data, headers=self.headers, content_type='application/json')
         self.assertEqual(response.status_code, 201)
