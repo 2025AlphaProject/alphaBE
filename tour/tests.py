@@ -14,6 +14,11 @@ from .models import Travel, Place
 from config.settings import APP_LOGGER
 import logging
 from usr.models import User
+from channels.testing import WebsocketCommunicator
+from tour.consumers import TaskConsumer
+from urllib.parse import urlencode
+from unittest.mock import patch
+from django.test import override_settings
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -231,8 +236,8 @@ class TestTour(BaseTestCase):
         self.test_tour_create_success() # 여행 추가
         uri = reverse('add_traveler')
         data = {
-            'add_traveler_sub': 1,
-            'travel_id': 1,
+            'add_traveler_sub': User.objects.first().sub,
+            'travel_id': Travel.objects.first().id,
         }
         response = self.client.post(uri, data, headers=self.headers, content_type='application/json')
         self.assertEqual(response.status_code, 201)
@@ -282,3 +287,48 @@ class TestTour(BaseTestCase):
         end_point = '/tour/get_area_list/?area_code=234'
         response = self.client.get(end_point)
         self.assertEqual(response.status_code, 404)
+
+    # tour/consumers.py에 있는 app.send_task 함수를 Mock() 객체로 교체
+    # Mock 객체를 테스트 함수 인자로 넘김
+    @patch('tour.consumers.app.send_task')
+    @override_settings(CHANNEL_LAYERS={
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer"
+        }
+    },
+        CACHES={
+            'default': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+                'LOCATION': 'test-cache'
+            }
+        }
+    )
+    async def test_tour_recommender(self, mock_send_task):
+        """
+            해당 테스트는 웹소켓 통신을 테스트합니다.
+        """
+        mock_send_task.return_value.task_id = 'mocked-task-id'
+        params = {
+            'areaCode': '34',
+            'user_id': '111',
+            'unique_code': '1',
+            'sigunguName': '아산',
+            'categoryName': '39',
+        }
+        query_string = urlencode(params)
+        communicator = WebsocketCommunicator(
+            TaskConsumer.as_asgi(),
+            f'/tour/recommend/?{query_string}',
+        )
+        connected, subprotocol = await communicator.connect(20)
+        self.assertTrue(connected)
+        response = await communicator.receive_json_from(10)
+        logger.debug('tour Recommender test result: ' + str(response))
+        ans = response.get('state') == 'OK' or response.json().get('state') == 'CACHE_HIT'
+        self.assertTrue(ans)
+        # if response['state'] == 'OK':
+        #     response = await communicator.receive_json_from(70)
+        #     logger.debug('tour Recommender test result: ' + str(response))
+            # self.assertEqual(response['status'], 'SUCCESS')
+            # self.assertEqual(response[])
+
