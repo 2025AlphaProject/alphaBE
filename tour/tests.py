@@ -295,7 +295,14 @@ class TestTour(BaseTestCase):
         "default": {
             "BACKEND": "channels.layers.InMemoryChannelLayer"
         }
-    })
+    },
+        CACHES={
+            'default': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+                'LOCATION': 'test-cache'
+            }
+        }
+    )
     async def test_tour_recommender(self, mock_send_task):
         """
             해당 테스트는 웹소켓 통신을 테스트합니다.
