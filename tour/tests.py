@@ -18,6 +18,7 @@ from channels.testing import WebsocketCommunicator
 from tour.consumers import TaskConsumer
 from urllib.parse import urlencode
 from unittest.mock import patch
+from django.test import override_settings
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -290,6 +291,11 @@ class TestTour(BaseTestCase):
     # tour/consumers.py에 있는 app.send_task 함수를 Mock() 객체로 교체
     # Mock 객체를 테스트 함수 인자로 넘김
     @patch('tour.consumers.app.send_task')
+    @override_settings(CHANNEL_LAYERS={
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer"
+        }
+    })
     async def test_tour_recommender(self, mock_send_task):
         """
             해당 테스트는 웹소켓 통신을 테스트합니다.
