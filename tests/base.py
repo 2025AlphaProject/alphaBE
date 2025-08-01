@@ -5,6 +5,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from usr.models import User
 
+from config.settings import APP_LOGGER
+import logging
+
+logger = logging.getLogger(APP_LOGGER)
+
 
 class BaseTestCase(TestCase):
     is_issued_token = False # 토큰 발급을 하였는가
@@ -21,6 +26,8 @@ class BaseTestCase(TestCase):
         kakao_tokens = token_service.get_new_tokens(KAKAO_REFRESH_TOKEN)
         cls.KAKAO_TEST_ACCESS_TOKEN = tokens.access_token
         cls.KAKAO_TEST_ID_TOKEN = kakao_tokens.id_token
+        logger.debug('ACCESS_TOKEN: ' + str(cls.KAKAO_TEST_ACCESS_TOKEN))
+        logger.debug('ID_TOKEN: ' + str(cls.KAKAO_TEST_ID_TOKEN))
 
     @classmethod
     def setUpTestData(cls):
