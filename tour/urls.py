@@ -6,7 +6,6 @@ from .views import (
     Sido_list,
     NewTourAddView,
     TourSnapshotsView,
-    CourseView,
     CategoryListView
 )
 
