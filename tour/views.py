@@ -335,3 +335,19 @@ class TourSnapshotsView(viewsets.ModelViewSet):
             raise NoObjectException(error_message='해당 id에 해당하는 사진이 없습니다.')
         return super().destroy(request, *args, **kwargs)
 
+
+class CategoryListView(viewsets.ViewSet):
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Tour API의 contentTypeId 기반 카테고리 리스트를 반환합니다.
+        """
+        category_list = [
+            {"contentTypeId": 12, "name": "관광지"},
+            {"contentTypeId": 14, "name": "문화시설"},
+            {"contentTypeId": 15, "name": "축제/공연/행사"},
+            {"contentTypeId": 28, "name": "레포츠"},
+            {"contentTypeId": 32, "name": "숙박"},
+            {"contentTypeId": 38, "name": "쇼핑"},
+            {"contentTypeId": 39, "name": "음식점"},
+        ]
+        return Response(category_list, status=status.HTTP_200_OK)

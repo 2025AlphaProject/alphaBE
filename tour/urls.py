@@ -5,7 +5,9 @@ from .views import (
     GetAreaList,
     Sido_list,
     NewTourAddView,
-    TourSnapshotsView
+    TourSnapshotsView,
+    CourseView,
+    CategoryListView
 )
 
 urlpatterns = [
@@ -43,5 +45,9 @@ urlpatterns = [
         'get': 'retrieve',
         'delete': 'destroy',
     })),
+
+    path('category/', CategoryListView.as_view({
+        'get': 'retrieve'  # 카테고리 리스트 조회
+    }), name='category-list'),
 
 ]
