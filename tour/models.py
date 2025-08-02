@@ -1,8 +1,9 @@
 from django.db import models
 from django.db.models import ForeignKey
 
-from usr.models import User
 from mission.models import Mission
+from usr.models import User
+
 
 # Create your models here.
 

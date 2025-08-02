@@ -1,11 +1,14 @@
 import json
+import logging
+import urllib.parse
+
 from channels.generic.websocket import AsyncWebsocketConsumer
+from django.core.cache import cache
+
 from config.celery import app
 from config.settings import PUBLIC_DATA_PORTAL_API_KEY, APP_LOGGER
 from services.tour_api import *
-import urllib.parse
-import logging
-from django.core.cache import cache
+
 logger = logging.getLogger(APP_LOGGER)
 
 class TaskConsumer(AsyncWebsocketConsumer):

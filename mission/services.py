@@ -19,18 +19,19 @@
 """
 # from tour.models import PlaceImages, TravelDaysAndPlaces, Place # 모델을 가져옵니다.
 
-import cv2
+import logging
 import os
-from ultralytics import YOLO
+
+import cv2
 import numpy as np
 import requests
+from django.conf import settings
 from skimage.metrics import structural_similarity as ssim
+from ultralytics import YOLO
 
+from config.settings import APP_LOGGER
 from services.exception_handler import FatalError, NoObjectException, ValueException
 from tour.models import PlaceImages, TravelDaysAndPlaces, Place
-import logging
-from config.settings import APP_LOGGER
-from django.conf import settings
 
 logger = logging.getLogger(APP_LOGGER)
 

@@ -1,6 +1,9 @@
-import requests
-from enum import Enum
 import math
+from enum import Enum
+
+import requests
+
+
 # from tour.models import Event
 
 class Area:

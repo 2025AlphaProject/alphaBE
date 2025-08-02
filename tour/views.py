@@ -1,23 +1,24 @@
+import logging
+
 from django.core.exceptions import ValidationError
 from rest_framework import viewsets, status
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 
-from usr.models import User
-from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, PlaceImageSerializer, \
-    TravelListSerializer, TourSnapshotsSerializer
 from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY, KAKAO_REST_API_KEY, APP_LOGGER
-from .serializers import EventSerializer
-from services.tour_api import TourApi, NearEventInfo
-from .services import PlaceService
-from .models import Travel, Place, PlaceImages, Event, UserTourImages
-import logging
 from services.exception_handler import (
     ValidationException,
     NoRequiredParameterException,
     ValueException, NoObjectException
 )
+from services.tour_api import TourApi, NearEventInfo
+from usr.models import User
+from .models import Travel, Place, PlaceImages, Event, UserTourImages
+from .serializers import EventSerializer
+from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, PlaceImageSerializer, \
+    TravelListSerializer, TourSnapshotsSerializer
+from .services import PlaceService
 
 logger = logging.getLogger(APP_LOGGER)
 

@@ -1,9 +1,11 @@
-import sys
-import inspect, os
-from config.settings import APP_LOGGER
+import inspect
 import logging
+import sys
+
 from rest_framework.exceptions import APIException
 from rest_framework.views import exception_handler
+
+from config.settings import APP_LOGGER
 
 logger = logging.getLogger(APP_LOGGER)
 

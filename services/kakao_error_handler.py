@@ -1,6 +1,6 @@
-from config.settings import APP_LOGGER
 import logging
-import sys
+
+from config.settings import APP_LOGGER
 
 logger = logging.getLogger(APP_LOGGER) # 로그 설정
 

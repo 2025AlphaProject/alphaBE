@@ -1,8 +1,9 @@
+from dataclasses import dataclass
+
+from config.settings import PUBLIC_DATA_PORTAL_API_KEY
 from services.public_data_portal_http_client import HttpRequestException
 from .tour_api_http_client import *
-from dataclasses import dataclass
-from .exception_handler import *
-from config.settings import PUBLIC_DATA_PORTAL_API_KEY
+
 
 @dataclass
 class Place:

@@ -10,10 +10,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
-from pathlib import Path
-import os, environ
-from datetime import timedelta
+import environ
 import logging
+import os
+from datetime import timedelta
+from pathlib import Path
 
 # .env 파일을 읽기 위한 객체 생성
 env = environ.Env()

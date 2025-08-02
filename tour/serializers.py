@@ -1,8 +1,10 @@
-from rest_framework import serializers
-from .models import Travel, Place, Event, TravelDaysAndPlaces, PlaceImages, UserTourImages
-from usr.serializers import UserSerializer
-from config.settings import APP_LOGGER
 import logging
+
+from rest_framework import serializers
+
+from config.settings import APP_LOGGER
+from usr.serializers import UserSerializer
+from .models import Travel, Place, Event, TravelDaysAndPlaces, PlaceImages, UserTourImages
 
 logger = logging.getLogger(APP_LOGGER)
 

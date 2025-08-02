@@ -1,17 +1,17 @@
+import logging
+
 from django.http import JsonResponse
 from rest_framework import status, viewsets
 from rest_framework.response import Response
-import requests
-from services.kakao_token_service import KakaoTokenService
-from services.kakao_error_handler import KakaoRequestError
-from rest_framework_simplejwt.views import TokenRefreshView
-from services.exception_handler import *
-
-from usr.services import UserService
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenRefreshView
 
-from config.settings import KAKAO_REAL_NATIVE_API_KEY, KAKAO_REST_API_KEY, APP_LOGGER # 환경변수를 가져옵니다.
-import logging
+from config.settings import KAKAO_REAL_NATIVE_API_KEY, KAKAO_REST_API_KEY, APP_LOGGER  # 환경변수를 가져옵니다.
+from services.exception_handler import *
+from services.kakao_error_handler import KakaoRequestError
+from services.kakao_token_service import KakaoTokenService
+from usr.services import UserService
+
 logger = logging.getLogger(APP_LOGGER)
 
 # Create your views here.

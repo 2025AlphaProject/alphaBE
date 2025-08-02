@@ -1,12 +1,11 @@
-from rest_framework.viewsets import ViewSet
-from rest_framework.response import Response
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.viewsets import ViewSet
 
-from services.exception_handler import ExceptionHandler, UnExpectedException
-from .serializers import UserSerializer
-
+from services.exception_handler import UnExpectedException
 from usr.models import User
+from .serializers import UserSerializer
 
 
 class Who(ViewSet):

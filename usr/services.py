@@ -1,12 +1,15 @@
-from services.exception_handler import (
-    get_my_function,
-    get_error_line,
-    ValidationException,
-    ExceptionHandler,
-    NoAttributeException
-)
+import base64
+import json
+import logging
 
-from .models import User
+import jwt
+import requests
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+
+from authenticate.models import OIDC
+from config.settings import APP_LOGGER
 from config.settings import (
     KAKAO_TEST_REST_API_KEY,
     KAKAO_TEST_NATIVE_API_KEY,
@@ -14,18 +17,14 @@ from config.settings import (
     KAKAO_REAL_NATIVE_API_KEY,
     KAKAO_REAL_JAVASCRIPT_KEY,
 )
+from services.exception_handler import (
+    ValidationException,
+    ExceptionHandler,
+    NoAttributeException
+)
 from services.kakao_http_client import KakaoHttpClient
-import requests
-import jwt
-import base64
-import json
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
-from authenticate.models import OIDC
+from .models import User
 
-from config.settings import APP_LOGGER
-import logging
 logger = logging.getLogger(APP_LOGGER)
 
 
