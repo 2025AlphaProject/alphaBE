@@ -292,9 +292,6 @@ LOGGING = {
             'format': '[{levelname}] | {asctime} | {message}',
             'style': '{',
         },
-        'logstash': {
-            '()': 'logstash_formatter.LogstashFormatterV1',
-        },
     },
     'handlers': { # 로그 핸들러 설정
         'file': {
@@ -306,13 +303,6 @@ LOGGING = {
             'when': 'midnight', # 자정마다 새 로그파일 생성
             'backupCount': 7, # 일주일치만 저장
         },
-        'logstash': {
-            'level': 'INFO',
-            'class': 'config.tcp_log_handler.TCPLogstashHandler',
-            'host': env('LOGSTASH_HOST'),
-            'port': 3306,
-            'formatter': 'logstash'
-        }
     },
     'loggers': { # 로거 설정, 실제 get_logger를 이용하여 로그 설정 가져옴
         'django': { # 실제 배포 환경에서 사용하는 로거
