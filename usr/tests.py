@@ -1,6 +1,8 @@
-from .services import UserService
-from .models import User
 from tests.base import BaseTestCase
+from .models import User
+from .services import UserService
+
+
 # Create your tests here.
 
 class TestService(BaseTestCase):

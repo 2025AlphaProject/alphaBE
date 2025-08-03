@@ -1,23 +1,24 @@
+import logging
+
 from django.core.exceptions import ValidationError
 from rest_framework import viewsets, status
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 
-from usr.models import User
-from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, PlaceImageSerializer, \
-    TravelListSerializer, TourSnapshotsSerializer
 from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY, KAKAO_REST_API_KEY, APP_LOGGER
-from .serializers import EventSerializer
-from services.tour_api import TourApi, NearEventInfo
-from .services import PlaceService
-from .models import Travel, Place, PlaceImages, Event, UserTourImages
-import logging
 from services.exception_handler import (
     ValidationException,
     NoRequiredParameterException,
     ValueException, NoObjectException
 )
+from services.tour_api import TourApi, NearEventInfo
+from usr.models import User
+from .models import Travel, Place, PlaceImages, Event, UserTourImages
+from .serializers import EventSerializer
+from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, PlaceImageSerializer, \
+    TravelListSerializer, TourSnapshotsSerializer
+from .services import PlaceService
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -38,7 +39,6 @@ class NearEventView(viewsets.ModelViewSet):
 
         if mapX is None or mapY is None: # 필수 파라미터 검증
             raise NoRequiredParameterException()
-            # return Response({"ERROR": "필수 파라미터 중 일부 혹은 전체가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         if Event.objects.count() == 0: # 주변 행사 정보가 DB에 없을 경우, 코드는 200 OK로 보냅니다.
             logger.warning("Event Info is not exist in DB") # 해당 오류는 서버 오류에 가깝기 때문에 로그를 남깁니다.

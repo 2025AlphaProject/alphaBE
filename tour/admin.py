@@ -1,4 +1,5 @@
 from django.contrib import admin
+
 from .models import Place, Travel, TravelDaysAndPlaces, PlaceImages, Event, UserTourImages
 
 # Register your models here.

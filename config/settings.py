@@ -10,10 +10,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
-from pathlib import Path
-import os, environ
-from datetime import timedelta
+import environ
 import logging
+import os
+from datetime import timedelta
+from pathlib import Path
 
 # .env 파일을 읽기 위한 객체 생성
 env = environ.Env()
@@ -124,15 +125,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
 # 기본 데이터 베이스를 mysql로 설정합니다.
 DATABASES = {
     'default': {
@@ -291,9 +283,6 @@ LOGGING = {
             'format': '[{levelname}] | {asctime} | {message}',
             'style': '{',
         },
-        'logstash': {
-            '()': 'logstash_formatter.LogstashFormatterV1',
-        },
     },
     'handlers': { # 로그 핸들러 설정
         'file': {
@@ -305,13 +294,6 @@ LOGGING = {
             'when': 'midnight', # 자정마다 새 로그파일 생성
             'backupCount': 7, # 일주일치만 저장
         },
-        'logstash': {
-            'level': 'INFO',
-            'class': 'config.tcp_log_handler.TCPLogstashHandler',
-            'host': env('LOGSTASH_HOST'),
-            'port': 3306,
-            'formatter': 'logstash'
-        }
     },
     'loggers': { # 로거 설정, 실제 get_logger를 이용하여 로그 설정 가져옴
         'django': { # 실제 배포 환경에서 사용하는 로거

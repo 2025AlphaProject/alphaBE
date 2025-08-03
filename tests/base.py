@@ -1,12 +1,12 @@
+import logging
+
 from django.test import TestCase
-from services.kakao_token_service import KakaoTokenService
-from config.settings import KAKAO_REFRESH_TOKEN, KAKAO_REST_API_KEY, REFRESH_TOKEN
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from usr.models import User
-
 from config.settings import APP_LOGGER
-import logging
+from config.settings import KAKAO_REFRESH_TOKEN, KAKAO_REST_API_KEY, REFRESH_TOKEN
+from services.kakao_token_service import KakaoTokenService
+from usr.models import User
 
 logger = logging.getLogger(APP_LOGGER)
 

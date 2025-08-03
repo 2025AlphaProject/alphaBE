@@ -1,18 +1,18 @@
+import logging
+from dataclasses import dataclass
 from typing import Optional
-import requests
-import logging, json
+
 from config.settings import KAKAO_REST_API_KEY, APP_LOGGER
 from .exception_handler import (
     get_my_function,
     get_error_line
 )
-from .kakao_http_client import (
-    KakaoHttpClient
-)
 from .kakao_error_handler import (
     KakaoServerError
 )
-from dataclasses import dataclass
+from .kakao_http_client import (
+    KakaoHttpClient
+)
 
 logger = logging.getLogger(APP_LOGGER)
 

@@ -1,23 +1,19 @@
-from mission.models import Mission
 from tour.models import Place,PlaceImages
-from usr.models import User
-from tour.models import TravelDaysAndPlaces
-from django.core.files import File
-from tour.models import Travel
-from services.tour_api import NearEventInfo
-from mission.services import ObjectDetection
-import shutil
-import tempfile
-from django.test import TestCase, override_settings
-import json
-from django.conf import settings
-from tests.base import BaseTestCase
 import io
+import logging
+import tempfile
+
 from PIL import Image
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from django.urls import reverse
+
 from config.settings import APP_LOGGER
-import logging
+from tests.base import BaseTestCase
+from tour.models import Place, PlaceImages
+from tour.models import Travel
+from tour.models import TravelDaysAndPlaces
+from usr.models import User
 
 logger = logging.getLogger(APP_LOGGER)
 

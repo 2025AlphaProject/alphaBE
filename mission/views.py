@@ -1,27 +1,24 @@
+import logging
+import random
+import tempfile
+
+import requests
+from rest_framework import status
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
-from .models import Mission
-from .serializers import MissionSerializer
-from tour.models import TravelDaysAndPlaces, Place, PlaceImages
-from .services import ImageSimilarity, ObjectDetection
-import random
-from services.tour_api import NearEventInfo
-import requests
-import tempfile
-import traceback
-from services.exception_handler import (
-    ValidationException,
-    NoObjectException,
-    get_error_line,
-    get_my_function,
-    NoAttributeException, NoRequiredParameterException, ValueException, UnExpectedException
-)
+
 from config.settings import (
     APP_LOGGER
 )
-import logging
+from services.exception_handler import (
+    NoObjectException,
+    NoAttributeException, NoRequiredParameterException, ValueException, UnExpectedException
+)
+from tour.models import TravelDaysAndPlaces, Place, PlaceImages
+from .models import Mission
+from .serializers import MissionSerializer
+from .services import ImageSimilarity, ObjectDetection
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -126,8 +123,6 @@ class MissionCheckCompleteView(viewsets.ViewSet):
             raise NoObjectException(error_message="여행지 정보가 존재하지 않습니다.")
         except ValueError as ve:
             return ValueException(error_message=str(ve))
-        # except Exception as e:
-        #     raise UnExpectedException(error_message=str(e))
 
 class RandomMissionCreateView(viewsets.ViewSet):
     """

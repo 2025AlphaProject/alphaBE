@@ -1,11 +1,9 @@
-import requests
 import json
-
-from requests import RequestException
-
-from config.settings import KAKAO_REST_API_KEY, APP_LOGGER, GEOCODER_API_KEY
 import logging
-from services import tour_api
+
+import requests
+
+from config.settings import APP_LOGGER, GEOCODER_API_KEY
 
 logger = logging.getLogger(APP_LOGGER)
 

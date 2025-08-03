@@ -1,5 +1,12 @@
+import logging
+from unittest.mock import patch
+from urllib.parse import urlencode
+
+from channels.testing import WebsocketCommunicator
+from django.test import override_settings
 from django.urls import reverse
 
+from config.settings import APP_LOGGER
 from config.settings import PUBLIC_DATA_PORTAL_API_KEY  # 공공 데이터 포탈 앱 키
 from services.tour_api import (
     TourApi,
@@ -10,15 +17,9 @@ from services.tour_api import (
     ContentTypeId,
 )
 from tests.base import BaseTestCase
-from .models import Travel, Place
-from config.settings import APP_LOGGER
-import logging
-from usr.models import User
-from channels.testing import WebsocketCommunicator
 from tour.consumers import TaskConsumer
-from urllib.parse import urlencode
-from unittest.mock import patch
-from django.test import override_settings
+from usr.models import User
+from .models import Travel, Place
 
 logger = logging.getLogger(APP_LOGGER)
 
