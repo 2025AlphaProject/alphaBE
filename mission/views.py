@@ -123,8 +123,6 @@ class MissionCheckCompleteView(viewsets.ViewSet):
             raise NoObjectException(error_message="여행지 정보가 존재하지 않습니다.")
         except ValueError as ve:
             return ValueException(error_message=str(ve))
-        # except Exception as e:
-        #     raise UnExpectedException(error_message=str(e))
 
 class RandomMissionCreateView(viewsets.ViewSet):
     """

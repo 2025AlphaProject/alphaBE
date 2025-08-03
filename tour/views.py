@@ -39,7 +39,6 @@ class NearEventView(viewsets.ModelViewSet):
 
         if mapX is None or mapY is None: # 필수 파라미터 검증
             raise NoRequiredParameterException()
-            # return Response({"ERROR": "필수 파라미터 중 일부 혹은 전체가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         if Event.objects.count() == 0: # 주변 행사 정보가 DB에 없을 경우, 코드는 200 OK로 보냅니다.
             logger.warning("Event Info is not exist in DB") # 해당 오류는 서버 오류에 가깝기 때문에 로그를 남깁니다.
