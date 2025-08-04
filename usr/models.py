@@ -11,6 +11,7 @@ class User(AbstractUser):
     age_range = models.CharField(max_length=20, null=True, blank=True) # '1-9' 형식으로 들어옴
     profile_image_url = models.URLField() # 프로필 이미지 링크입니다.
     username = models.CharField(max_length=100)
+    fcm_token = models.CharField(max_length=500, null=True, blank=True) # 알림을 위한 클라이언트 측 fcm 토큰을 저장합니다.
 
     USERNAME_FIELD = 'sub'
     REQUIRED_FIELDS = ['username']
