@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import Who, UserListView
+from .views import Who, UserListView, UploadFcmTokenView
 
 urlpatterns = [
     path('', UserListView.as_view({
@@ -9,4 +9,7 @@ urlpatterns = [
     path('me/',Who.as_view({
         'get' : 'retrieve',
     }), name='who'), # 토큰 이용한 내 정보 get 매핑
+    path('fcm/', UploadFcmTokenView.as_view({
+        'post' : 'create',
+    }))
 ]
