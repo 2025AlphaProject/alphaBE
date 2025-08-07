@@ -21,6 +21,7 @@ class BaseTestCase(TestCase):
         cls.is_issued_token = True
         super().setUpClass()
         token_service = KakaoTokenService(KAKAO_REST_API_KEY)
+        # PyJWT 버전이 2.10.0 이상부터는 sub가 반드시 String 형식이어야함
         sub = RefreshToken(REFRESH_TOKEN).payload['sub']
         tokens = RefreshToken.for_user(User.objects.get(sub=sub))
         kakao_tokens = token_service.get_new_tokens(KAKAO_REFRESH_TOKEN)
@@ -32,12 +33,14 @@ class BaseTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         if not cls.is_created_user:
-            user = User.objects.create(
+            user, created = User.objects.get_or_create(
                 sub=3928446869,
-                username='TestUser',
-                gender='male',
-                age_range='1-9',
-                profile_image_url='https://example.org'
+                defaults={
+                    'username': 'TestUser',
+                    'gender': 'male',
+                    'age_range': '1-9',
+                    'profile_image_url': 'https://example.org'
+                }
             )
             user.set_password('test_password112')
             user.save()
