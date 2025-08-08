@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from config.settings import APP_LOGGER
 from usr.serializers import UserSerializer
-from .models import Travel, Place, Event, TravelDaysAndPlaces, PlaceImages, UserTourImages
+from .models import Travel, Place, Event, TravelDaysAndPlaces, PlaceImages, SnapshotImages
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -73,7 +73,7 @@ class PlaceImageSerializer(serializers.ModelSerializer):
 
 class TourSnapshotsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = UserTourImages
+        model = SnapshotImages
         fields = '__all__'
 
     def to_representation(self, instance):

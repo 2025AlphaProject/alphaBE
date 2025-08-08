@@ -14,7 +14,7 @@ from services.exception_handler import (
 )
 from services.tour_api import TourApi, NearEventInfo
 from usr.models import User
-from .models import Travel, Place, PlaceImages, Event, UserTourImages
+from .models import Travel, Place, PlaceImages, Event, SnapshotImages
 from .serializers import EventSerializer
 from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, PlaceImageSerializer, \
     TravelListSerializer, TourSnapshotsSerializer
@@ -291,7 +291,7 @@ class NewTourAddView(viewsets.ModelViewSet):
 
 class TourSnapshotsView(viewsets.ModelViewSet):
     serializer_class = TourSnapshotsSerializer
-    queryset = UserTourImages.objects.all()
+    queryset = SnapshotImages.objects.all()
     permission_classes = [IsAuthenticated] # 로그인 사용자만 허용
 
     def get_queryset(self):
@@ -326,12 +326,12 @@ class TourSnapshotsView(viewsets.ModelViewSet):
         snapshot_id = kwargs.get('pk')
         # 사진 S3에서도 삭제
         try:
-            snapshot_object = UserTourImages.objects.get(id=int(snapshot_id))
+            snapshot_object = SnapshotImages.objects.get(id=int(snapshot_id))
             if snapshot_object.user != request.user:
                 raise PermissionDenied(detail='본인의 사진만 저장할 수 있습니다.')
             # 사진 삭제
             snapshot_object.image.delete()
-        except UserTourImages.DoesNotExist:
+        except SnapshotImages.DoesNotExist:
             raise NoObjectException(error_message='해당 id에 해당하는 사진이 없습니다.')
         return super().destroy(request, *args, **kwargs)
 
