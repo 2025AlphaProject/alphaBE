@@ -6,4 +6,4 @@ from .models import User
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['sub', 'username', 'profile_image_url']
+        fields = ['sub', 'username', 'profile_image_url', 'fcm_token']

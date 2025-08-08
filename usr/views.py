@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
-from services.exception_handler import UnExpectedException
+from services.exception_handler import UnExpectedException, NoRequiredParameterException
 from usr.models import User
 from .serializers import UserSerializer
 
@@ -21,6 +21,7 @@ class Who(ViewSet):
                 "profile_image_url": user.profile_image_url,
                 "age_range": user.age_range,
                 "gender": user.gender,
+                "fcm": user.fcm_token,
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
@@ -39,3 +40,25 @@ class UserListView(viewsets.ModelViewSet):
         if user_name is not None:
             return not_admin_user.filter(username__icontains=user_name)
         return not_admin_user
+
+class UploadFcmTokenView(ViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserSerializer
+
+    def create(self, request):
+        """
+            해당 메서드는 사용자의 fcm token을 저장합니다.
+        """
+        fcm_token = request.data.get('fcm_token', None)
+        if not fcm_token:
+            raise NoRequiredParameterException(
+                error_message='fcm_token is required'
+            )
+
+        serializer = UserSerializer(instance=request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        """
+            fcm token은 매우 중요한 개인정보이기에 유저 정보 자체를 보내지 않습니다.
+        """
+        return Response(status=status.HTTP_201_CREATED)
