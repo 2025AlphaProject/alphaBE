@@ -14,8 +14,8 @@ from services.exception_handler import (
 )
 from services.tour_api import TourApi, NearEventInfo
 from usr.models import User
-from .models import Travel, Place, PlaceImages, Event, UserTourImages
-from .serializers import EventSerializer
+from .models import Travel, Place, PlaceImages, Event, SnapshotImages, UserTourImage
+from .serializers import EventSerializer, UserTourImageSerializer
 from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, PlaceImageSerializer, \
     TravelListSerializer, TourSnapshotsSerializer
 from .services import PlaceService
@@ -289,10 +289,13 @@ class NewTourAddView(viewsets.ModelViewSet):
         self.serializer_class = TravelListSerializer
         return super().list(request, *args, **kwargs)
 
-class TourSnapshotsView(viewsets.ModelViewSet):
-    serializer_class = TourSnapshotsSerializer
-    queryset = UserTourImages.objects.all()
-    permission_classes = [IsAuthenticated] # 로그인 사용자만 허용
+
+class BaseImageSaveView(viewsets.ModelViewSet):
+    """
+        해당 클래스는 여행 이미지, 인생네컷 등 사진 데이터를 저장하는 뷰로 활용됩니다.
+    """
+
+    permission_classes = [IsAuthenticated] # 로그인 사용자를 디폴트로
 
     def get_queryset(self):
         return self.queryset.filter(user__sub=self.request.user.sub)
@@ -323,17 +326,26 @@ class TourSnapshotsView(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def destroy(self, request, *args, **kwargs):
-        snapshot_id = kwargs.get('pk')
+        obj_id = kwargs.get('pk')
         # 사진 S3에서도 삭제
         try:
-            snapshot_object = UserTourImages.objects.get(id=int(snapshot_id))
-            if snapshot_object.user != request.user:
+            queryset_object = self.get_queryset().get(id=int(obj_id))
+            if queryset_object.user != request.user:
                 raise PermissionDenied(detail='본인의 사진만 저장할 수 있습니다.')
             # 사진 삭제
-            snapshot_object.image.delete()
-        except UserTourImages.DoesNotExist:
+            queryset_object.image.delete()
+        except SnapshotImages.DoesNotExist:
             raise NoObjectException(error_message='해당 id에 해당하는 사진이 없습니다.')
         return super().destroy(request, *args, **kwargs)
+
+class TourSnapshotsView(BaseImageSaveView):
+    serializer_class = TourSnapshotsSerializer
+    queryset = SnapshotImages.objects.all()
+
+
+class UserTourImageView(BaseImageSaveView):
+    serializer_class = UserTourImageSerializer
+    queryset = UserTourImage.objects.all()
 
 
 class CategoryListView(viewsets.ViewSet):
