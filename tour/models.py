@@ -68,14 +68,17 @@ class SnapshotImages(models.Model):
     image = models.ImageField(upload_to='', blank=True, null=True) # 이미지 필드를 추가합니다.
 
     def __str__(self):
-        return f"{self.tour.tour_name} - {self.tour.tour_date}"
+        return f"{self.tour.tour_name} - {self.tour.tour_date} - snapshots"
 
 
-# class SnapshotImages(models.Model):
-#     # id: pk
-#     tour = ForeignKey(Travel, on_delete=models.CASCADE)
-#     user = ForeignKey(User, on_delete=models.CASCADE)
-#     image = models.ImageField(upload_to='', blank=True, null=True) # 이미지 필드를 추가합니다.
-#
-#     def __str__(self):
-#         return f"{self.tour.tour_name} - {self.tour.tour_date} - snapshot"
+class UserTourImage(models.Model):
+    # id: pk
+    tour = ForeignKey(Travel, on_delete=models.CASCADE)
+    user = ForeignKey(User, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='', blank=True, null=True) # 이미지 필드를 추가합니다.
+
+    def __str__(self):
+        return f"{self.tour.tour_name} - {self.tour.tour_date} - userImage"
+
+    class Meta:
+        db_table = 'tour_images'

@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from config.settings import APP_LOGGER
 from usr.serializers import UserSerializer
-from .models import Travel, Place, Event, TravelDaysAndPlaces, PlaceImages, SnapshotImages
+from .models import Travel, Place, Event, TravelDaysAndPlaces, PlaceImages, SnapshotImages, UserTourImage
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -74,6 +74,17 @@ class PlaceImageSerializer(serializers.ModelSerializer):
 class TourSnapshotsSerializer(serializers.ModelSerializer):
     class Meta:
         model = SnapshotImages
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        # 사진 날짜 보여주기
+        data = super().to_representation(instance)
+        data['tour_date'] = instance.tour.tour_date
+        return data
+
+class UserTourImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserTourImage
         fields = '__all__'
 
     def to_representation(self, instance):
