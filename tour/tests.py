@@ -327,9 +327,48 @@ class TestTour(BaseTestCase):
         logger.debug('tour Recommender test result: ' + str(response))
         ans = response.get('state') == 'OK' or response.json().get('state') == 'CACHE_HIT'
         self.assertTrue(ans)
-        # if response['state'] == 'OK':
-        #     response = await communicator.receive_json_from(70)
-        #     logger.debug('tour Recommender test result: ' + str(response))
-            # self.assertEqual(response['status'], 'SUCCESS')
-            # self.assertEqual(response[])
+
+    def testSnapshot_post_success(self):
+        """
+            인생네컷 사진 업로드 성공 테스트
+        """
+        pass
+
+    def testSnapshot_post_fail(self):
+        """
+            인생네컷 사진 업로드 실패 테스트
+        """
+        pass
+
+    def testSnapshot_list_success(self):
+        """
+            인생네컷 사진 리스트 가져오기 성공 테스트
+        """
+        pass
+
+    def testSnapshot_list_fail(self):
+        """
+            인생네컷 사진 리스트 가져오기 실패 테스트
+        """
+        pass
+
+    def testSnapshot_retrieve_success(self):
+        """
+            인생네컷 사진 상세 가져오기 성공 테스트
+        """
+        pass
+
+    def testSnapshot_retrieve_fail(self):
+        """
+            인생네컷 사진 상세 가져오기 실패 테스트
+        """
+        pass
+
+    def test_tour_image_post_success(self):
+        """
+            여행 사진 업로드 성공 테스트
+        """
+        pass
+
+
 
