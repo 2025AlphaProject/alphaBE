@@ -21,7 +21,6 @@ class Who(ViewSet):
                 "profile_image_url": user.profile_image_url,
                 "age_range": user.age_range,
                 "gender": user.gender,
-                "fcm": user.fcm_token,
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
