@@ -342,6 +342,8 @@ class BaseImageSaveView(viewsets.ModelViewSet):
 class TourSnapshotsView(BaseImageSaveView):
     serializer_class = TourSnapshotsSerializer
     queryset = SnapshotImages.objects.all()
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ('tour',)
 
 
 class UserTourImageView(BaseImageSaveView):
