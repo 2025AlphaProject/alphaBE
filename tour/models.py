@@ -1,7 +1,5 @@
 from django.db import models
 from django.db.models import ForeignKey
-
-from mission.models import Mission
 from usr.models import User
 
 
@@ -31,9 +29,6 @@ class TravelDaysAndPlaces(models.Model):
     # id: pk
     travel = models.ForeignKey(Travel, on_delete=models.CASCADE) # 여행 제거시 해당 일차도 제거
     place = models.ForeignKey(Place, on_delete=models.CASCADE) # 장소 제거시 해당 일차도 제거
-    mission = models.ForeignKey(Mission, on_delete=models.SET_NULL, blank=True, null=True) # 미션을 추가합니다. 미션 제거시 해당 일차 미션 NULL
-    mission_image = models.ImageField(upload_to='', blank=True, null=True) # 이미지 필드를 추가합니다.
-    mission_success = models.BooleanField(null = True, blank = True)
 
     def __str__(self):
         return self.travel.tour_name + " " + self.place.name + " " + str(self.travel.tour_date)

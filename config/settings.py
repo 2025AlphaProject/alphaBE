@@ -72,7 +72,6 @@ INSTALLED_APPS = [
     'authenticate',
     'usr',
     'tour',
-    'mission',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist', # 토큰 블랙리스트 위해 필요
     'channels',
@@ -312,8 +311,7 @@ LOGGING = {
 # 앱 기본 로거 설정
 APP_LOGGER='django'
 
-# YOLO 모델 디렉터리 설정
-MODEL_DIR = os.path.join(BASE_DIR, "mission", "yolomodels")
+
 
 # 캐시 설정
 CACHES = {
