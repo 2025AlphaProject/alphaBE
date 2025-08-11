@@ -19,6 +19,7 @@ from .serializers import EventSerializer, UserTourImageSerializer
 from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, PlaceImageSerializer, \
     TravelListSerializer, TourSnapshotsSerializer
 from .services import PlaceService
+from django_filters.rest_framework import DjangoFilterBackend
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -346,6 +347,8 @@ class TourSnapshotsView(BaseImageSaveView):
 class UserTourImageView(BaseImageSaveView):
     serializer_class = UserTourImageSerializer
     queryset = UserTourImage.objects.all()
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ('tour',)
 
 
 class CategoryListView(viewsets.ViewSet):
