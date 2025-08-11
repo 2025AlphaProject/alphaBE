@@ -4,8 +4,8 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
 from services.exception_handler import UnExpectedException, NoRequiredParameterException
-from usr.models import User
-from .serializers import UserSerializer
+from usr.models import User, FCMToken
+from .serializers import UserSerializer, FCMTokenSerializer
 
 
 class Who(ViewSet):
@@ -43,19 +43,26 @@ class UserListView(viewsets.ModelViewSet):
 
 class UploadFcmTokenView(ViewSet):
     permission_classes = [IsAuthenticated]
-    serializer_class = UserSerializer
+    serializer_class = FCMTokenSerializer
 
     def create(self, request):
         """
             해당 메서드는 사용자의 fcm token을 저장합니다.
         """
+        try:
+            fcm = FCMToken.objects.get(fcm_token=request.data['fcm_token'])
+            # 이미 요청된 fcm 토큰 존재하는 경우 등록 절차 생략
+            return Response(status=status.HTTP_201_CREATED)
+        except FCMToken.DoesNotExist:
+            pass
         fcm_token = request.data.get('fcm_token', None)
         if not fcm_token:
             raise NoRequiredParameterException(
                 error_message='fcm_token is required'
             )
-
-        serializer = UserSerializer(instance=request.user, data=request.data, partial=True)
+        data = request.data.copy()
+        data['user'] = request.user.sub
+        serializer = FCMTokenSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         """
