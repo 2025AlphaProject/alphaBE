@@ -168,7 +168,8 @@ class NewTourAddView(viewsets.ModelViewSet):
             plc_cp_dic['address'] = address_kakao
             place_serializer = PlaceSerializer(data=plc_cp_dic)
             place_serializer.is_valid(raise_exception=True)
-            place_serializer.save()
+            place_info = place_serializer.save()
+            self.place_service.save_metadata(place_info)
             logger.debug(f"장소 저장")
 
             # 사진 저장

@@ -95,7 +95,7 @@ class TourAPIService:
                 return item['code']
         return None
 
-    def get_location_based_list(self, mapX, mapY, radius:str):
+    def get_location_based_list(self, mapX:str, mapY:str, radius:str):
         """
             해당 함수는 위도, 경도 좌표가 주어졌을 떄 관광지 정보를 조회할 때 사용합니다.
             데이터가 없으면 빈 리스트를 반환하고, 그렇지 않다면 dictionary가 원소인 리스트가 결과 값이 반환됩니다.
