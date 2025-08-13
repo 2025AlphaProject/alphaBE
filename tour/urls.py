@@ -7,7 +7,8 @@ from .views import (
     Sido_list,
     NewTourAddView,
     TourSnapshotsView,
-    CategoryListView, UserTourImageView
+    CategoryListView, UserTourImageView,
+    Category2ListView
 )
 
 urlpatterns = [
@@ -56,6 +57,8 @@ urlpatterns = [
     path('image/<int:pk>/', UserTourImageView.as_view({
         'get': 'retrieve',
         'delete': 'destroy'
-    }))
-
+    })),
+    path('category2',Category2ListView.as_view({
+        'get' : 'retrieve'
+    }), name='category2-list')
 ]

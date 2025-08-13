@@ -372,3 +372,75 @@ class CategoryListView(viewsets.ViewSet):
             {"contentTypeId": 39, "name": "음식점"},
         ]
         return Response(category_list, status=status.HTTP_200_OK)
+
+class Category2ListView(viewsets.ViewSet):
+    def retrieve(self, request, *args, **kwargs):
+        category2_list = [
+            {
+                "cat1": "A01",
+                "name": "자연",
+                "items": [
+                    {"cat2": "A0101", "name": "자연관광지"},
+                    {"cat2": "A0102", "name": "관광자원"},
+                ],
+            },
+            {
+                "cat1": "A02",
+                "name": "인문",
+                "items": [
+                    {"cat2": "A0201", "name": "역사관광지"},
+                    {"cat2": "A0202", "name": "휴양관광지"},
+                    {"cat2": "A0203", "name": "체험관광지"},
+                    {"cat2": "A0204", "name": "산업관광지"},
+                    {"cat2": "A0205", "name": "건축/조형물"},
+                    {"cat2": "A0206", "name": "문화시설"},
+                    {"cat2": "A0207", "name": "축제"},
+                    {"cat2": "A0208", "name": "공연/행사"},
+                ],
+            },
+            {
+                "cat1": "A03",
+                "name": "레포츠",
+                "items": [
+                    {"cat2": "A0301", "name": "레포츠소개"},
+                    {"cat2": "A0302", "name": "육상 레포츠"},
+                    {"cat2": "A0303", "name": "수상 레포츠"},
+                    {"cat2": "A0304", "name": "항공 레포츠"},
+                    {"cat2": "A0305", "name": "복합 레포츠"},
+                ],
+            },
+            {
+                "cat1": "A04",
+                "name": "쇼핑",
+                "items": [
+                    {"cat2": "A0401", "name": "쇼핑"},
+                ],
+            },
+            {
+                "cat1": "A05",
+                "name": "음식",
+                "items": [
+                    {"cat2": "A0502", "name": "음식점"},
+                ],
+            },
+            {
+                "cat1": "B02",
+                "name": "숙박",
+                "items": [
+                    {"cat2": "B0201", "name": "숙박시설"},
+                ],
+            },
+            {
+                "cat1": "C01",
+                "name": "추천코스",
+                "items": [
+                    {"cat2": "C0112", "name": "가족코스"},
+                    {"cat2": "C0113", "name": "나홀로코스"},
+                    {"cat2": "C0114", "name": "힐링코스"},
+                    {"cat2": "C0115", "name": "도보코스"},
+                    {"cat2": "C0116", "name": "캠핑코스"},
+                    {"cat2": "C0117", "name": "맛코스"},
+                ],
+            },
+        ]
+        return Response(category2_list, status=status.HTTP_200_OK)
