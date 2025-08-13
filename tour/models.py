@@ -25,17 +25,17 @@ class Place(models.Model):
     cat2 = models.TextField(blank=True, null=True) # 중분류
     cat3 = models.TextField(blank=True, null=True) # 대분류
     place_image = models.URLField(blank=True, null=True)
-    areacode = models.CharField(max_length=255, blank=True, db_index=True)
-    sigungucode = models.CharField(max_length=255, blank=True, db_index=True)
-    contentid = models.CharField(max_length=255, blank=True, unique=True, db_index=True)
-    contenttypeid = models.CharField(max_length=255, blank=True, db_index=True)
-    zipcode = models.CharField(max_length=255, blank=True)
-    lDongRegnCd = models.CharField(max_length=255, blank=True)
-    lDongSignguCd = models.CharField(max_length=255, blank=True)
-    lclsSystm1 = models.CharField(max_length=255, blank=True)
-    lclsSystm2 = models.CharField(max_length=255, blank=True)
-    lclsSystm3 = models.CharField(max_length=255, blank=True)
-    tel = models.TextField(blank=True)
+    areacode = models.CharField(max_length=255, blank=True, db_index=True, null=True)
+    sigungucode = models.CharField(max_length=255, blank=True, db_index=True, null=True)
+    contentid = models.CharField(max_length=255, blank=True, unique=True, db_index=True, null=True)
+    contenttypeid = models.CharField(max_length=255, blank=True, db_index=True, null=True)
+    zipcode = models.CharField(max_length=255, blank=True, null=True)
+    lDongRegnCd = models.CharField(max_length=255, blank=True, null=True)
+    lDongSignguCd = models.CharField(max_length=255, blank=True, null=True)
+    lclsSystm1 = models.CharField(max_length=255, blank=True, null=True)
+    lclsSystm2 = models.CharField(max_length=255, blank=True, null=True)
+    lclsSystm3 = models.CharField(max_length=255, blank=True, null=True)
+    tel = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return self.name
