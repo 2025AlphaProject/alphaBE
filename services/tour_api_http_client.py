@@ -141,6 +141,7 @@ class Arrange(Enum):
     ImageTitle = 'O' # 이미지 반드시 있는 제목 순
     ImageModify = 'Q' # 이미지 반드시 있는 수정일 순
     ImageCreate = 'R' # 아마자 반드시 있는 생성일 순
+    DISTANCE = 'E' # 거리 순 (위치기반 관광정보 조회에서 사용)
 
 class TourAPIHTTPClient:
     """

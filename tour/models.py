@@ -21,6 +21,9 @@ class Place(models.Model):
     mapY = models.FloatField() # 소수점 표현
     road_address = models.TextField(blank=True, null=True) # 도로명 주소
     address = models.TextField(blank=True, null=True) # 지번 주소
+    cat1 = models.TextField(blank=True, null=True) # 소분류
+    cat2 = models.TextField(blank=True, null=True) # 중분류
+    cat3 = models.TextField(blank=True, null=True) # 대분류
 
     def __str__(self):
         return self.name

@@ -311,7 +311,7 @@ LOGGING = {
 }
 
 # 앱 기본 로거 설정
-APP_LOGGER='django'
+APP_LOGGER='django_debug'
 
 
 
