@@ -14,6 +14,7 @@ class PlaceService:
     """
     장소와 관련된 여러 서비스를 구현 합니다.
     """
+    metadata = None
     def __init__(self, service_key=None):
         self.service_key = service_key
 
@@ -112,22 +113,21 @@ class PlaceService:
         ) # 가장 가까운 정보만 get
         logger.info('response: {}'.format(response))
         if len(response) == 0:
-            logger.warning(f'There is no place {place.name}')
             return
         response = response[0]
+        self.metadata = response
         cat1 = response.get('cat1', None)
         cat2 = response.get('cat2', None)
         cat3 = response.get('cat3', None)
-        logger.info('cat1: {}'.format(cat1))
-        logger.info('cat2: {}'.format(cat2))
-        logger.info('cat3: {}'.format(cat3))
-        serializer = PlaceSerializer(instance=place, data={
+        data = {
             'cat1': cat1,
             'cat2': cat2,
             'cat3': cat3,
-        }, partial=True)
+        }
+        serializer = PlaceSerializer(instance=place, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+
 
 
 
