@@ -321,42 +321,14 @@ class NewTourAddView(viewsets.ModelViewSet):
 
         # self.save_tdp_place_image(tour_id, places_info)
         logger.debug('partial 장소 정보 수정 시작')
-        for each in places_info:
-            info_data = each.copy()
-            place_id_str = info_data.get('id', None)
-            image_url = info_data.pop('image_url', None)
-            if place_id_str is None: raise NoRequiredParameterException(error_message='각 장소 정보에 장소 id는 필수입니다.')
-
-            try:
-                place = Place.objects.get(id=int(place_id_str)) # 기존 장소 객체 불러오기
-            except Place.DoesNotExist:
-                raise NoObjectException(error_code='No place', error_message='id에 맞는 장소 정보가 없습니다.')
-
-            mapX = info_data.get('mapX', None)
-            mapY = info_data.get('mapY', None)
-            logger.debug('좌표: ' + str(mapX) + ' ' + str(mapY))
-            if info_data.get('mapX', None) is not None or info_data.get('mapY', None) is not None: # 좌표 변경 시
-                logger.debug('좌표 변경에 따른 주소 변경 시작')
-                if mapX is None: mapX = place.mapX
-                if mapY is None: mapY = place.mapY
-
-                road_addr, addr = self.place_service.get_parcel_and_road_address(float(mapX), float(mapY))
-                if info_data.get('road_address') is None: info_data['road_address'] = road_addr
-                info_data['address'] = addr
-
-
-            place_serializer = PlaceSerializer(place, data=info_data, partial=True)
-            place_serializer.is_valid(raise_exception=True)
-            place_serializer.save()
-
-            if image_url is not None:
-                logger.debug('partial 사진저장 시작')
-                place_image_serializer = PlaceImageSerializer(
-                    PlaceImages.objects.get(place_id=int(place_id_str)),
-                    data={"image_url": image_url}, partial=True
-                )
-                place_image_serializer.is_valid(raise_exception=True)
-                place_image_serializer.save()
+        delete_places = places_info.get('delete_places', None)
+        if delete_places is not None:
+            for place_id in delete_places:
+                try:
+                    tdp = TravelDaysAndPlaces.objects.get(travel_id=tour_id, place_id=int(place_id))
+                    tdp.delete()
+                except TravelDaysAndPlaces.DoesNotExist:
+                    raise NoObjectException(error_message='해당 여행 장소에 맞는 여행 정보를 찾을 수 없습니다.')
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
