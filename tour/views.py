@@ -208,6 +208,13 @@ class NewTourAddView(viewsets.ModelViewSet):
                 serializer = TravelDaysAndPlacesSerializer(data=data)
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
+                place = Place.objects.get(pk=int(each_id))
+                road_address_kakao, address_kakao = self.place_service.get_parcel_and_road_address(float(place.mapX), float(place.mapY))
+                plc_serializer = PlaceSerializer(instance=place, data={
+                    "address": address_kakao,
+                }, partial=True)
+                plc_serializer.is_valid(raise_exception=True)
+                plc_serializer.save()
                 logger.debug(f'place_ids_result: {serializer.data}')
 
         if additional_info is not None:
@@ -264,14 +271,20 @@ class NewTourAddView(viewsets.ModelViewSet):
                     # 다른 장소일 경우
                     name = each.get('name', None)
                     if name is None: raise NoRequiredParameterException()
-                    road_address = each.get('road_address', None)
-                    address = each.get('address', None)
+
+
+                    road_address_kakao, address_kakao = self.place_service.get_parcel_and_road_address(
+                        float(mapX), float(mapY)
+                    )
+                    road_address = each.get('road_address', road_address_kakao)
+                    address = each.get('address', address_kakao)
+
                     place = Place.objects.create(
                         name=each['name'],
                         mapX=mapX,
                         mapY=mapY,
                         road_address=road_address,
-                        address=address,
+                        address=address_kakao,
                     )
                     ans_place = place
                 try:
