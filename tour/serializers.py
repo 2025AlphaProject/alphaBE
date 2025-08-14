@@ -105,3 +105,7 @@ class UserTourImageSerializer(serializers.ModelSerializer):
         data['tour'] = UserTourImageSerializer.TravelMiniSerializer(instance=instance.tour).data
         data['user'] = UserSerializer(instance.user).data
         return data
+
+class PoseRecommendSerializer(serializers.Serializer):
+    place_id = serializers.CharField(max_length=255)
+    poses = serializers.ListField(child=serializers.CharField(max_length=1000))

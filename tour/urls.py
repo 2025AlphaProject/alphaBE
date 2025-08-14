@@ -8,7 +8,7 @@ from .views import (
     NewTourAddView,
     TourSnapshotsView,
     CategoryListView, UserTourImageView,
-    LocationBasedPoseView
+    PoseRecommendView
 )
 
 urlpatterns = [
@@ -59,7 +59,7 @@ urlpatterns = [
         'delete': 'destroy'
     })),
 
-    path('location_base_pose/', LocationBasedPoseView.as_view({
-        'get': 'list',
-    }), name='location_base_pose'),
+    path('pose-rec/', PoseRecommendView.as_view({
+        'get': 'retrieve',
+    }), name='pose_recommend'),
 ]
