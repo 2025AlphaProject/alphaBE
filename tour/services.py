@@ -3,9 +3,7 @@ import logging
 
 import requests
 
-from config.settings import APP_LOGGER, GEOCODER_API_KEY, PUBLIC_DATA_PORTAL_API_KEY
-from services.tour_api_service import TourAPIService
-from tour.serializers import PlaceSerializer
+from config.settings import APP_LOGGER, GEOCODER_API_KEY
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -103,33 +101,3 @@ class PlaceService:
                 return {'service': {'name': 'address', 'version': '2.0', 'operation': 'getAddress', 'time': '11(ms)'}, 'status': 'OK', 'result': [{'zipcode': '03045', 'text': '서울특별시 종로구 세종로 1-58', 'structure': {'level0': '대한민국', 'level1': '서울특별시', 'level2': '종로구', 'level3': '', 'level4L': '세종로', 'level4LC': '1111011900', 'level4A': '청운효자동', 'level4AC': '1111051500', 'level5': '1-58도', 'detail': ''}}, {'zipcode': '03045', 'text': '서울특별시 종로구 사직로 161 (세종로,경복궁)', 'structure': {'level0': '대한민국', 'level1': '서울특별시', 'level2': '종로구', 'level3': '세종로', 'level4L': '사직로', 'level4LC': '3100005', 'level4A': '청운효자동', 'level4AC': '1111051500', 'level5': '161', 'detail': '경복궁'}}]}
             raise Exception('Geocoder API Error')
         return response.json()['response']
-
-    def save_metadata(self, place):
-        tour_api_service = TourAPIService(service_key=PUBLIC_DATA_PORTAL_API_KEY)
-        response = tour_api_service.get_location_based_list(
-            mapX=str(place.mapX),
-            mapY=str(place.mapY),
-            radius="10" # 반경 10m
-        ) # 가장 가까운 정보만 get
-        logger.info('response: {}'.format(response))
-        if len(response) == 0:
-            return
-        response = response[0]
-        self.metadata = response
-        cat1 = response.get('cat1', None)
-        cat2 = response.get('cat2', None)
-        cat3 = response.get('cat3', None)
-        data = {
-            'cat1': cat1,
-            'cat2': cat2,
-            'cat3': cat3,
-        }
-        serializer = PlaceSerializer(instance=place, data=data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-
-
-
-
-
-

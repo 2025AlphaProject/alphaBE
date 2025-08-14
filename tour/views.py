@@ -13,11 +13,10 @@ from services.exception_handler import (
     ValueException, NoObjectException
 )
 from services.tour_api import TourApi, NearEventInfo
-from services.tour_api_http_client import TourAPIHTTPClient
 from usr.models import User
-from .models import Travel, Place, PlaceImages, Event, SnapshotImages, UserTourImage, TravelDaysAndPlaces
+from .models import Travel, Place, Event, SnapshotImages, UserTourImage, TravelDaysAndPlaces
 from .serializers import EventSerializer, UserTourImageSerializer, PoseRecommendSerializer
-from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, PlaceImageSerializer, \
+from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, \
     TravelListSerializer, TourSnapshotsSerializer
 from .services import PlaceService
 from services.utils import haversine
@@ -169,34 +168,6 @@ class NewTourAddView(viewsets.ModelViewSet):
 
 
     def save_tdp_place_image(self, tour_id, places_list):
-        """
-            해당 함수는 장소들 리스트를 부여받으면 장소, 사진, tdp를 저장해주는 함수입니다.
-            "place_ids": [1, 2, 3],
-            "additional_info": [
-                {
-                    "place_id": 1,
-                    "road_address": "",
-                },
-                {
-                    "place_id": 2,
-                    "road_address": "주소",
-                },
-            ]
-            "custom_places": [
-                {
-                    "name": "아산 공세리성당",
-                    "mapX": "126.9134070332",
-                    "mapY": "36.8833377411",
-                    "road_address": "충청남도 아산시 인주면 공세리성당길 10"
-                },
-                {
-                    "name": "아산 공세리성당2",
-                    "mapX": "126.9134070332",
-                    "mapY": "36.8833377411",
-                    "road_address": "충청남도 아산시 인주면 공세리성당길 10"
-                },
-            ]
-        """
         place_ids = places_list.get('place_ids', None)
         additional_info = places_list.get('additional_info', None)
         custom_places = places_list.get('custom_places', None)
