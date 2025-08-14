@@ -7,7 +7,8 @@ from .views import (
     Sido_list,
     NewTourAddView,
     TourSnapshotsView,
-    CategoryListView, UserTourImageView
+    CategoryListView, UserTourImageView,
+    PoseRecommendView
 )
 
 urlpatterns = [
@@ -56,6 +57,9 @@ urlpatterns = [
     path('image/<int:pk>/', UserTourImageView.as_view({
         'get': 'retrieve',
         'delete': 'destroy'
-    }))
+    })),
 
+    path('pose-rec/', PoseRecommendView.as_view({
+        'get': 'retrieve',
+    }), name='pose_recommend'),
 ]

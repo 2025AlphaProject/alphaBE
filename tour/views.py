@@ -13,9 +13,10 @@ from services.exception_handler import (
     ValueException, NoObjectException
 )
 from services.tour_api import TourApi, NearEventInfo
+from services.tour_api_http_client import TourAPIHTTPClient
 from usr.models import User
 from .models import Travel, Place, PlaceImages, Event, SnapshotImages, UserTourImage, TravelDaysAndPlaces
-from .serializers import EventSerializer, UserTourImageSerializer
+from .serializers import EventSerializer, UserTourImageSerializer, PoseRecommendSerializer
 from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, PlaceImageSerializer, \
     TravelListSerializer, TourSnapshotsSerializer
 from .services import PlaceService
@@ -23,6 +24,7 @@ from services.utils import haversine
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models.functions import Cast
 from django.db.models import FloatField
+from tour.poses import POSE_MAP
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -478,3 +480,24 @@ class CategoryListView(viewsets.ViewSet):
             {"contentTypeId": 39, "name": "음식점"},
         ]
         return Response(category_list, status=status.HTTP_200_OK)
+
+
+class PoseRecommendView(viewsets.ViewSet) :
+    def retrieve(self, request, *args, **kwargs):
+        place_id = request.GET.get('place_id', None)
+        if place_id is None: raise NoRequiredParameterException()
+        try:
+            place = Place.objects.get(id=int(place_id))
+        except Place.DoesNotExist:
+            raise NoObjectException(error_message='place_id에 해당하는 장소를 찾을 수 없습니다.')
+
+        poses = POSE_MAP.get(str(place.cat2)) # list 형태, 카테고리가 없는 경우, "None"이 키 값으로 들어갑니다.
+        logger.debug(f'poses: {poses}')
+        data = {
+            'place_id': place_id,
+            'poses': poses
+        }
+
+        serializer = PoseRecommendSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

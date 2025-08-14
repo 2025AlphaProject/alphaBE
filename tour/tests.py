@@ -396,5 +396,36 @@ class TestTour(BaseTestCase):
         """
         pass
 
+    def test_pose_recommend_retrieve_for_no_cat_success(self):
+        """
+            카테고리가 없는 장소에 대한 포즈 추천 성공 테스트
+        """
+        # 장소가 존재하지 않을 경우를 대비해 장소를 만듭니다.
+        place = Place.objects.create(
+            name='명원박물관 테스트',
+            mapX='127',
+            mapY='37.8111883307',
+        )
+        uri = f'{reverse('pose_recommend')}?place_id={place.id}'
+        response = self.client.get(uri)
+        self.assertEqual(response.status_code, 200)
+        logger.debug('tour Recommend for no cat test result: ' + str(response.json()))
+
+    def test_pose_recommend_retrieve_for_cat_success(self):
+        """
+            카테고리가 존재하는 장소에 대한 포즈 추천 성공 테스트
+        """
+        # 장소가 존재하지 않을 경우를 대비해 장소를 만듭니다.
+        place = Place.objects.create(
+            name='명원박물관 테스트',
+            mapX='127',
+            mapY='37.8111883307',
+            cat2='B0201'
+        )
+        uri = f'{reverse('pose_recommend')}?place_id={place.id}'
+        response = self.client.get(uri)
+        self.assertEqual(response.status_code, 200)
+        logger.debug('tour Recommend for cat test result: ' + str(response.json()))
+
 
 
