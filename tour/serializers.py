@@ -3,7 +3,6 @@ import logging
 from rest_framework import serializers
 
 from config.settings import APP_LOGGER
-from usr.models import User
 from usr.serializers import UserSerializer
 from .models import Travel, Place, Event, TravelDaysAndPlaces, PlaceImages, SnapshotImages, UserTourImage
 
@@ -20,12 +19,7 @@ class TravelSerializer(serializers.ModelSerializer):
         logger.debug('Tour 시리얼라이저 to_representation 실행')
         data = super().to_representation(instance)
         data['user'] = UserSerializer(instance.user.all(), many=True).data
-        # data['user'] = instance.user.all().values_list('username', flat=True) # 사용자 username만 가져옵니다.
-        # instance는 DB 객체가 들어옴
-        # 여행 id, tour_name, tour_date만 들어왔음
         data['places'] = TravelDaysAndPlacesSerializer(TravelDaysAndPlaces.objects.filter(travel_id=instance.id), many=True).data
-        # data['places'] = PlaceSerializer(
-        #     Place.objects.filter(traveldaysandplaces__travel=instance.id), many=True).data
         return data
 
 class TravelListSerializer(serializers.ModelSerializer):
@@ -58,7 +52,6 @@ class PlaceSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class TravelDaysAndPlacesSerializer(serializers.ModelSerializer):
-    # place = PlaceSerializer() # 장소 정보는 시리얼라이저를 통해 반환합니다.
 
     class Meta:
         model = TravelDaysAndPlaces
