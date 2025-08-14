@@ -13,11 +13,10 @@ from services.exception_handler import (
     ValueException, NoObjectException
 )
 from services.tour_api import TourApi, NearEventInfo
-from services.tour_api_http_client import TourAPIHTTPClient
 from usr.models import User
-from .models import Travel, Place, PlaceImages, Event, SnapshotImages, UserTourImage, TravelDaysAndPlaces
+from .models import Travel, Place, Event, SnapshotImages, UserTourImage, TravelDaysAndPlaces
 from .serializers import EventSerializer, UserTourImageSerializer, PoseRecommendSerializer
-from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, PlaceImageSerializer, \
+from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, \
     TravelListSerializer, TourSnapshotsSerializer
 from .services import PlaceService
 from services.utils import haversine
