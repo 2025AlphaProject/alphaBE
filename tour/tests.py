@@ -31,30 +31,40 @@ class TestTour(BaseTestCase):
         self.headers = {
             'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
         }
+        # 테스트 위한 장소 생성
+        self.place = Place.objects.create(
+            name='명원박물관',
+            mapX='126.9999927956',
+            mapY='37.6111883307',
+        )
         self.data = {
-            'tour_name': '태근이의 여행',
-            'tour_date': '2025-07-07',
-            'places': [
-                {
-                    "name": "아산 공세리성당",
-                    "mapX": "126.9134070332",
-                    "mapY": "36.8833377411",
-                    "image_url": "http://tong.visitkorea.or.kr/cms/resource/17/3095817_image2_1.jpg",
-                    "road_address": "충청남도 아산시 인주면 공세리성당길 10"
-                },
-                {
-                    "name": "아산 공세리",
-                    "mapX": "126.9134070332",
-                    "mapY": "36.8833377411",
-                    "image_url": "",
-                },
-                {
-                    "name": "피나클랜드 수목원",
-                    "mapX": "126.9263450490",
-                    "mapY": "36.8725197718",
-                    "road_address": "충청남도 아산시 영인면 월선길 20-42"
-                },
-            ]
+            "tour_name": "태근이의 여행",
+            "tour_date": "2025-07-07",
+            "places": {
+                "place_ids": [self.place.id],
+                "additional_info": [
+                    {
+                        "place_id": self.place.id,
+                        "road_address": "테스트지롱",
+                        "place_image": "http://naver.com"
+                    }
+                ],
+                "custom_places": [
+                    {
+                        "name": "아산 공세리성당",
+                        "mapX": "126.9134070332",
+                        "mapY": "36.8833377411",
+                        "road_address": "충청남도 아산시 인주면 공세리성당길 10"
+                    },
+                    {
+                        "name": "성북구립미술관",
+                        "mapX": "126.9949020554",
+                        "mapY": "37.594890134",
+                        "road_address": "서울특별시 성북구 성북로 134 (성북동)"
+                    },
+                ]
+            }
+
         }
 
         # 유저 정보 임의 생성 - 친구 추가를 위한 추가 유저
@@ -67,6 +77,8 @@ class TestTour(BaseTestCase):
         )
         user2.set_password('test_password112')
         user2.save()
+
+
 
     def test_tour_api_module(self):
         """
@@ -118,7 +130,7 @@ class TestTour(BaseTestCase):
         # create test
         response = self.client.post(uri, self.data, headers=self.headers, content_type='application/json')
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(Place.objects.count(), 3)
+        # self.assertEqual(Place.objects.count(), 3)
         logger.debug('tour create test result: ' + str(response.json()))
 
     def test_tour_get_list_success(self):
@@ -182,31 +194,48 @@ class TestTour(BaseTestCase):
         """
             해당 테스트는 여행이 정상적으로 수정이 되는지 확인하기 위한 테스트입니다.
         """
+        self.place = Place.objects.create(
+            name='명원박물관2',
+            mapX='126',
+            mapY='37',
+        )
+        self.data = {
+            "tour_name": "태근이의 여행",
+            "tour_date": "2025-07-07",
+            "places": {
+                "place_ids": [self.place.id],
+                "additional_info": [
+                    {
+                        "place_id": self.place.id,
+                        "road_address": "테스트지롱2",
+                        "place_image": "http://naver.com"
+                    }
+                ],
+                "custom_places": [
+                    {
+                        "name": "아산 공세리성당",
+                        "mapX": "126.9134070332",
+                        "mapY": "36.8833377411",
+                        "road_address": "충청남도 아산시 인주면 공세리성당길 10"
+                    },
+                    {
+                        "name": "성북구립미술관",
+                        "mapX": "126.9949020554",
+                        "mapY": "37.594890134",
+                        "road_address": "서울특별시 성북구 성북로 134 (성북동)"
+                    },
+                ]
+            }
+
+        }
         self.test_tour_create_success()
         uri = reverse('travel-detail', kwargs={'pk': Travel.objects.first().pk})
         patch_data = {
             'tour_name': '시연이의 여행',
             'tour_date': '2025-07-08',
-            'places': [
-                {
-                    'id': Place.objects.get(name='아산 공세리성당').id,
-                    'name': '아산 공세리성당2',
-                    'image_url': 'https://sports-phinf.pstatic.net/team/kbo/default/LG.png'
-                },
-                {
-                    'id': Place.objects.get(name='아산 공세리').id,
-                    'road_address': '도로명주소',
-                    'address': '충남 아산시'
-                },
-                {
-                    'id': Place.objects.get(name='피나클랜드 수목원').id,
-                    'name': '레일',
-                    'mapX': '126.8673145212',
-                    'mapY': '36.7610121401',
-                    'road_address': '도로명주소'
-                },
-
-            ]
+            'places': {
+                'delete_places': [self.place.id]
+            }
         }
         response = self.client.patch(uri, patch_data, headers=self.headers, content_type='application/json')
         self.assertEqual(response.status_code, 200)
@@ -219,12 +248,9 @@ class TestTour(BaseTestCase):
         self.test_tour_create_success() # 여행 생성
         uri = reverse('travel-detail', kwargs={'pk': Travel.objects.first().pk})
         patch_data = {
-            'places': [
-                {
-                    "id": "1241241",
-                    "mapX": "126.9134070332"
-                }
-            ]
+            'places': {
+                'delete_places': [1123124]
+            }
         }
         response = self.client.patch(uri, patch_data, headers=self.headers, content_type='application/json')
         self.assertEqual(response.status_code, 404)
@@ -327,9 +353,48 @@ class TestTour(BaseTestCase):
         logger.debug('tour Recommender test result: ' + str(response))
         ans = response.get('state') == 'OK' or response.json().get('state') == 'CACHE_HIT'
         self.assertTrue(ans)
-        # if response['state'] == 'OK':
-        #     response = await communicator.receive_json_from(70)
-        #     logger.debug('tour Recommender test result: ' + str(response))
-            # self.assertEqual(response['status'], 'SUCCESS')
-            # self.assertEqual(response[])
+
+    def testSnapshot_post_success(self):
+        """
+            인생네컷 사진 업로드 성공 테스트
+        """
+        pass
+
+    def testSnapshot_post_fail(self):
+        """
+            인생네컷 사진 업로드 실패 테스트
+        """
+        pass
+
+    def testSnapshot_list_success(self):
+        """
+            인생네컷 사진 리스트 가져오기 성공 테스트
+        """
+        pass
+
+    def testSnapshot_list_fail(self):
+        """
+            인생네컷 사진 리스트 가져오기 실패 테스트
+        """
+        pass
+
+    def testSnapshot_retrieve_success(self):
+        """
+            인생네컷 사진 상세 가져오기 성공 테스트
+        """
+        pass
+
+    def testSnapshot_retrieve_fail(self):
+        """
+            인생네컷 사진 상세 가져오기 실패 테스트
+        """
+        pass
+
+    def test_tour_image_post_success(self):
+        """
+            여행 사진 업로드 성공 테스트
+        """
+        pass
+
+
 

@@ -24,7 +24,6 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgl1
         sudo apt-get install -y dos2unix
         dos2unix requirements.txt
     - name: Install Dependencies

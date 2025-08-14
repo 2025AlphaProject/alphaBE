@@ -15,11 +15,15 @@ from services.exception_handler import (
 from services.tour_api import TourApi, NearEventInfo
 from services.tour_api_http_client import TourAPIHTTPClient
 from usr.models import User
-from .models import Travel, Place, PlaceImages, Event, SnapshotImages, UserTourImage
+from .models import Travel, Place, PlaceImages, Event, SnapshotImages, UserTourImage, TravelDaysAndPlaces
 from .serializers import EventSerializer, UserTourImageSerializer
 from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, PlaceImageSerializer, \
     TravelListSerializer, TourSnapshotsSerializer
 from .services import PlaceService
+from services.utils import haversine
+from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models.functions import Cast
+from django.db.models import FloatField
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -141,55 +145,164 @@ class NewTourAddView(viewsets.ModelViewSet):
     serializer_class = TravelSerializer
     place_service = PlaceService(KAKAO_REST_API_KEY) # 주소 저장 서비스
 
+    def get_most_near_place(self, fixed_x, fixed_y):
+        # 10m 내에 있는 건 같은 장소라 판단
+        LON_DIF_PER_10M = 0.00547202  # 경도 차
+        LAT_DIF_PER_10M = 0.00009  # 위도 차
+        # 주위 10m 이내 장소들을 탐색합니다.
+        near_places = Place.objects.annotate(
+            mapX_float=Cast('mapX', FloatField()),
+            mapY_float=Cast('mapY', FloatField())
+        ).filter(mapX_float__gte=(fixed_x - LON_DIF_PER_10M),
+                mapX_float__lte=(fixed_x + LON_DIF_PER_10M),
+                mapY_float__gte=(fixed_y - LAT_DIF_PER_10M),
+                mapY_float__lte=(fixed_y + LAT_DIF_PER_10M))
+        dist = None
+        ans_place = None
+        for place in near_places:
+            temp_dist = haversine(fixed_x, fixed_y, float(place.mapX), float(place.mapY))
+            if dist is None or temp_dist < dist:
+                ans_place = place
+                dist = temp_dist
+        return ans_place
+
+
     def save_tdp_place_image(self, tour_id, places_list):
         """
             해당 함수는 장소들 리스트를 부여받으면 장소, 사진, tdp를 저장해주는 함수입니다.
+            "place_ids": [1, 2, 3],
+            "additional_info": [
+                {
+                    "place_id": 1,
+                    "road_address": "",
+                },
+                {
+                    "place_id": 2,
+                    "road_address": "주소",
+                },
+            ]
+            "custom_places": [
+                {
+                    "name": "아산 공세리성당",
+                    "mapX": "126.9134070332",
+                    "mapY": "36.8833377411",
+                    "road_address": "충청남도 아산시 인주면 공세리성당길 10"
+                },
+                {
+                    "name": "아산 공세리성당2",
+                    "mapX": "126.9134070332",
+                    "mapY": "36.8833377411",
+                    "road_address": "충청남도 아산시 인주면 공세리성당길 10"
+                },
+            ]
         """
-        for each in places_list:
+        place_ids = places_list.get('place_ids', None)
+        additional_info = places_list.get('additional_info', None)
+        custom_places = places_list.get('custom_places', None)
+        if place_ids is not None:
+            # 기존 DB에 있던 장소들 저장
+            for each_id in place_ids:
+                data = {
+                    "place": int(each_id),
+                    "travel": tour_id
+                }
+                serializer = TravelDaysAndPlacesSerializer(data=data)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                place = Place.objects.get(pk=int(each_id))
+                road_address_kakao, address_kakao = self.place_service.get_parcel_and_road_address(float(place.mapX), float(place.mapY))
+                plc_serializer = PlaceSerializer(instance=place, data={
+                    "address": address_kakao,
+                }, partial=True)
+                plc_serializer.is_valid(raise_exception=True)
+                plc_serializer.save()
+                logger.debug(f'place_ids_result: {serializer.data}')
+
+        if additional_info is not None:
+            # 기존 DB 장소들 정보 업데이트
+            for each in additional_info:
+                place_id = each.pop('place_id', None)
+                if place_id is None: raise NoRequiredParameterException(error_message='place_id 누락')
+
+                place = None
+                try:
+                    place = Place.objects.get(id=int(place_id))
+                except Place.DoesNotExist:
+                    raise NoObjectException(error_code='NotFoundInAddIn')
+                serializer = PlaceSerializer(instance=place, data=each, partial=True)
+                serializer.is_valid(raise_exception=True)
+                place = serializer.save()
+
+                data = {
+                    "place": int(place.id),
+                    "travel": tour_id
+                }
+                serializer = TravelDaysAndPlacesSerializer(
+                    instance=TravelDaysAndPlaces.objects.get(travel_id=tour_id, place_id=place.id),
+                    data=data,
+                    partial=True
+                )
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                logger.debug(f'addition_result: {place.id}: {serializer.data}')
+
+        if custom_places is not None:
             """
                 {
-                    name
-                    mapX
-                    mapY
-                    image_url
-                    road_address
-                    address
-                }
+                    "name": "아산 공세리성당",
+                    "mapX": "126.9134070332",
+                    "mapY": "36.8833377411",
+                    "road_address": "충청남도 아산시 인주면 공세리성당길 10"
+                },
             """
-            # 파라미터 검증
-            if each.get('name', None) is None or each.get('mapX', None) is None or each.get('mapY', None) is None:
-                raise NoRequiredParameterException(error_message='장소의 필수 파라미터 누락')
+            # 사용자 추가 장소들 정보 업데이트
+            for each in custom_places:
+                mapX = each.get('mapX', None)
+                mapY = each.get('mapY', None)
+                if mapX is None or mapY is None: raise NoRequiredParameterException()
+                most_near_place = self.get_most_near_place(
+                    float(mapX),
+                    float(mapY),
+                )
+                ans_place = None
+                if most_near_place is not None:
+                    # 같은 장소일 경우
+                    ans_place = most_near_place
+                else:
+                    # 다른 장소일 경우
+                    name = each.get('name', None)
+                    if name is None: raise NoRequiredParameterException()
 
-            plc_cp_dic = each.copy()
-            img_url = plc_cp_dic.pop('image_url', None) # 사진 정보는 따로 저장
-            road_address_kakao, address_kakao = self.place_service.get_parcel_and_road_address(float(each['mapX']), float(each['mapY']))
-            if plc_cp_dic.get('road_address', None) is None:
-                plc_cp_dic['road_address'] = road_address_kakao
-            plc_cp_dic['address'] = address_kakao
-            place_serializer = PlaceSerializer(data=plc_cp_dic)
-            place_serializer.is_valid(raise_exception=True)
-            place_serializer.save()
-            logger.debug(f"장소 저장")
 
-            # 사진 저장
-            plc_id = place_serializer.data.get('id')
-            place = Place.objects.get(id=int(plc_id))
-            if img_url is not None and img_url != "":
-                image_serializer = PlaceImageSerializer(data={
-                    'place': int(plc_id),
-                    'image_url': img_url
-                })
-                image_serializer.is_valid(raise_exception=True)
-                image_serializer.save()
-                logger.debug(f"사진 저장")
+                    road_address_kakao, address_kakao = self.place_service.get_parcel_and_road_address(
+                        float(mapX), float(mapY)
+                    )
+                    road_address = each.get('road_address', road_address_kakao)
+                    address = each.get('address', address_kakao)
 
-            tdp_serializer = TravelDaysAndPlacesSerializer(data={
-                'place': int(plc_id),
-                'travel': int(tour_id)
-            })
-            tdp_serializer.is_valid(raise_exception=True)
-            tdp_serializer.save()
-            logger.debug(f"tdp 저장")
+                    place = Place.objects.create(
+                        name=each['name'],
+                        mapX=mapX,
+                        mapY=mapY,
+                        road_address=road_address,
+                        address=address_kakao,
+                    )
+                    ans_place = place
+                try:
+                    # 중복 요청 제거
+                    # 이미 연결된게 있다면
+                    tdp = TravelDaysAndPlaces.objects.get(travel_id=tour_id, place_id=ans_place.id)
+                except TravelDaysAndPlaces.DoesNotExist:
+                    # 연결된 정보가 없어 즉, 중복이 아니라면 저장
+                    data = {
+                        "place": int(ans_place.id),
+                        "travel": tour_id
+                    }
+                    serializer = TravelDaysAndPlacesSerializer(data=data)
+                    serializer.is_valid(raise_exception=True)
+                    serializer.save()
+                    logger.debug(f'custom_place_result: {serializer.data}')
+
         return TravelSerializer(Travel.objects.get(id=tour_id))
 
     def get_queryset(self):
@@ -222,42 +335,14 @@ class NewTourAddView(viewsets.ModelViewSet):
 
         # self.save_tdp_place_image(tour_id, places_info)
         logger.debug('partial 장소 정보 수정 시작')
-        for each in places_info:
-            info_data = each.copy()
-            place_id_str = info_data.get('id', None)
-            image_url = info_data.pop('image_url', None)
-            if place_id_str is None: raise NoRequiredParameterException(error_message='각 장소 정보에 장소 id는 필수입니다.')
-
-            try:
-                place = Place.objects.get(id=int(place_id_str)) # 기존 장소 객체 불러오기
-            except Place.DoesNotExist:
-                raise NoObjectException(error_code='No place', error_message='id에 맞는 장소 정보가 없습니다.')
-
-            mapX = info_data.get('mapX', None)
-            mapY = info_data.get('mapY', None)
-            logger.debug('좌표: ' + str(mapX) + ' ' + str(mapY))
-            if info_data.get('mapX', None) is not None or info_data.get('mapY', None) is not None: # 좌표 변경 시
-                logger.debug('좌표 변경에 따른 주소 변경 시작')
-                if mapX is None: mapX = place.mapX
-                if mapY is None: mapY = place.mapY
-
-                road_addr, addr = self.place_service.get_parcel_and_road_address(float(mapX), float(mapY))
-                if info_data.get('road_address') is None: info_data['road_address'] = road_addr
-                info_data['address'] = addr
-
-
-            place_serializer = PlaceSerializer(place, data=info_data, partial=True)
-            place_serializer.is_valid(raise_exception=True)
-            place_serializer.save()
-
-            if image_url is not None:
-                logger.debug('partial 사진저장 시작')
-                place_image_serializer = PlaceImageSerializer(
-                    PlaceImages.objects.get(place_id=int(place_id_str)),
-                    data={"image_url": image_url}, partial=True
-                )
-                place_image_serializer.is_valid(raise_exception=True)
-                place_image_serializer.save()
+        delete_places = places_info.get('delete_places', None)
+        if delete_places is not None:
+            for place_id in delete_places:
+                try:
+                    tdp = TravelDaysAndPlaces.objects.get(travel_id=tour_id, place_id=int(place_id))
+                    tdp.delete()
+                except TravelDaysAndPlaces.DoesNotExist:
+                    raise NoObjectException(error_message='해당 여행 장소에 맞는 여행 정보를 찾을 수 없습니다.')
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -265,6 +350,32 @@ class NewTourAddView(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         """
             여행 상세등록 API
+            "tour_name": "태근이의 여행",
+            "tour_date": "2025-07-07",
+            "places": {
+                "place_ids": [1, 2, 3],
+                "additional_info": [
+                    {
+                        "place_id": 1,
+                        "road_address": "",
+                    }
+                ],
+                "custom_places": [
+                    {
+                        "name": "아산 공세리성당",
+                        "mapX": "126.9134070332",
+                        "mapY": "36.8833377411",
+                        "road_address": "충청남도 아산시 인주면 공세리성당길 10"
+                    },
+                    {
+                        "name": "아산 공세리성당2",
+                        "mapX": "126.9134070332",
+                        "mapY": "36.8833377411",
+                        "road_address": "충청남도 아산시 인주면 공세리성당길 10"
+                    },
+                ]
+            }
+
         """
         logger.debug("/tour/ create 메소드 실행")
         user_sub = request.user.sub
@@ -342,11 +453,15 @@ class BaseImageSaveView(viewsets.ModelViewSet):
 class TourSnapshotsView(BaseImageSaveView):
     serializer_class = TourSnapshotsSerializer
     queryset = SnapshotImages.objects.all()
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ('tour',)
 
 
 class UserTourImageView(BaseImageSaveView):
     serializer_class = UserTourImageSerializer
     queryset = UserTourImage.objects.all()
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ('tour',)
 
 
 class CategoryListView(viewsets.ViewSet):

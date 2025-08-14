@@ -72,11 +72,11 @@ INSTALLED_APPS = [
     'authenticate',
     'usr',
     'tour',
-    'mission',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist', # 토큰 블랙리스트 위해 필요
     'channels',
     'storages',
+    'django_filters',
 ]
 ASGI_APPLICATION = 'config.asgi.application'
 CHANNEL_LAYERS = {
@@ -187,7 +187,8 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'authenticate.authentications.CustomAuthentication',
     ),
-    'EXCEPTION_HANDLER': 'services.exception_handler.custom_exception_handler'
+    'EXCEPTION_HANDLER': 'services.exception_handler.custom_exception_handler',
+    'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',),
 }
 
 # 아래는 celery setting을 담당합니다.
@@ -310,10 +311,9 @@ LOGGING = {
 }
 
 # 앱 기본 로거 설정
-APP_LOGGER='django'
+APP_LOGGER='django_debug'
 
-# YOLO 모델 디렉터리 설정
-MODEL_DIR = os.path.join(BASE_DIR, "mission", "yolomodels")
+
 
 # 캐시 설정
 CACHES = {
