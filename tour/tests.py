@@ -137,6 +137,7 @@ class TestTour(BaseTestCase):
         """
             해당 테스트는 여행 등록 api의 GET 메소드가 제대로 실행되는지 확인하는 테스트입니다.
         """
+        self.test_tour_create_success()
         uri = reverse('create-tour')
         response = self.client.get(uri, headers=self.headers)
         self.assertEqual(response.status_code, 200)

@@ -18,7 +18,7 @@ from .models import Travel, Place, Event, SnapshotImages, UserTourImage, TravelD
 from .serializers import EventSerializer, UserTourImageSerializer, PoseRecommendSerializer
 from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, \
     TravelListSerializer, TourSnapshotsSerializer
-from .services import PlaceService
+from .services import PlaceService, TravelCreationService, TravelUpdateService
 from services.utils import haversine
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models.functions import Cast
@@ -143,231 +143,69 @@ class NewTourAddView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = Travel.objects.all() # 여행 모델에 대한 정보만 가지고 옵니다.
     serializer_class = TravelSerializer
-    place_service = PlaceService(KAKAO_REST_API_KEY) # 주소 저장 서비스
 
-    def get_most_near_place(self, fixed_x, fixed_y):
-        # 10m 내에 있는 건 같은 장소라 판단
-        LON_DIF_PER_10M = 0.00547202  # 경도 차
-        LAT_DIF_PER_10M = 0.00009  # 위도 차
-        # 주위 10m 이내 장소들을 탐색합니다.
-        near_places = Place.objects.annotate(
-            mapX_float=Cast('mapX', FloatField()),
-            mapY_float=Cast('mapY', FloatField())
-        ).filter(mapX_float__gte=(fixed_x - LON_DIF_PER_10M),
-                mapX_float__lte=(fixed_x + LON_DIF_PER_10M),
-                mapY_float__gte=(fixed_y - LAT_DIF_PER_10M),
-                mapY_float__lte=(fixed_y + LAT_DIF_PER_10M))
-        dist = None
-        ans_place = None
-        for place in near_places:
-            temp_dist = haversine(fixed_x, fixed_y, float(place.mapX), float(place.mapY))
-            if dist is None or temp_dist < dist:
-                ans_place = place
-                dist = temp_dist
-        return ans_place
-
-
-    def save_tdp_place_image(self, tour_id, places_list):
-        place_ids = places_list.get('place_ids', None)
-        additional_info = places_list.get('additional_info', None)
-        custom_places = places_list.get('custom_places', None)
-        if place_ids is not None:
-            # 기존 DB에 있던 장소들 저장
-            for each_id in place_ids:
-                data = {
-                    "place": int(each_id),
-                    "travel": tour_id
-                }
-                serializer = TravelDaysAndPlacesSerializer(data=data)
-                serializer.is_valid(raise_exception=True)
-                serializer.save()
-                place = Place.objects.get(pk=int(each_id))
-                road_address_kakao, address_kakao = self.place_service.get_parcel_and_road_address(float(place.mapX), float(place.mapY))
-                plc_serializer = PlaceSerializer(instance=place, data={
-                    "address": address_kakao,
-                }, partial=True)
-                plc_serializer.is_valid(raise_exception=True)
-                plc_serializer.save()
-                logger.debug(f'place_ids_result: {serializer.data}')
-
-        if additional_info is not None:
-            # 기존 DB 장소들 정보 업데이트
-            for each in additional_info:
-                place_id = each.pop('place_id', None)
-                if place_id is None: raise NoRequiredParameterException(error_message='place_id 누락')
-
-                place = None
-                try:
-                    place = Place.objects.get(id=int(place_id))
-                except Place.DoesNotExist:
-                    raise NoObjectException(error_code='NotFoundInAddIn')
-                serializer = PlaceSerializer(instance=place, data=each, partial=True)
-                serializer.is_valid(raise_exception=True)
-                place = serializer.save()
-
-                data = {
-                    "place": int(place.id),
-                    "travel": tour_id
-                }
-                serializer = TravelDaysAndPlacesSerializer(
-                    instance=TravelDaysAndPlaces.objects.get(travel_id=tour_id, place_id=place.id),
-                    data=data,
-                    partial=True
-                )
-                serializer.is_valid(raise_exception=True)
-                serializer.save()
-                logger.debug(f'addition_result: {place.id}: {serializer.data}')
-
-        if custom_places is not None:
-            """
-                {
-                    "name": "아산 공세리성당",
-                    "mapX": "126.9134070332",
-                    "mapY": "36.8833377411",
-                    "road_address": "충청남도 아산시 인주면 공세리성당길 10"
-                },
-            """
-            # 사용자 추가 장소들 정보 업데이트
-            for each in custom_places:
-                mapX = each.get('mapX', None)
-                mapY = each.get('mapY', None)
-                if mapX is None or mapY is None: raise NoRequiredParameterException()
-                most_near_place = self.get_most_near_place(
-                    float(mapX),
-                    float(mapY),
-                )
-                ans_place = None
-                if most_near_place is not None:
-                    # 같은 장소일 경우
-                    ans_place = most_near_place
-                else:
-                    # 다른 장소일 경우
-                    name = each.get('name', None)
-                    if name is None: raise NoRequiredParameterException()
-
-
-                    road_address_kakao, address_kakao = self.place_service.get_parcel_and_road_address(
-                        float(mapX), float(mapY)
-                    )
-                    road_address = each.get('road_address', road_address_kakao)
-                    address = each.get('address', address_kakao)
-
-                    place = Place.objects.create(
-                        name=each['name'],
-                        mapX=mapX,
-                        mapY=mapY,
-                        road_address=road_address,
-                        address=address_kakao,
-                    )
-                    ans_place = place
-                try:
-                    # 중복 요청 제거
-                    # 이미 연결된게 있다면
-                    tdp = TravelDaysAndPlaces.objects.get(travel_id=tour_id, place_id=ans_place.id)
-                except TravelDaysAndPlaces.DoesNotExist:
-                    # 연결된 정보가 없어 즉, 중복이 아니라면 저장
-                    data = {
-                        "place": int(ans_place.id),
-                        "travel": tour_id
-                    }
-                    serializer = TravelDaysAndPlacesSerializer(data=data)
-                    serializer.is_valid(raise_exception=True)
-                    serializer.save()
-                    logger.debug(f'custom_place_result: {serializer.data}')
-
-        return TravelSerializer(Travel.objects.get(id=tour_id))
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        place_service = PlaceService(KAKAO_REST_API_KEY)
+        self.travel_creation_service = TravelCreationService(place_service)
+        self.travel_update_service = TravelUpdateService(self.travel_creation_service)
 
     def get_queryset(self):
-        logger.debug("queryset 반환 메소드 실행")
         return self.queryset.filter(user__sub=self.request.user.sub)
 
-    def retrieve(self, request, *args, **kwargs):
-        """
-            여행 상세정보 조회 API
-        """
-        tour_id = int(kwargs.get('pk'))
-        travel_object = Travel.objects.get(id=tour_id)
-        deserializer = TravelSerializer(travel_object)
-        return Response(deserializer.data, status=status.HTTP_200_OK)
-
-    def partial_update(self, request, *args, **kwargs):
-        tour_id = int(kwargs.get('pk'))
-        if request.data.get('places', None) is None: return super().partial_update(request, *args, **kwargs)
-        logger.debug('places_update')
-        data = request.data.copy()
-        places_info = data.pop('places')
-        serializer = TravelSerializer(Travel.objects.get(id=tour_id))
-        if len(data) != 0: # 장소 제외 정보가 존재한다면
-            # 여행 시리얼라이저 이용해서 저장
-            serializer = TravelSerializer(Travel.objects.get(id=tour_id), # 원래 object
-                                         data=data, # 요청 data
-                                         partial=True) # 일부 업데이트
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-
-        # self.save_tdp_place_image(tour_id, places_info)
-        logger.debug('partial 장소 정보 수정 시작')
-        delete_places = places_info.get('delete_places', None)
-        if delete_places is not None:
-            for place_id in delete_places:
-                try:
-                    tdp = TravelDaysAndPlaces.objects.get(travel_id=tour_id, place_id=int(place_id))
-                    tdp.delete()
-                except TravelDaysAndPlaces.DoesNotExist:
-                    raise NoObjectException(error_message='해당 여행 장소에 맞는 여행 정보를 찾을 수 없습니다.')
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
     def create(self, request, *args, **kwargs):
-        """
-            여행 상세등록 API
-            "tour_name": "태근이의 여행",
-            "tour_date": "2025-07-07",
-            "places": {
-                "place_ids": [1, 2, 3],
-                "additional_info": [
-                    {
-                        "place_id": 1,
-                        "road_address": "",
-                    }
-                ],
-                "custom_places": [
-                    {
-                        "name": "아산 공세리성당",
-                        "mapX": "126.9134070332",
-                        "mapY": "36.8833377411",
-                        "road_address": "충청남도 아산시 인주면 공세리성당길 10"
-                    },
-                    {
-                        "name": "아산 공세리성당2",
-                        "mapX": "126.9134070332",
-                        "mapY": "36.8833377411",
-                        "road_address": "충청남도 아산시 인주면 공세리성당길 10"
-                    },
-                ]
-            }
-
-        """
+        """여행 상세등록 API - 최적화된 버전"""
         logger.debug("/tour/ create 메소드 실행")
-        user_sub = request.user.sub
-        # 파라미터 유효성 검사 - places만
-        if request.data.get('places') is None:
+
+        # 파라미터 유효성 검사
+        places_data = request.data.get('places')
+        if not places_data:
             raise NoRequiredParameterException("No Object", "places 정보가 없습니다.")
 
-        # 여행 생성
-        cp_dic = request.data.copy()
-        cp_dic.pop('places') # 장소 정보만 삭제
-        serializer = TravelSerializer(data=cp_dic)
-        serializer.is_valid(raise_exception=True)
-        travel = serializer.save()
-        travel.user.add(User.objects.get(sub=user_sub))  # 다대 다 관계시 유저 추가
-        logger.debug("여행 생성")
-        # 장소 생성
-        tour_id = serializer.data.get('id')
-        ser = self.save_tdp_place_image(tour_id, request.data.get('places'))
+        # 여행 데이터 준비
+        travel_data = request.data.copy()
+        travel_data.pop('places')
 
-        return Response(ser.data, status=status.HTTP_201_CREATED)
+        # 서비스를 통한 여행 생성
+        travel = self.travel_creation_service.create_travel_with_places(
+            travel_data=travel_data,
+            places_data=places_data,
+            user_sub=request.user.sub
+        )
+
+        # 응답 반환
+        serializer = TravelSerializer(travel)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def partial_update(self, request, *args, **kwargs):
+        """여행 정보 수정 - 최적화된 버전"""
+        travel_id = int(kwargs.get('pk'))
+
+        # 장소 정보가 없는 경우 기본 업데이트
+        places_data = request.data.get('places')
+        if not places_data:
+            return super().partial_update(request, *args, **kwargs)
+
+        # 여행 데이터 준비
+        travel_data = request.data.copy()
+        travel_data.pop('places')
+
+        # 서비스를 통한 업데이트
+        travel = self.travel_update_service.update_travel_with_places(
+            travel_id=travel_id,
+            travel_data=travel_data if travel_data else None,
+            places_data=places_data
+        )
+
+        serializer = TravelSerializer(travel)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def retrieve(self, request, *args, **kwargs):
+        """여행 상세정보 조회 API"""
+        travel_id = int(kwargs.get('pk'))
+        travel = Travel.objects.get(id=travel_id)
+        serializer = TravelSerializer(travel)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def list(self, request, *args, **kwargs):
         self.serializer_class = TravelListSerializer
