@@ -41,7 +41,7 @@ class EventSerializer(serializers.ModelSerializer):
 class PlaceMiniSerializer(serializers.ModelSerializer):
     class Meta:
         model = Place
-        fields = ('id', 'name', 'mapX', 'mapY', 'road_address', 'address')
+        fields = ('id', 'name', 'mapX', 'mapY', 'road_address', 'address', 'contentid')
 
 class PlaceSerializer(serializers.ModelSerializer):
     """
