@@ -342,6 +342,9 @@ class TodayTravelService:
             self.tour = Travel.objects.get(user=user, tour_date=timezone.now())
         except Travel.DoesNotExist:
             raise NoObjectException(error_message='오늘의 여행 정보를 찾을 수 없습니다.')
+        except Travel.MultipleObjectsReturned: # 다수의 여행 정보가 있다면 최상위 객체만 등록합니다.
+            logger.warning('오늘 여행 조회 API에서 다수의 인스턴스가 조회됨')
+            self.tour = Travel.objects.filter(user=user, tour_date=timezone.now()).first()
 
         # 시리얼라이저에 대응하는 데이터를 핸들러를 통해 가져옵니다.
         serializer_data_handler_list = [
