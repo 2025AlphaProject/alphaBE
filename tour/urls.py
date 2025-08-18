@@ -8,7 +8,8 @@ from .views import (
     NewTourAddView,
     TourSnapshotsView,
     CategoryListView, UserTourImageView,
-    PoseRecommendView
+    PoseRecommendView,
+    TodayTravelViewSet
 )
 
 urlpatterns = [
@@ -62,4 +63,7 @@ urlpatterns = [
     path('pose-rec/', PoseRecommendView.as_view({
         'get': 'retrieve',
     }), name='pose_recommend'),
+    path('today/', TodayTravelViewSet.as_view({
+        'get': 'retrieve'
+    }), name='get_today_tour')
 ]

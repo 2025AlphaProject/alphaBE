@@ -102,3 +102,21 @@ class UserTourImageSerializer(serializers.ModelSerializer):
 class PoseRecommendSerializer(serializers.Serializer):
     place_id = serializers.CharField(max_length=255)
     poses = serializers.ListField(child=serializers.CharField(max_length=1000))
+
+class TodayTravelSerializer(serializers.Serializer):
+    """
+        당일 여행에 대한 정보를 위한 시리얼라이저 입니다.
+        지역, 여행 인원수, 여행날짜, 사진 업로드 정보, 여행 장소 갯수, 관광타입정보
+    """
+    # 여행 이름
+    tour_name = serializers.CharField(max_length=1000)
+    # 여행날짜
+    tour_date = serializers.DateField()
+    # 여행 인원수
+    people_cnt = serializers.IntegerField()
+    # 사진 업로드 갯수
+    image_cnt = serializers.IntegerField()
+    # 여행 장소 갯수
+    place_cnt = serializers.IntegerField()
+    # 관광타입정보
+    category_list = serializers.ListField(child=serializers.IntegerField())

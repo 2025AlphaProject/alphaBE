@@ -6,10 +6,11 @@ import requests
 from config.settings import APP_LOGGER, GEOCODER_API_KEY
 from typing import Dict, List, Optional
 from django.db import transaction
-from .models import Travel, Place, TravelDaysAndPlaces
-from .serializers import TravelSerializer, TravelDaysAndPlacesSerializer, PlaceSerializer
+from .models import Travel, Place, TravelDaysAndPlaces, SnapshotImages, UserTourImage
+from .serializers import TravelSerializer, TravelDaysAndPlacesSerializer, PlaceSerializer, TodayTravelSerializer
 from usr.models import User
 from services.exception_handler import *
+from django.utils import timezone
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -323,3 +324,69 @@ class TravelUpdateService:
             except TravelDaysAndPlaces.DoesNotExist:
                 raise NoObjectException(error_message='해당 여행 장소에 맞는 여행 정보를 찾을 수 없습니다.')
 
+class TodayTravelService:
+    def get_today_tour_by_user(self, user):
+        """
+            유저 정보를 통해 오늘의 여행 정보를 얻습니다.
+        """
+        # 시리얼라이저에 들어갈 데이터를 획득합니다.
+        data = self.__get_today_tour_by_user_data(user=user)
+        # 시리얼라이저를 통해 필드를 '검증합니다.'
+        serializer = self.__validate_field(data=data)
+        # 검증된 시리얼라이저를 반환합니다.
+        return serializer
+
+    def __get_today_tour_by_user_data(self, user):
+        # 여행을 인스턴스 객체로 등록합니다.
+        try:
+            self.tour = Travel.objects.get(user=user, tour_date=timezone.now())
+        except Travel.DoesNotExist:
+            raise NoObjectException(error_message='오늘의 여행 정보를 찾을 수 없습니다.')
+
+        # 시리얼라이저에 대응하는 데이터를 핸들러를 통해 가져옵니다.
+        serializer_data_handler_list = [
+            ('tour_name', self.__get_tour_name),
+            ('tour_date', self.__get_tour_date),
+            ('people_cnt', self.__get_people_cnt),
+            ('image_cnt', self.__get_image_cnt),
+            ('place_cnt', self.__get_place_cnt),
+            ('category_list', self.__get_category_list),
+        ]
+        # 핸들러를 실행하여 반환 객체에 담습니다.
+        data = dict()
+
+        for target, handler in serializer_data_handler_list:
+            data[target] = handler()
+
+        return data
+
+    def __get_tour_name(self):
+        return self.tour.tour_name
+
+    def __get_tour_date(self):
+        return self.tour.tour_date
+
+    def __get_people_cnt(self):
+        return self.tour.user.count()
+
+    def __get_image_cnt(self):
+        return UserTourImage.objects.filter(tour=self.tour).count()
+
+    def __get_place_cnt(self):
+        return TravelDaysAndPlaces.objects.filter(travel=self.tour).count()
+
+    def __get_category_list(self):
+        # 모든 여행 장소들에 대한 카테고리 정보를 수집합니다.
+        category_set = set() # 중복되면 안되므로 set 형식입니다.
+        for tdp in TravelDaysAndPlaces.objects.filter(travel=self.tour):
+            info = tdp.place.contenttypeid
+            if info is not None and info != "":
+                category_set.add(int(tdp.place.contenttypeid))
+        return sorted(list(category_set)) # 정렬된 리스트를 보냅니다.
+
+
+    @staticmethod
+    def __validate_field(data):
+        serializer = TodayTravelSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        return serializer
