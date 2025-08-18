@@ -18,7 +18,7 @@ from .models import Travel, Place, Event, SnapshotImages, UserTourImage, TravelD
 from .serializers import EventSerializer, UserTourImageSerializer, PoseRecommendSerializer
 from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, \
     TravelListSerializer, TourSnapshotsSerializer
-from .services import PlaceService, TravelCreationService, TravelUpdateService
+from .services import PlaceService, TravelCreationService, TravelUpdateService, TodayTravelService
 from services.utils import haversine
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models.functions import Cast
@@ -310,3 +310,21 @@ class PoseRecommendView(viewsets.ViewSet) :
         serializer = PoseRecommendSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class TodayTravelViewSet(viewsets.ModelViewSet):
+    """
+        당일 여행에 대한 정보를 주는 API 뷰셋입니다.
+        구현 메소드: GET
+        들어가야 할 정보: 지역, 여행 인원수, 여행날짜, 사진 업로드 정보, 여행 장소 갯수, 관광타입정보, 여행 이름
+    """
+    # 유저를 가져오기 위한 로그인 여부 판단
+    permission_classes = [IsAuthenticated,] # 로그인이 된 사용자만 접근을 허용합니다.
+
+    def retrieve(self, request, *args, **kwargs):
+        # 1. 당일 여행에 대한 정보를 계산한다.
+        service = TodayTravelService()
+        serializer = service.get_today_tour_by_user(request.user)
+        # 2. 시리얼라이저 데이터를 반환한다.
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+

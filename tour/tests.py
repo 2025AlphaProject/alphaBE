@@ -20,6 +20,7 @@ from tests.base import BaseTestCase
 from tour.consumers import TaskConsumer
 from usr.models import User
 from .models import Travel, Place
+from django.utils import timezone
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -36,10 +37,14 @@ class TestTour(BaseTestCase):
             name='명원박물관',
             mapX='126.9999927956',
             mapY='37.6111883307',
+            areacode='31',
+            sigungucode='2',
+            contentid='2930970',
+            contenttypeid='38',
         )
         self.data = {
             "tour_name": "태근이의 여행",
-            "tour_date": "2025-07-07",
+            "tour_date": timezone.now().strftime('%Y-%m-%d'),
             "places": {
                 "place_ids": [self.place.id],
                 "additional_info": [
@@ -427,6 +432,17 @@ class TestTour(BaseTestCase):
         response = self.client.get(uri)
         self.assertEqual(response.status_code, 200)
         logger.debug('tour Recommend for cat test result: ' + str(response.json()))
+
+    def test_get_today_tour_success(self):
+        """
+            당일 여행 가져오기 성공 테스트
+        """
+        self.test_tour_create_success()
+        uri = reverse('get_today_tour')
+        response = self.client.get(uri, headers=self.headers)
+        self.assertEqual(response.status_code, 200)
+        logger.debug('get_today_tour_success Test result: ' + str(response.json()))
+
 
 
 
