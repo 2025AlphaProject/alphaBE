@@ -44,7 +44,7 @@ class TestTour(BaseTestCase):
         )
         self.data = {
             "tour_name": "태근이의 여행",
-            "tour_date": timezone.now().strftime('%Y-%m-%d'),
+            "tour_date": timezone.localdate(timezone.now()).strftime('%Y-%m-%d'),
             "places": {
                 "place_ids": [self.place.id],
                 "additional_info": [
