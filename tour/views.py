@@ -220,7 +220,7 @@ class BaseImageSaveView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated] # 로그인 사용자를 디폴트로
 
     def get_queryset(self):
-        return self.queryset.filter(user__sub=self.request.user.sub)
+        return self.queryset.filter(tour__user__sub=self.request.user.sub)
 
     def create(self, request, *args, **kwargs):
         """
