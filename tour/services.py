@@ -3,7 +3,7 @@ import logging
 
 import requests
 
-from config.settings import APP_LOGGER, GEOCODER_API_KEY
+from config.settings import APP_LOGGER, GEOCODER_API_KEY, PUBLIC_DATA_PORTAL_API_KEY
 from typing import Dict, List, Optional
 from django.db import transaction
 from .models import Travel, Place, TravelDaysAndPlaces, SnapshotImages, UserTourImage
@@ -11,6 +11,7 @@ from .serializers import TravelSerializer, TravelDaysAndPlacesSerializer, PlaceS
 from usr.models import User
 from services.exception_handler import *
 from django.utils import timezone
+from services.tour_api_service import TourAPIService, area_codes
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -325,6 +326,9 @@ class TravelUpdateService:
                 raise NoObjectException(error_message='해당 여행 장소에 맞는 여행 정보를 찾을 수 없습니다.')
 
 class TodayTravelService:
+    def __init__(self):
+        self.tour_api_service = TourAPIService(service_key=PUBLIC_DATA_PORTAL_API_KEY)
+
     def get_today_tour_by_user(self, user):
         """
             유저 정보를 통해 오늘의 여행 정보를 얻습니다.
@@ -354,6 +358,7 @@ class TodayTravelService:
             ('image_cnt', self.__get_image_cnt),
             ('place_cnt', self.__get_place_cnt),
             ('category_list', self.__get_category_list),
+            ('tour_area_info', self.__get_tour_area_info)
         ]
         # 핸들러를 실행하여 반환 객체에 담습니다.
         data = dict()
@@ -386,6 +391,37 @@ class TodayTravelService:
             if info is not None and info != "":
                 category_set.add(int(tdp.place.contenttypeid))
         return sorted(list(category_set)) # 정렬된 리스트를 보냅니다.
+
+    def __get_tour_area_info(self) -> list[str]:
+        # 모든 여행 장소들에 대한 지역 정보를 수집합니다.
+        # 모든 장소들에 대해 중복없이 지역코드를 추출합니다.
+        area_code_list = self.__get_area_code_list_from_places() # ('시/도', '시군구')
+        # 해당 지역코드를 tour_api 서비스를 이용해 지역 코드를 가져옵니다.
+        area_list_str = self.__convert_area_code_list_to_area_str(area_code_list)
+        return area_list_str
+
+    def __get_area_code_list_from_places(self):
+        # (17개 시/도, 세부 시군구) 형식으로 데이터를 제공합니다.
+        area_code_set = set()
+        places = Place.objects.filter(traveldaysandplaces__travel=self.tour)
+        for place in places:
+            if place.areacode is not None:
+                area_code_set.add((place.areacode, place.sigungucode))
+        return sorted(list(area_code_set))
+
+
+
+
+    def __convert_area_code_list_to_area_str(self, area_code_list):
+        ans_list = []
+        for area_code, sigungu_code in area_code_list:
+            ans = f'{area_codes.get(str(area_code))} {self.__convert_sigungu_code_to_str(area_code, sigungu_code)}'
+            ans_list.append(ans)
+        return ans_list
+
+    def __convert_sigungu_code_to_str(self, area_code, sigungu_code):
+        return self.tour_api_service.get_sigungu_name_by_code(area_code, sigungu_code)
+
 
 
     @staticmethod
