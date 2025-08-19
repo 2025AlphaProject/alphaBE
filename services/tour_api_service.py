@@ -4,6 +4,18 @@ from config.settings import PUBLIC_DATA_PORTAL_API_KEY
 from services.public_data_portal_http_client import HttpRequestException
 from .tour_api_http_client import *
 
+area_codes = {
+    '1': '서울',
+    '2': '인천',
+    '3': '대전',
+    '4': '대구',
+    '5': '광주',
+    '6': '부산',
+    '7': '울산',
+    '8': '세종특별자치시',
+    '31': '경기도',
+    '32': '강원특별자치도',
+}
 
 @dataclass
 class Place:
@@ -93,6 +105,14 @@ class TourAPIService:
         for item in items:
             if target_sigungu_name in item['name']:
                 return item['code']
+        return None
+
+    def get_sigungu_name_by_code(self, area_code:str, target_sigungu_code):
+        raw_data = self.tour_api_http_client.get_area_code(area_code=area_code)
+        items = raw_data['response']['body']['items']['item']
+        for item in items:
+            if target_sigungu_code == item['code']:
+                return item['name']
         return None
 
     def get_location_based_list(self, mapX:str, mapY:str, radius:str):

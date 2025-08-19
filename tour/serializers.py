@@ -120,3 +120,5 @@ class TodayTravelSerializer(serializers.Serializer):
     place_cnt = serializers.IntegerField()
     # 관광타입정보
     category_list = serializers.ListField(child=serializers.IntegerField())
+    # 여행 지역 정보 (다수일 수 있으므로 리스트 형태로 제공)
+    tour_area_info = serializers.ListField(child=serializers.CharField(max_length=1000))
