@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Place, Travel, TravelDaysAndPlaces, PlaceImages, Event, SnapshotImages, UserTourImage
+from .models import Place, Travel, TravelDaysAndPlaces, PlaceImages, Event, SnapshotImages, UserTourImage, RelationPlace
 
 # Register your models here.
 admin.site.register(Place) # 장소 정보 관리자가 관리 가능하도록 함
@@ -10,3 +10,4 @@ admin.site.register(PlaceImages)
 admin.site.register(Event)
 admin.site.register(SnapshotImages)
 admin.site.register(UserTourImage)
+admin.site.register(RelationPlace)
