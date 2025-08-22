@@ -14,8 +14,9 @@ from services.exception_handler import (
 )
 from services.tour_api import TourApi, NearEventInfo
 from usr.models import User
-from .models import Travel, Place, Event, SnapshotImages, UserTourImage, TravelDaysAndPlaces
-from .serializers import EventSerializer, UserTourImageSerializer, PoseRecommendSerializer
+from .models import Travel, Place, Event, SnapshotImages, UserTourImage, TravelDaysAndPlaces, RelationPlace
+from .serializers import EventSerializer, UserTourImageSerializer, PoseRecommendSerializer, \
+    MiniRelationPlaceSerializer
 from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, \
     TravelListSerializer, TourSnapshotsSerializer
 from .services import PlaceService, TravelCreationService, TravelUpdateService, TodayTravelService
@@ -24,6 +25,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models.functions import Cast
 from django.db.models import FloatField
 from tour.poses import POSE_MAP
+from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -328,3 +330,16 @@ class TodayTravelViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+
+class LargeResultsSetPagination(PageNumberPagination):
+    page_size = 25
+    page_size_query_param = 'page_size'
+    max_page_size = 50 # 최대 50개로
+
+
+class RelationPlaceView(viewsets.ModelViewSet):
+    queryset = RelationPlace.objects.all()
+    serializer_class = MiniRelationPlaceSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ('place_name',)
+    pagination_class = LargeResultsSetPagination
