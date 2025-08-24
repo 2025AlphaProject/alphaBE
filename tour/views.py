@@ -305,9 +305,11 @@ class PoseRecommendView(viewsets.ViewSet) :
 
         poses = POSE_MAP.get(str(place.cat2)) # list 형태, 카테고리가 없는 경우, "None"이 키 값으로 들어갑니다.
         logger.debug(f'poses: {poses}')
+        images = POSE_URL_MAP.get(str(place.cat2))
         data = {
             'place_id': place_id,
-            'poses': poses
+            'poses': poses,
+            'images': images
         }
 
         serializer = PoseRecommendSerializer(data=data)
