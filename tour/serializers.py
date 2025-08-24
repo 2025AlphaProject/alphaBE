@@ -122,6 +122,9 @@ class TodayTravelSerializer(serializers.Serializer):
     category_list = serializers.ListField(child=serializers.IntegerField())
     # 여행 지역 정보 (다수일 수 있으므로 리스트 형태로 제공)
     tour_area_info = serializers.ListField(child=serializers.CharField(max_length=1000))
+    # 여행 아이디
+    tour_id = serializers.IntegerField()
+
 
 class MiniRelationPlaceSerializer(serializers.ModelSerializer):
     related_place_detail_info = PlaceMiniSerializer(source='related_place', read_only=True)
