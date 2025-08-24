@@ -2,9 +2,10 @@ import logging
 
 from rest_framework import serializers
 
-from config.settings import APP_LOGGER
+from config.settings import APP_LOGGER, PUBLIC_DATA_PORTAL_API_KEY
 from usr.serializers import UserSerializer
 from .models import Travel, Place, Event, TravelDaysAndPlaces, PlaceImages, SnapshotImages, UserTourImage, RelationPlace
+from services.tour_api_service import area_codes, TourAPIService
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -23,6 +24,9 @@ class TravelSerializer(serializers.ModelSerializer):
         return data
 
 class TravelListSerializer(serializers.ModelSerializer):
+    area_info = serializers.SerializerMethodField(allow_null=True)
+    thumbnail = serializers.SerializerMethodField(allow_null=True)
+
     class Meta:
         model = Travel
         fields = '__all__'
@@ -32,6 +36,32 @@ class TravelListSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data.pop('user')
         return data
+
+    def get_area_info(self, obj):
+        # 가장 첫번째 장소 정보만 가져옵니다. 여러 여행지를 여행하지 않는다 가정
+        place = Place.objects.filter(traveldaysandplaces__travel_id=obj.id).first()
+        area_name = None
+        sigungu_name = None
+        if place:
+            area_name = area_codes.get(place.areacode)
+        if area_name:
+            tour_api_service = TourAPIService(service_key=PUBLIC_DATA_PORTAL_API_KEY)
+            sigungu_name = tour_api_service.get_sigungu_name_by_code(
+                area_code=place.areacode,
+                target_sigungu_code=place.sigungucode
+            )
+        if area_name is None and sigungu_name is None: return None
+        elif sigungu_name is None: return f'{area_name}'
+
+        return f'{area_name} {sigungu_name}'
+
+    def get_thumbnail(self, obj):
+        # 가장 첫번째 사진만 가져옵니다.
+        image = UserTourImage.objects.filter(tour_id=obj.id).first()
+        if image is None: return None
+        return image.image.url
+
+
 
 class EventSerializer(serializers.ModelSerializer):
     class Meta:
