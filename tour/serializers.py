@@ -102,6 +102,7 @@ class UserTourImageSerializer(serializers.ModelSerializer):
 class PoseRecommendSerializer(serializers.Serializer):
     place_id = serializers.CharField(max_length=255)
     poses = serializers.ListField(child=serializers.CharField(max_length=1000))
+    images = serializers.ListField(child=serializers.URLField(max_length=1000))
 
 class TodayTravelSerializer(serializers.Serializer):
     """
