@@ -25,6 +25,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models.functions import Cast
 from django.db.models import FloatField
 from tour.poses import POSE_MAP
+from tour.poses_url import POSE_URL_MAP
 from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
 
 logger = logging.getLogger(APP_LOGGER)
