@@ -358,7 +358,8 @@ class TodayTravelService:
             ('image_cnt', self.__get_image_cnt),
             ('place_cnt', self.__get_place_cnt),
             ('category_list', self.__get_category_list),
-            ('tour_area_info', self.__get_tour_area_info)
+            ('tour_area_info', self.__get_tour_area_info),
+            ('tour_id', self.__get_tour_id)
         ]
         # 핸들러를 실행하여 반환 객체에 담습니다.
         data = dict()
@@ -367,6 +368,9 @@ class TodayTravelService:
             data[target] = handler()
 
         return data
+
+    def __get_tour_id(self):
+        return self.tour.id
 
     def __get_tour_name(self):
         return self.tour.tour_name

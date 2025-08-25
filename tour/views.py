@@ -26,6 +26,7 @@ from django.db.models.functions import Cast
 from django.db.models import FloatField
 from tour.poses import POSE_MAP
 from tour.poses_url import POSE_URL_MAP
+from tour.sido import SIDO_LIST
 from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
 
 logger = logging.getLogger(APP_LOGGER)
@@ -128,9 +129,7 @@ class GetAreaList(viewsets.ViewSet):
 class Sido_list(viewsets.ViewSet):
 
     def retrieve(self, request):
-        tour = TourApi(service_key=PUBLIC_DATA_PORTAL_API_KEY)
-        sido_list = tour.get_sigungu_code_list()
-        return Response(sido_list, status=status.HTTP_200_OK)
+        return Response(SIDO_LIST, status=status.HTTP_200_OK)
 
 class NewTourAddView(viewsets.ModelViewSet):
     """
