@@ -25,6 +25,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models.functions import Cast
 from django.db.models import FloatField
 from tour.poses import POSE_MAP
+from tour.poses_url import POSE_URL_MAP
 from tour.sido import SIDO_LIST
 from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
 
@@ -303,9 +304,11 @@ class PoseRecommendView(viewsets.ViewSet) :
 
         poses = POSE_MAP.get(str(place.cat2)) # list 형태, 카테고리가 없는 경우, "None"이 키 값으로 들어갑니다.
         logger.debug(f'poses: {poses}')
+        images = POSE_URL_MAP.get(str(place.cat2))
         data = {
             'place_id': place_id,
-            'poses': poses
+            'poses': poses,
+            'images': images
         }
 
         serializer = PoseRecommendSerializer(data=data)
