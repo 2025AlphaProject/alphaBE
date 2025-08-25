@@ -48,61 +48,61 @@ SIDO_LIST = [
     {
         "rnum": 8, 
         "code": "8", 
-        "name": "세종특별자치시", 
+        "name": "세종",
         "image": f"{s3_base_url}/image_89.png"
     },
     {
         "rnum": 9, 
         "code": "31", 
-        "name": "경기도", 
+        "name": "경기",
         "image": f"{s3_base_url}/image_90.png"
     },
     {
         "rnum": 10, 
         "code": "32", 
-        "name": "강원특별자치도", 
+        "name": "강원",
         "image": f"{s3_base_url}/image_91.png"
     },
     {
         "rnum": 11, 
         "code": "33", 
-        "name": "충청북도", 
+        "name": "충북",
         "image": f"{s3_base_url}/image_92.png"
     },
     {
         "rnum": 12, 
         "code": "34", 
-        "name": "충청남도", 
+        "name": "충남",
         "image": f"{s3_base_url}/image_93.png"
     },
     {
         "rnum": 13, 
         "code": "35", 
-        "name": "경상북도", 
+        "name": "경북",
         "image": f"{s3_base_url}/image_94.png"
     },
     {
         "rnum": 14, 
         "code": "36", 
-        "name": "경상남도", 
+        "name": "경남",
         "image": f"{s3_base_url}/image_95.png"
     },
     {
         "rnum": 15, 
         "code": "37", 
-        "name": "전북특별자치도", 
+        "name": "전북",
         "image": f"{s3_base_url}/image_96.png"
     },
     {
         "rnum": 16, 
         "code": "38", 
-        "name": "전라남도", 
+        "name": "전남",
         "image": f"{s3_base_url}/image_97.png"
     },
     {
         "rnum": 17, 
         "code": "39", 
-        "name": "제주도", 
+        "name": "제주",
         "image": f"{s3_base_url}/image_98.png"
     },
 ]
