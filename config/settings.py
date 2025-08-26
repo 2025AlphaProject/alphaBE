@@ -326,3 +326,6 @@ CACHES = {
         }
     }
 }
+
+# 파일 최대 업로드 설정
+FILE_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024 # 100MB로 제한
