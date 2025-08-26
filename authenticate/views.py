@@ -10,7 +10,7 @@ from config.settings import KAKAO_REAL_NATIVE_API_KEY, KAKAO_REST_API_KEY, APP_L
 from services.exception_handler import *
 from services.kakao_error_handler import KakaoRequestError
 from services.kakao_token_service import KakaoTokenService
-from usr.services import UserService
+from usr.services import UserService, TestUserCreationService
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -89,8 +89,12 @@ class LoginRegisterView(viewsets.ViewSet):
         if id_token is None: # id token 정보가 없는 경우
             return Response({"Error": "id_token 정보가 존재하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            user_service = UserService(id_token)
-            user, is_new = user_service.get_or_register_user() # 로그인, 회원가입 처리
+            if id_token == 'tester': # 테스터 로그인이라면
+                user_service = TestUserCreationService()
+                user, is_new = user_service.get_or_create_test_user()
+            else:
+                user_service = UserService(id_token)
+                user, is_new = user_service.get_or_register_user() # 로그인, 회원가입 처리
         except Exception as e:
             return Response({"Error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
