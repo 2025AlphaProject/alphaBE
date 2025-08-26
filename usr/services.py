@@ -215,3 +215,26 @@ class UserService:
 
         logger.info(f"회원가입 완료. 회원명: {user.username} (sub:{self.sub})")
         return user
+
+class TestUserCreationService:
+    """
+        테스트 유저 생성을 위한 클래스입니다.
+    """
+    sub = 231215489 # 고정 값입니다.
+
+    def get_or_create_test_user(self):
+        user = None
+        is_new = False
+        try:
+            user = User.objects.get(sub=self.sub)
+        except User.DoesNotExist:
+            user = self.__create_test_user()
+            is_new = True
+
+        return user, is_new
+
+    def __create_test_user(self):
+        return User.objects.create(
+            sub=self.sub,
+            username='Tester',
+        )
