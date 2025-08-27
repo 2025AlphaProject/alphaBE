@@ -37,6 +37,8 @@ class Place(models.Model):
     lclsSystm3 = models.CharField(blank=True, null=True, max_length=255)
     tel = models.TextField(blank=True, null=True)
 
+    updated_at = models.DateField(auto_now=True)
+
     def __str__(self):
         return self.name
 
