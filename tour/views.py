@@ -205,9 +205,14 @@ class NewTourAddView(viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         """여행 상세정보 조회 API"""
         travel_id = int(kwargs.get('pk'))
-        travel = Travel.objects.get(id=travel_id)
-        serializer = TravelSerializer(travel)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        try:
+            travel = Travel.objects.get(id=travel_id)
+            serializer = TravelSerializer(travel)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Travel.DoesNotExist:
+            raise NoObjectException(
+                error_message='해당 여행 id에 해당하는 여행이 존재하지 않습니다.'
+            )
 
     def list(self, request, *args, **kwargs):
         self.serializer_class = TravelListSerializer
