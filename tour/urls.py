@@ -65,7 +65,7 @@ urlpatterns = [
         'get': 'retrieve',
     }), name='pose_recommend'),
     path('today/', TodayTravelViewSet.as_view({
-        'get': 'retrieve'
+        'get': 'list'
     }), name='get_today_tour'),
     path('relation_info/', RelationPlaceView.as_view({
         'get': 'list'

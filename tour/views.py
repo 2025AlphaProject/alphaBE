@@ -329,7 +329,7 @@ class TodayTravelViewSet(viewsets.ModelViewSet):
     # 유저를 가져오기 위한 로그인 여부 판단
     permission_classes = [IsAuthenticated,] # 로그인이 된 사용자만 접근을 허용합니다.
 
-    def retrieve(self, request, *args, **kwargs):
+    def list(self, request, *args, **kwargs):
         # 1. 당일 여행에 대한 정보를 계산한다.
         service = TodayTravelService()
         serializer = service.get_today_tour_by_user(request.user)
