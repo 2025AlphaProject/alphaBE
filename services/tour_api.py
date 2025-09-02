@@ -6,6 +6,8 @@ from config.settings import APP_LOGGER
 
 import logging
 
+from services.exception_handler import UnExpectedException
+
 logger = logging.getLogger(APP_LOGGER)
 
 
@@ -239,9 +241,15 @@ class TourApi:
         response = requests.get(BASE_URL + uri, params=parameters)
         if response.status_code == 200:
             logger.debug(f'결과: {response.text}')
-            if response.json()['response']['body']['totalCount'] == 0: # 컨텐츠가 없으면 빈 리스트 반환
-                return []
-            return response.json()['response']['body']['items']['item']
+            try:
+                if response.json()['response']['body']['totalCount'] == 0: # 컨텐츠가 없으면 빈 리스트 반환
+                    return []
+                return response.json()['response']['body']['items']['item']
+            except requests.exceptions.JSONDecodeError:
+                raise UnExpectedException(
+                    error_code='API LIMIT',
+                    error_message='관광데이터 포털 API 한도초과 혹은 일시적 오류입니다.'
+                )
         return None
 
     def get_sigungu_code(self, areaCode, targetName):
