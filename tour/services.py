@@ -333,22 +333,25 @@ class TodayTravelService:
         """
             유저 정보를 통해 오늘의 여행 정보를 얻습니다.
         """
-        # 시리얼라이저에 들어갈 데이터를 획득합니다.
-        data = self.__get_today_tour_by_user_data(user=user)
+        response_list = []
+        # 모든 당일 여행 정보를 가져옵니다.
+        self.__get_today_tour_list_by_user_data(user=user)
+        for tour in self.tour_list:
+            # 시리얼라이저에 들어갈 데이터를 획득합니다.
+            data = self.__get_today_tour_by_user_data(tour=tour)
+            response_list.append(data)
         # 시리얼라이저를 통해 필드를 '검증합니다.'
-        serializer = self.__validate_field(data=data)
+        serializer = self.__validate_field(data=response_list)
         # 검증된 시리얼라이저를 반환합니다.
         return serializer
 
-    def __get_today_tour_by_user_data(self, user):
+    def __get_today_tour_list_by_user_data(self, user):
+        self.tour_list = Travel.objects.filter(user=user, tour_date=timezone.now())
+        if len(self.tour_list) == 0: raise NoObjectException(error_message='오늘의 여행 정보를 찾을 수 없습니다.')
+
+    def __get_today_tour_by_user_data(self, tour):
         # 여행을 인스턴스 객체로 등록합니다.
-        try:
-            self.tour = Travel.objects.get(user=user, tour_date=timezone.now())
-        except Travel.DoesNotExist:
-            raise NoObjectException(error_message='오늘의 여행 정보를 찾을 수 없습니다.')
-        except Travel.MultipleObjectsReturned: # 다수의 여행 정보가 있다면 최상위 객체만 등록합니다.
-            logger.warning('오늘 여행 조회 API에서 다수의 인스턴스가 조회됨')
-            self.tour = Travel.objects.filter(user=user, tour_date=timezone.now()).first()
+        self.tour = tour
 
         # 시리얼라이저에 대응하는 데이터를 핸들러를 통해 가져옵니다.
         serializer_data_handler_list = [
@@ -430,6 +433,6 @@ class TodayTravelService:
 
     @staticmethod
     def __validate_field(data):
-        serializer = TodayTravelSerializer(data=data)
+        serializer = TodayTravelSerializer(data=data, many=True)
         serializer.is_valid(raise_exception=True)
         return serializer
