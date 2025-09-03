@@ -1,5 +1,8 @@
 import requests
 
+from services.exception_handler import UnExpectedException
+
+
 class HttpRequestException(Exception):
     def __init__(self, message):
         self.message = message
@@ -25,5 +28,11 @@ class PublicDataPortalHttpClient:
         kwargs['serviceKey'] = self.service_key
         response = requests.get(base_url + path, params=kwargs)
         if response.status_code == 200:
-            return response.json()
+            try:
+                return response.json()
+            except requests.exceptions.JSONDecodeError:
+                raise UnExpectedException(
+                    error_code='API LIMIT',
+                    error_message='관광데이터 포털 API 한도초과 혹은 일시적 오류입니다.'
+                )
         raise HttpRequestException(f'Public Data Portal API HTTP request failed with status code {response.status_code}')
