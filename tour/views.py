@@ -130,7 +130,7 @@ class GetAreaList(viewsets.ViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        return Response(response_data, status=status.HTTP_200_OK)
+        return Response({str(area_code): response_data}, status=status.HTTP_200_OK)
 
 class Sido_list(viewsets.ViewSet):
 
