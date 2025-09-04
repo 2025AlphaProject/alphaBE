@@ -110,10 +110,7 @@ class GetAreaList(viewsets.ViewSet):
     def list(self, request, *args, **kwargs):
         area_code = request.GET.get('area_code', None)
         if not area_code:
-            return Response(
-                {"error": "area_code 파라미터가 틀렸습니다."},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            raise NoRequiredParameterException()
 
         try:
             area_code = int(area_code)
@@ -125,10 +122,7 @@ class GetAreaList(viewsets.ViewSet):
 
         response_data = SIGUNGU_DATA.get(area_code, None)
         if not response_data:
-            return Response(
-                {"error": "해당 area_code 데이터가 존재하지 않습니다."},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return NoObjectException(error_message='올바른 시군구 데이터가 없습니다.')
 
         return Response({str(area_code): response_data}, status=status.HTTP_200_OK)
 
