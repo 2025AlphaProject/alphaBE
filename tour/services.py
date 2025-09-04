@@ -13,6 +13,8 @@ from services.exception_handler import *
 from django.utils import timezone
 from services.tour_api_service import TourAPIService, area_codes
 from tour.sigungu import SIGUNGU_DATA
+import difflib
+from services.utils import haversine
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -203,41 +205,72 @@ class TravelCreationService:
     def _get_or_create_place(self, place_data: Dict) -> Place:
         """근처 장소 검색 또는 새로운 장소 생성"""
         mapX, mapY = float(place_data['mapX']), float(place_data['mapY'])
+        name = place_data.get('name')
+        if name is None: NoRequiredParameterException()
 
+        # 이름이 일치하고, 그 일치하는 장소들 중에서 1km 내에 있는 장소 정보를 가져옵니다.
+        place = self.__get_place_by_name_equal(name, mapX, mapY)
+        if place is not None: return place
+
+        # 이름 불일치 시
         # 10m 내 기존 장소 검색
-        existing_place = self._find_nearest_place(mapX, mapY)
+        existing_place = self._find_nearest_place(name, mapX, mapY)
         if existing_place:
             return existing_place
 
         # 새 장소 생성
         return self._create_new_place(place_data, mapX, mapY)
 
-    def _find_nearest_place(self, x: float, y: float) -> Optional[Place]:
-        """10m 내에 있는 가장 가까운 장소 찾기"""
+    def _find_nearest_place(self, original_place_name:str, x: float, y: float) -> Optional[Place]:
+        """50m 내에 있는 가장 가까운 장소 찾기"""
         from django.db.models import FloatField
         from django.db.models.functions import Cast
-        from services.utils import haversine
 
         near_places = Place.objects.annotate(
             mapX_float=Cast('mapX', FloatField()),
             mapY_float=Cast('mapY', FloatField())
         ).filter(
-            mapX_float__gte=(x - self.LON_DIF_PER_10M),
-            mapX_float__lte=(x + self.LON_DIF_PER_10M),
-            mapY_float__gte=(y - self.LAT_DIF_PER_10M),
-            mapY_float__lte=(y + self.LAT_DIF_PER_10M)
+            mapX_float__gte=(x - (self.LON_DIF_PER_10M * 10)),
+            mapX_float__lte=(x + (self.LON_DIF_PER_10M * 10)),
+            mapY_float__gte=(y - (self.LAT_DIF_PER_10M * 10)),
+            mapY_float__lte=(y + (self.LAT_DIF_PER_10M * 10))
         )
+
+        near_places_after_similarity = []
+        for place in near_places:
+            # 이름 유사도 검사
+            if self._check_name_similarity(original_place_name, place.name):
+                near_places_after_similarity.append(place)
+
+        if len(near_places_after_similarity) == 1: return near_places_after_similarity.pop() # 하나면 그냥 반환
 
         closest_place = None
         min_distance = None
 
-        for place in near_places:
+        for place in near_places_after_similarity:
             distance = haversine(x, y, float(place.mapX), float(place.mapY))
             if min_distance is None or distance < min_distance:
                 closest_place = place
                 min_distance = distance
 
+
         return closest_place
+
+    def _check_name_similarity(self, name1, name2):
+        # 장소 이름 유사도 검사를 실시합니다.
+        CUTLINE = 0.8 # 유사도 80% 이상 시 통과
+        answer_bytes = bytes(name1, 'utf-8')
+        input_bytes = bytes(name2, 'utf-8')
+        answer_bytes_list = list(answer_bytes)
+        input_bytes_list = list(input_bytes)
+
+        sm = difflib.SequenceMatcher(None, answer_bytes_list, input_bytes_list)
+        similar = sm.ratio()
+        if similar >= CUTLINE:
+            return True
+        else:
+            return False
+
 
     def _create_new_place(self, place_data: Dict, mapX: float, mapY: float) -> Place:
         """새로운 장소 생성"""
@@ -279,6 +312,15 @@ class TravelCreationService:
         serializer = PlaceSerializer(instance=place, data={"address": address}, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+
+    @staticmethod
+    def __get_place_by_name_equal(name, mapX, mapY):
+        db_places = Place.objects.filter(name=name)
+        for db_place in db_places:
+            if haversine(db_place.mapX, db_place.mapY, mapX, mapY) > 1:  # 1km보다 크다면
+                continue
+            return db_place
+        return None
 
 
 class TravelUpdateService:
