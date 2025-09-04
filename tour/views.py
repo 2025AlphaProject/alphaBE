@@ -28,6 +28,7 @@ from tour.poses import POSE_MAP
 from tour.poses_url import POSE_URL_MAP
 from tour.sido import SIDO_LIST
 from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
+from tour.sigungu import SIGUNGU_DATA
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -108,22 +109,15 @@ class GetAreaList(viewsets.ViewSet):
 
     def list(self, request, *args, **kwargs):
         area_code = request.GET.get('area_code', None)
-        response_data = {}
-        tour = TourApi(service_key=PUBLIC_DATA_PORTAL_API_KEY)
-        # 전국을 다 보냅니다.
-        area_list = tour.get_sigungu_code_list()
-        if area_code is None:
-            for each in area_list:
-                response_data[each['code']] = tour.get_sigungu_code_list(int(each['code']))
-        else:
-            code_list = []
-            for each in area_list:
-                code_list.append(int(each['code']))
-            area_code = int(area_code)
-            if area_code not in code_list:
-                raise NoObjectException('No Area Code', f"There is no area code {area_code}")
-            area_list = tour.get_sigungu_code_list(area_code)
-            response_data[str(area_code)] = area_list
+        if not area_code:
+            return Response(
+                {"error": "area_code 파라미터가 틀렸습니다."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        area_code = int(area_code)
+        response_data = SIGUNGU_DATA.get(area_code, {})
+
         return Response(response_data, status=status.HTTP_200_OK)
 
 class Sido_list(viewsets.ViewSet):
