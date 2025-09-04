@@ -6,6 +6,7 @@ from config.settings import APP_LOGGER, PUBLIC_DATA_PORTAL_API_KEY
 from usr.serializers import UserSerializer
 from .models import Travel, Place, Event, TravelDaysAndPlaces, PlaceImages, SnapshotImages, UserTourImage, RelationPlace
 from services.tour_api_service import area_codes, TourAPIService
+from .sigungu import SIGUNGU_DATA
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -45,11 +46,11 @@ class TravelListSerializer(serializers.ModelSerializer):
         if place:
             area_name = area_codes.get(place.areacode)
         if area_name:
-            tour_api_service = TourAPIService(service_key=PUBLIC_DATA_PORTAL_API_KEY)
-            sigungu_name = tour_api_service.get_sigungu_name_by_code(
-                area_code=place.areacode,
-                target_sigungu_code=place.sigungucode
-            )
+            areas = SIGUNGU_DATA.get(int(place.areacode))
+            for sigungu in areas:
+                if sigungu['code'] == place.sigungucode:
+                    sigungu_name = sigungu['name']
+                    break
         if area_name is None and sigungu_name is None: return None
         elif sigungu_name is None: return f'{area_name}'
 
