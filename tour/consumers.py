@@ -81,7 +81,7 @@ class TaskConsumer(AsyncWebsocketConsumer):
                 areas = SIGUNGU_DATA.get(int(areaCode))
                 sigunguCode = None
                 for area in areas:
-                    if area['name'] == sigunguName or (sigunguName in area['name']):
+                    if area['name'] == each or (each in area['name']):
                         sigunguCode = int(area['code'])
                         break
 
