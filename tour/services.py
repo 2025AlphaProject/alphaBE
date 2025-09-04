@@ -13,6 +13,7 @@ from services.exception_handler import *
 from django.utils import timezone
 from services.tour_api_service import TourAPIService, area_codes
 import difflib
+from services.utils import haversine
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -206,6 +207,11 @@ class TravelCreationService:
         name = place_data.get('name')
         if name is None: NoRequiredParameterException()
 
+        # 이름이 일치하고, 그 일치하는 장소들 중에서 1km 내에 있는 장소 정보를 가져옵니다.
+        place = self.__get_place_by_name_equal(name, mapX, mapY)
+        if place is not None: return place
+
+        # 이름 불일치 시
         # 10m 내 기존 장소 검색
         existing_place = self._find_nearest_place(name, mapX, mapY)
         if existing_place:
@@ -218,16 +224,15 @@ class TravelCreationService:
         """50m 내에 있는 가장 가까운 장소 찾기"""
         from django.db.models import FloatField
         from django.db.models.functions import Cast
-        from services.utils import haversine
 
         near_places = Place.objects.annotate(
             mapX_float=Cast('mapX', FloatField()),
             mapY_float=Cast('mapY', FloatField())
         ).filter(
-            mapX_float__gte=(x - (self.LON_DIF_PER_10M * 5)),
-            mapX_float__lte=(x + (self.LON_DIF_PER_10M * 5)),
-            mapY_float__gte=(y - (self.LAT_DIF_PER_10M * 5)),
-            mapY_float__lte=(y + (self.LAT_DIF_PER_10M * 5))
+            mapX_float__gte=(x - (self.LON_DIF_PER_10M * 10)),
+            mapX_float__lte=(x + (self.LON_DIF_PER_10M * 10)),
+            mapY_float__gte=(y - (self.LAT_DIF_PER_10M * 10)),
+            mapY_float__lte=(y + (self.LAT_DIF_PER_10M * 10))
         )
 
         near_places_after_similarity = []
@@ -306,6 +311,15 @@ class TravelCreationService:
         serializer = PlaceSerializer(instance=place, data={"address": address}, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+
+    @staticmethod
+    def __get_place_by_name_equal(name, mapX, mapY):
+        db_places = Place.objects.filter(name=name)
+        for db_place in db_places:
+            if haversine(db_place.mapX, db_place.mapY, mapX, mapY) > 1:  # 1km보다 크다면
+                continue
+            return db_place
+        return None
 
 
 class TravelUpdateService:
