@@ -106,7 +106,7 @@ class AddTravelerView(viewsets.ModelViewSet):
 
 
 class GetAreaList(viewsets.ViewSet):
-    #화이팅
+
     def list(self, request, *args, **kwargs):
         area_code = request.GET.get('area_code', None)
         if not area_code:
