@@ -109,8 +109,8 @@ class GetAreaList(viewsets.ViewSet):
 
     def list(self, request, *args, **kwargs):
         area_code = request.GET.get('area_code', None)
-        if not area_code:
-            raise NoRequiredParameterException()
+        if area_code is None:
+            return Response(SIGUNGU_DATA, status=status.HTTP_200_OK)
 
         try:
             area_code = int(area_code)
