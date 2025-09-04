@@ -112,11 +112,23 @@ class GetAreaList(viewsets.ViewSet):
         if not area_code:
             return Response(
                 {"error": "area_code 파라미터가 틀렸습니다."},
-                status=status.HTTP_404_BAD_REQUEST
+                status=status.HTTP_404_NOT_FOUND
             )
 
-        area_code = int(area_code)
-        response_data = SIGUNGU_DATA.get(area_code, {})
+        try:
+            area_code = int(area_code)
+        except ValueError:
+            return Response(
+                {"error": "area_code는 숫자여야 합니다."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        response_data = SIGUNGU_DATA.get(area_code, None)
+        if not response_data:
+            return Response(
+                {"error": "해당 area_code 데이터가 존재하지 않습니다."},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
         return Response(response_data, status=status.HTTP_200_OK)
 
