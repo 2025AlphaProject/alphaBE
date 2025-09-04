@@ -112,7 +112,7 @@ class GetAreaList(viewsets.ViewSet):
         if not area_code:
             return Response(
                 {"error": "area_code 파라미터가 틀렸습니다."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_404_BAD_REQUEST
             )
 
         area_code = int(area_code)
