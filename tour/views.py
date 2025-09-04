@@ -28,6 +28,7 @@ from tour.poses import POSE_MAP
 from tour.poses_url import POSE_URL_MAP
 from tour.sido import SIDO_LIST
 from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
+from tour.sigungu import SIGUNGU_DATA
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -108,23 +109,22 @@ class GetAreaList(viewsets.ViewSet):
 
     def list(self, request, *args, **kwargs):
         area_code = request.GET.get('area_code', None)
-        response_data = {}
-        tour = TourApi(service_key=PUBLIC_DATA_PORTAL_API_KEY)
-        # 전국을 다 보냅니다.
-        area_list = tour.get_sigungu_code_list()
-        if area_code is None:
-            for each in area_list:
-                response_data[each['code']] = tour.get_sigungu_code_list(int(each['code']))
-        else:
-            code_list = []
-            for each in area_list:
-                code_list.append(int(each['code']))
+        if not area_code:
+            raise NoRequiredParameterException()
+
+        try:
             area_code = int(area_code)
-            if area_code not in code_list:
-                raise NoObjectException('No Area Code', f"There is no area code {area_code}")
-            area_list = tour.get_sigungu_code_list(area_code)
-            response_data[str(area_code)] = area_list
-        return Response(response_data, status=status.HTTP_200_OK)
+        except ValueError:
+            return Response(
+                {"error": "area_code는 숫자여야 합니다."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        response_data = SIGUNGU_DATA.get(area_code, None)
+        if not response_data:
+            raise NoObjectException(error_message='올바른 시군구 데이터가 없습니다.')
+
+        return Response({str(area_code): response_data}, status=status.HTTP_200_OK)
 
 class Sido_list(viewsets.ViewSet):
 
