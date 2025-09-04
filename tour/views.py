@@ -122,7 +122,7 @@ class GetAreaList(viewsets.ViewSet):
 
         response_data = SIGUNGU_DATA.get(area_code, None)
         if not response_data:
-            return NoObjectException(error_message='올바른 시군구 데이터가 없습니다.')
+            raise NoObjectException(error_message='올바른 시군구 데이터가 없습니다.')
 
         return Response({str(area_code): response_data}, status=status.HTTP_200_OK)
 

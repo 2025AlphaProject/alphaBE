@@ -12,6 +12,7 @@ from usr.models import User
 from services.exception_handler import *
 from django.utils import timezone
 from services.tour_api_service import TourAPIService, area_codes
+from tour.sigungu import SIGUNGU_DATA
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -427,7 +428,11 @@ class TodayTravelService:
         return ans_list
 
     def __convert_sigungu_code_to_str(self, area_code, sigungu_code):
-        return self.tour_api_service.get_sigungu_name_by_code(area_code, sigungu_code)
+        sigungus = SIGUNGU_DATA.get(int(area_code))
+        for each in sigungus:
+            if each.get('code') == str(sigungu_code):
+                return each.get('name')
+        raise UnExpectedException(error_message='시군구 코드 없음')
 
 
 
