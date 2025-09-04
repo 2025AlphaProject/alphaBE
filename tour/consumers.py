@@ -7,6 +7,7 @@ from django.core.cache import cache
 from config.celery import app
 from config.settings import PUBLIC_DATA_PORTAL_API_KEY
 from services.tour_api import *
+from tour.sigungu import SIGUNGU_DATA
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -77,7 +78,14 @@ class TaskConsumer(AsyncWebsocketConsumer):
             sigunguNames = sigunguName.split(',')
             sigunguCodes = []
             for each in sigunguNames:
-                sigunguCode = tour.get_sigungu_code(areaCode, each)
+                areas = SIGUNGU_DATA.get(int(areaCode))
+                sigunguCode = None
+                for area in areas:
+                    if area['name'] == sigunguName or (sigunguName in area['name']):
+                        sigunguCode = int(area['code'])
+                        break
+
+                # sigunguCode = tour.get_sigungu_code(areaCode, each)
                 if sigunguCode is None:
                     await self.send(text_data=json.dumps({
                         'state': 'ERROR',
