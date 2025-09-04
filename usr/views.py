@@ -1,3 +1,4 @@
+import pytz
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -6,6 +7,8 @@ from rest_framework.viewsets import ViewSet
 from services.exception_handler import UnExpectedException, NoRequiredParameterException
 from usr.models import User, FCMToken
 from .serializers import UserSerializer, FCMTokenSerializer
+from django.utils import timezone
+import datetime
 
 
 class Who(ViewSet):
@@ -68,3 +71,25 @@ class UploadFcmTokenView(ViewSet):
             fcm token은 매우 중요한 개인정보이기에 유저 정보 자체를 보내지 않습니다.
         """
         return Response(status=status.HTTP_201_CREATED)
+
+class AgreePrivacyPolicyView(ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request):
+        privacy_policy_agree_time = timezone.now()
+        privacy_policy_agree = request.data.get('privacy_policy_agree')
+        privacy_policy_version = request.data.get('privacy_policy_version')
+        user = request.user
+
+        seoul_tz = pytz.timezone("Asia/Seoul")
+
+        user.privacy_policy_agree = privacy_policy_agree
+        user.privacy_policy_agree_time = privacy_policy_agree_time.astimezone(seoul_tz)
+        user.privacy_policy_version = privacy_policy_version
+        user.save()
+
+        return Response({
+            'privacy_policy_agree': user.privacy_policy_agree,
+            'privacy_policy_agree_time': user.privacy_policy_agree_time,
+            'privacy_policy_version': user.privacy_policy_version
+        },status=status.HTTP_201_CREATED)

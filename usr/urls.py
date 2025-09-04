@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import Who, UserListView, UploadFcmTokenView
+from .views import Who, UserListView, UploadFcmTokenView, AgreePrivacyPolicyView
 
 urlpatterns = [
     path('', UserListView.as_view({
@@ -11,5 +11,8 @@ urlpatterns = [
     }), name='who'), # 토큰 이용한 내 정보 get 매핑
     path('fcm/', UploadFcmTokenView.as_view({
         'post' : 'create',
+    })),
+    path('privacy_policy/', AgreePrivacyPolicyView.as_view({
+        'post': 'create'
     }))
 ]

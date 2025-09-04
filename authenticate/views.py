@@ -111,6 +111,7 @@ class LoginRegisterView(viewsets.ViewSet):
                 "profile_image_url": user.profile_image_url,
                 "age_range": user.age_range,
                 "gender": user.gender,
+                "privacy_policy_agree": user.privacy_policy_agree
             },
             "tokens": {
                 "access_token": accessToken,
