@@ -306,7 +306,7 @@ class TravelCreationService:
 
     def _update_place_address(self, place: Place) -> None:
         """장소의 주소 정보 업데이트"""
-        road_address, address = self.place_service.get_parcel_and_road_address(
+        address, road_address = self.place_service.get_parcel_and_road_address(
             float(place.mapX), float(place.mapY)
         )
         serializer = PlaceSerializer(instance=place, data={"address": address}, partial=True)
