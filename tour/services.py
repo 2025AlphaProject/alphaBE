@@ -279,7 +279,7 @@ class TravelCreationService:
             raise NoRequiredParameterException()
 
         # 주소 정보 가져오기
-        road_address_kakao, address_kakao = self.place_service.get_parcel_and_road_address(mapX, mapY)
+        address_kakao, road_address_kakao = self.place_service.get_parcel_and_road_address(mapX, mapY)
 
         return Place.objects.create(
             name=name,
