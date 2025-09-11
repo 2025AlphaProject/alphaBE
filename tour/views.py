@@ -145,6 +145,8 @@ class NewTourAddView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = Travel.objects.all() # 여행 모델에 대한 정보만 가지고 옵니다.
     serializer_class = TravelSerializer
+    filter_backends = (DjangoFilterBackend, )
+    filterset_fields = ('id',)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
