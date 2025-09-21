@@ -1,4 +1,5 @@
 import logging
+
 from config.settings import APP_LOGGER
 
 logger = logging.getLogger(APP_LOGGER)

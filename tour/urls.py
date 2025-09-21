@@ -1,15 +1,27 @@
 from django.urls import path
-from .views import TravelViewSet, NearEventView, AddTravelerView, GetAreaList, Sido_list, CourseView
+
+from .views import (
+    NearEventView,
+    AddTravelerView,
+    GetAreaList,
+    Sido_list,
+    NewTourAddView,
+    TourSnapshotsView,
+    CategoryListView, UserTourImageView,
+    PoseRecommendView,
+    TodayTravelViewSet,
+    RelationPlaceView
+)
 
 urlpatterns = [
-    path('', TravelViewSet.as_view({
+    path('', NewTourAddView.as_view({
         'get': 'list',
         'post': 'create'
-    }), name='travel-list-create'),
+    }), name='create-tour'),
 
-    path('<int:pk>/', TravelViewSet.as_view({
+    path('<int:pk>/', NewTourAddView.as_view({
         'get': 'retrieve',
-        'put': 'partial_update',
+        'patch': 'partial_update', # 메소드를 일부 업데이트인 patch로 변경
         'delete': 'destroy'
     }), name='travel-detail'),
 
@@ -28,15 +40,34 @@ urlpatterns = [
     path('get_sido_list/', Sido_list.as_view({
         'get': 'retrieve'
     })),
+    path('snapshot/', TourSnapshotsView.as_view({
+        'get': 'list',
+        'post': 'create',
+    })),
+    path('snapshot/<int:pk>/', TourSnapshotsView.as_view({
+        'get': 'retrieve',
+        'delete': 'destroy',
+    })),
 
-    path('course/', CourseView.as_view({
-        'post': 'create',   # 저장
-        'get': 'list'       # 전체 조회
-    }), name='course-list-create'),
+    path('category/', CategoryListView.as_view({
+        'get': 'retrieve'  # 카테고리 리스트 조회
+    }), name='category-list'),
+    path('image/', UserTourImageView.as_view({
+        'get': 'list',
+        'post': 'create',
+    })),
+    path('image/<int:pk>/', UserTourImageView.as_view({
+        'get': 'retrieve',
+        'delete': 'destroy'
+    })),
 
-    path('course/<int:pk>/', CourseView.as_view({
-        'get': 'retrieve',  # 개별 조회
-        'delete': 'destroy' # 삭제
-    }), name='course-detail'),
-
+    path('pose-rec/', PoseRecommendView.as_view({
+        'get': 'retrieve',
+    }), name='pose_recommend'),
+    path('today/', TodayTravelViewSet.as_view({
+        'get': 'list'
+    }), name='get_today_tour'),
+    path('relation_info/', RelationPlaceView.as_view({
+        'get': 'list'
+    }))
 ]

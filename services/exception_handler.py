@@ -1,9 +1,11 @@
-import sys
-import inspect, os
-from config.settings import APP_LOGGER
+import inspect
 import logging
+import sys
+
 from rest_framework.exceptions import APIException
 from rest_framework.views import exception_handler
+
+from config.settings import APP_LOGGER
 
 logger = logging.getLogger(APP_LOGGER)
 
@@ -182,7 +184,6 @@ class FatalError(ExceptionHandler):
         logger.error(exception_str)
         # 코드 보안을 지키기 위해 에러 메시지만 노출합니다.
         return self.error_message
-
 
 
 def custom_exception_handler(exc, context):

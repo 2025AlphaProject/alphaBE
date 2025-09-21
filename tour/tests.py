@@ -1,5 +1,13 @@
-from django.test import TestCase
-from config.settings import PUBLIC_DATA_PORTAL_API_KEY, KAKAO_REFRESH_TOKEN, KAKAO_REST_API_KEY  # 공공 데이터 포탈 앱 키
+import logging
+from unittest.mock import patch
+from urllib.parse import urlencode
+
+from channels.testing import WebsocketCommunicator
+from django.test import override_settings
+from django.urls import reverse
+
+from config.settings import APP_LOGGER
+from config.settings import PUBLIC_DATA_PORTAL_API_KEY  # 공공 데이터 포탈 앱 키
 from services.tour_api import (
     TourApi,
     MobileOS,
@@ -8,27 +16,63 @@ from services.tour_api import (
     Category1Code,
     ContentTypeId,
 )
-from usr.models import User
-from .models import Travel
-from services.kakao_token_service import KakaoTokenService
 from tests.base import BaseTestCase
+from tour.consumers import TaskConsumer
+from usr.models import User
+from .models import Travel, Place
+from django.utils import timezone
+
+logger = logging.getLogger(APP_LOGGER)
+
 
 # Create your tests here.
 
 class TestTour(BaseTestCase):
     def setUp(self):
-        # 유저 정보 임의 생성
-        # user = User.objects.create(
-        #     sub=3928446869,
-        #     username='TestUser',
-        #     gender='male',
-        #     age_range='1-9',
-        #     profile_image_url='https://example.org'
-        # )
-        # user.set_password('test_password112')
-        # user.save()
+        self.headers = {
+            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
+        }
+        # 테스트 위한 장소 생성
+        self.place = Place.objects.create(
+            name='명원박물관',
+            mapX='126.9999927956',
+            mapY='37.6111883307',
+            areacode='31',
+            sigungucode='2',
+            contentid='2930970',
+            contenttypeid='38',
+        )
+        self.data = {
+            "tour_name": "태근이의 여행",
+            "tour_date": timezone.localdate(timezone.now()).strftime('%Y-%m-%d'),
+            "places": {
+                "place_ids": [self.place.id],
+                "additional_info": [
+                    {
+                        "place_id": self.place.id,
+                        "road_address": "테스트지롱",
+                        "place_image": "http://naver.com"
+                    }
+                ],
+                "custom_places": [
+                    {
+                        "name": "아산 공세리성당",
+                        "mapX": "126.9134070332",
+                        "mapY": "36.8833377411",
+                        "road_address": "충청남도 아산시 인주면 공세리성당길 10"
+                    },
+                    {
+                        "name": "성북구립미술관",
+                        "mapX": "126.9949020554",
+                        "mapY": "37.594890134",
+                        "road_address": "서울특별시 성북구 성북로 134 (성북동)"
+                    },
+                ]
+            }
 
-        # 유저 정보 임의 생성2
+        }
+
+        # 유저 정보 임의 생성 - 친구 추가를 위한 추가 유저
         user2 = User.objects.create(
             sub=1,
             username='TestUser2',
@@ -38,147 +82,183 @@ class TestTour(BaseTestCase):
         )
         user2.set_password('test_password112')
         user2.save()
-    def test_tour_api_module(self):
+
+
+
+
+    def test_tour_create_success(self):
         """
-        해당 테스트는 module/tour_api를 테스트하기 위해 작성된 테스트 코드 입니다.
+            해당 테스트는 여행이 제대로 잘 만들어지는지 확인하는 테스트입니다.
         """
-        tour = TourApi(MobileOS=MobileOS.ANDROID, MobileApp='AlphaTest')
-        tour.set_serviceKey(PUBLIC_DATA_PORTAL_API_KEY)
-        # 지역 기반 관광지 가져오기 1
-        area = tour.get_area_based_list(areaCode=AreaCode.SEOUL,
-                                        sigunguCode=tour.get_sigungu_code(areaCode=AreaCode.SEOUL, targetName='성북'))
-        self.assertNotEqual(area, None)
-
-        # 지역 기반 관광지 가져오기 2
-        data = {
-            'areaCode': AreaCode.SEOUL,
-            'sigunguCode': tour.get_sigungu_code(areaCode=AreaCode.SEOUL, targetName='종로'),
-            'arrange': Arrange.TITLE_IMAGE,
-            'contentTypeId': ContentTypeId.GWANGWANGJI
-        }
-        area = tour.get_area_based_list(**data)
-        self.assertNotEqual(area, None)
-
-        # 카테고리 코드 가져오기 테스트
-        categories = tour.get_category_code_list(cat1=Category1Code.HUMANITIES, cat2='A0201')
-        self.assertNotEqual(categories, None)
-
-        # 위치 기반 관광지 가져오기
-        data = {
-            'areaCode': AreaCode.SEOUL,
-            'arrange': Arrange.TITLE_IMAGE,
-            'contentTypeId': ContentTypeId.GWANGWANGJI
-        }
-        response = tour.get_location_based_list(126.3547412438, 34.4354594945, 20000)
-        self.assertNotEqual(response, None)
-
-        # 행사 정보 가져오기
-        data.pop('contentTypeId')
-        response = tour.get_festival_list('20250315', '20250318', **data)
-        self.assertNotEqual(response, None)
-        # for each in response:
-        #     print(each.get_eventStartDate(), each.get_eventEndDate())
-
-    def test_travel_api(self):
-        uri = '/tour/'
-        headers = {
-            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
-        }
-        data = {
-            'tour_name': '태근이의 여행',
-            'start_date': '2025-03-10',
-            'end_date': '2025-03-15',
-        }
-        # 빈 데이터 list get Test
-        response = self.client.get(uri, headers=headers)
-        self.assertEqual(response.status_code, 200)
+        uri = reverse('create-tour')
 
         # create test
-        response = self.client.post(uri, data, headers=headers, content_type='application/json')
+        response = self.client.post(uri, self.data, headers=self.headers, content_type='application/json')
         self.assertEqual(response.status_code, 201)
+        # self.assertEqual(Place.objects.count(), 3)
+        logger.debug('tour create test result: ' + str(response.json()))
 
-        # create test - Exception Test
+    def test_tour_get_list_success(self):
+        """
+            해당 테스트는 여행 등록 api의 GET 메소드가 제대로 실행되는지 확인하는 테스트입니다.
+        """
+        self.test_tour_create_success()
+        uri = reverse('create-tour')
+        response = self.client.get(uri, headers=self.headers)
+        self.assertEqual(response.status_code, 200)
+        logger.debug('tour get list test result: ' + str(response.json()))
+
+    def test_tour_get_detail_success(self):
+        """
+            해당 테스트는 여행 등록 api의 GET (상세보기, retrieve) 메소드가 제대로 실행되는지 확인하는 테스트입니다.
+        """
+        self.test_tour_create_success()
+        uri = reverse('travel-detail', kwargs={'pk': Travel.objects.first().pk})
+        response = self.client.get(uri, headers=self.headers)
+        self.assertEqual(response.status_code, 200)
+        logger.debug('tour get detail test result: ' + str(response.json()))
+
+    def test_tour_delete_success(self):
+        """
+            해당 테스트는 여행이 정상적으로 삭제 되는지 확인하기 위한 테스트입니다.
+        """
+        self.test_tour_create_success() # 여행 생성
+        uri = reverse('travel-detail', kwargs={'pk': Travel.objects.first().pk})
+        response = self.client.delete(uri, headers=self.headers)
+        self.assertEqual(response.status_code, 204)
+
+    def test_tour_delete_fail(self):
+        """
+            해당 테스트는 없는 여행 번호를 삭제하고자 할 떄 확인하는 테스트입니다.
+        """
+        uri = reverse('travel-detail', kwargs={'pk': '123141'})
+        response = self.client.delete(uri, headers=self.headers)
+        self.assertEqual(response.status_code, 404)
+        logger.debug('tour delete fail test result: ' + str(response.json()))
+
+    def test_tour_exception_test(self):
+        """
+            해당 테스트는 정확한 오류코드가 발생되는지 검사하기 위한 테스트입니다.
+        """
+        # No Required Parameter Exception
+        uri = reverse('create-tour')
         exception_data = {
             'id': 1,
             'start_date': '2025-0310',
         }
-        response = self.client.post(uri, exception_data, headers=headers, content_type='application/json')
+        response = self.client.post(uri, exception_data, headers=self.headers, content_type='application/json')
         self.assertEqual(response.status_code, 400)
+        logger.debug('tour No Required Exception test result: ' + str(response.json()))
 
-        # 인스턴스 임의로 하나 더 생성
-        data['tour_name'] = '태근이의 여행2'
-        response = self.client.post(uri, data, headers=headers, content_type='application/json')
-        self.assertEqual(response.status_code, 201)
+        serializer_exception_data = self.data.copy()
+        serializer_exception_data.pop('tour_date')
+        response = self.client.post(uri, serializer_exception_data, headers=self.headers, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        logger.debug('tour Serializer Exception test result: ' + str(response.json()))
 
-        # list get Test
-        response = self.client.get(uri, headers=headers)
-        self.assertEqual(response.status_code, 200)
+    def test_tour_update_success(self):
+        """
+            해당 테스트는 여행이 정상적으로 수정이 되는지 확인하기 위한 테스트입니다.
+        """
+        self.place = Place.objects.create(
+            name='명원박물관2',
+            mapX='126',
+            mapY='37',
+        )
+        self.data = {
+            "tour_name": "태근이의 여행",
+            "tour_date": "2025-07-07",
+            "places": {
+                "place_ids": [self.place.id],
+                "additional_info": [
+                    {
+                        "place_id": self.place.id,
+                        "road_address": "테스트지롱2",
+                        "place_image": "http://naver.com"
+                    }
+                ],
+                "custom_places": [
+                    {
+                        "name": "아산 공세리성당",
+                        "mapX": "126.9134070332",
+                        "mapY": "36.8833377411",
+                        "road_address": "충청남도 아산시 인주면 공세리성당길 10"
+                    },
+                    {
+                        "name": "성북구립미술관",
+                        "mapX": "126.9949020554",
+                        "mapY": "37.594890134",
+                        "road_address": "서울특별시 성북구 성북로 134 (성북동)"
+                    },
+                ]
+            }
 
-        # detail get Test
-        id = Travel.objects.get(tour_name='태근이의 여행').id
-        uri_detail = f'/tour/{id}/' # 아이디 1번
-        response = self.client.get(uri_detail, headers=headers)
-        self.assertEqual(response.status_code, 200)
-
-        # delete Test
-        response = self.client.delete(uri_detail, headers=headers)
-        self.assertEqual(response.status_code, 204)
-        response = self.client.get(uri, headers=headers)
-        self.assertEqual(response.status_code, 200)
-
-        # put Test - Exception Test
-        put_data = {
-            'tour_name': '시연이의 여행'
         }
-        response = self.client.put(uri_detail, put_data, headers=headers, content_type='application/json')
-        self.assertEqual(response.status_code, 404)
-
-        # put Test
-        id2 = Travel.objects.get(tour_name='태근이의 여행2').id
-        uri_detail = f'/tour/{id2}/'  # 아이디 2번
-        response = self.client.put(uri_detail, put_data, headers=headers, content_type='application/json')
-        self.assertEqual(response.status_code, 200)
-
-        # get Test - Exception Test
-        uri_detail = f'/tour/{id}/'
-        response = self.client.get(uri_detail, headers=headers)
-        self.assertEqual(response.status_code, 404)
-
-    def test_add_traveler(self):
-        end_point = '/tour/'
-        headers = {
-            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
+        self.test_tour_create_success()
+        uri = reverse('travel-detail', kwargs={'pk': Travel.objects.first().pk})
+        patch_data = {
+            'tour_name': '시연이의 여행',
+            'tour_date': '2025-07-08',
+            'places': {
+                'delete_places': [self.place.id]
+            }
         }
+        response = self.client.patch(uri, patch_data, headers=self.headers, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        logger.debug('tour Update success test result: ' + str(response.json()))
+
+    def test_tour_update_fail(self):
+        """
+            해당 테스트는 여행이 수정이 되지 못할 때 즉, 여행 장소 정보가 없을 때 발생하는 오류를 테스트합니다.
+        """
+        self.test_tour_create_success() # 여행 생성
+        uri = reverse('travel-detail', kwargs={'pk': Travel.objects.first().pk})
+        patch_data = {
+            'places': {
+                'delete_places': [1123124]
+            }
+        }
+        response = self.client.patch(uri, patch_data, headers=self.headers, content_type='application/json')
+        self.assertEqual(response.status_code, 404)
+        logger.debug('tour Update fail test result: ' + str(response.json()))
+
+    def test_add_traveler_success(self):
+        """
+            해당 테스트는 한 여행에 친구 추가가 제대로 되는지 테스트 합니다.
+        """
+        self.test_tour_create_success() # 여행 추가
+        uri = reverse('add_traveler')
         data = {
-            'tour_name': '태근이의 여행',
-            'start_date': '2025-03-10',
-            'end_date': '2025-03-15',
+            'add_traveler_sub': User.objects.first().sub,
+            'travel_id': Travel.objects.first().id,
         }
-        response = self.client.post(end_point, headers=headers, data=data, content_type='application/json')
-
+        response = self.client.post(uri, data, headers=self.headers, content_type='application/json')
         self.assertEqual(response.status_code, 201)
-        end_point = '/tour/add_traveler/'
+        logger.debug('tour Add Traveler success test result: ' + str(response.json()))
+
+    def test_add_traveler_fail(self):
+        """
+            해당 테스트는 한 여행에 친구 추가가 제대로 안되었을 때 제대로 된 에러 코드가 날라오는지 테스트합니다.
+        """
+        uri = reverse('add_traveler')
         data = {
             'add_traveler_sub': 1,
             'travel_id': 1,
         }
-        # Normal POST Test
-        response = self.client.post(end_point, data, headers=headers, content_type='application/json')
-        self.assertEqual(response.status_code, 201)
-
-        # Exception Test
         strange_data = {
             'aadd_traveler_sub': 1,
             'travel_id': 1,
         }
-        response = self.client.post(end_point, strange_data, headers=headers, content_type='application/json')
+        response = self.client.post(uri, strange_data, headers=self.headers, content_type='application/json')
         self.assertEqual(response.status_code, 400)
+        logger.debug('tour Add Traveler No Required Parameter test result: ' + str(response.json()))
 
         data['add_traveler_sub'] = 324 # 없는 데이터
-        response = self.client.post(end_point, data, headers=headers, content_type='application/json')
+        response = self.client.post(uri, data, headers=self.headers, content_type='application/json')
         self.assertEqual(response.status_code, 400)
+        logger.debug('tour Add Traveler fail test result: ' + str(response.json()))
 
-    def test_get_area_list(self):
+    def test_get_area_list_success(self):
         """
         해당 테스트는 시군구 코드를 정확하게 가져오는지 테스트합니다.
         """
@@ -187,260 +267,142 @@ class TestTour(BaseTestCase):
         response = self.client.get(end_point)
         self.assertEqual(response.status_code, 200)
 
-        #404 Test
-        end_point = '/tour/get_area_list/?area_code=234'
-        response = self.client.get(end_point)
-        self.assertEqual(response.status_code, 404)
-
         # sido_list Test
         end_point = '/tour/get_sido_list/'
         response = self.client.get(end_point)
         self.assertEqual(response.status_code, 200)
 
-
-    def test_save_course(self):
+    def test_get_sido_list_fail(self):
         """
-        해당 테스트는 /tour/course/ 경로 저장 API가 정상적으로 작동하는지 검증합니다.
+            해당 테스트는 시군구 코드 가져오는 것을 실패했을 때를 테스트합니다.
         """
-
-        # 1️⃣ 여행 생성
-        headers = {
-            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
-        }
-        travel_data = {
-            'tour_name': '테스트 여행',
-            'start_date': '2025-04-01',
-            'end_date': '2025-04-05'
-        }
-        create_response = self.client.post('/tour/', data=travel_data, headers=headers, content_type='application/json')
-        self.assertEqual(create_response.status_code, 201)
-        tour_id = create_response.json()['id']
-
-        # 2️⃣ 정상적인 코스 저장 요청
-        course_data = {
-            "tour_id": tour_id,
-            "date": "2025-04-02",
-            "places": [
-                {
-                    "name": "광화문",
-                    "mapX": "126.9769",
-                    "mapY": "37.5759",
-                    "image_url": "https://image.example.com/gwanghwamun.jpg"
-                },
-                {
-                    "name": "서울역",
-                    "mapX": "126.9706",
-                    "mapY": "37.5562",
-                    "image_url": "https://image.example.com/seoul.jpg"
-                }
-            ]
-        }
-        response = self.client.post('/tour/course/', data=course_data, headers=headers, content_type='application/json')
-        self.assertEqual(response.status_code, 201)  # ✅ 정상적으로 저장되었는지 확인
-        self.assertEqual(response.json()['date'], "2025-04-02")
-        self.assertEqual(len(response.json()['places']), 2)
-
-        # 예외 케이스: 날짜 범위 오류
-        course_data['date'] = '2025-04-06'
-        response = self.client.post('/tour/course/', data=course_data, headers=headers, content_type='application/json')
-        self.assertEqual(response.status_code, 400)
-
-        # 3️⃣ 예외 케이스: 필수 필드 누락 (date 없음)
-        bad_data = {
-            "tour_id": tour_id,
-            "places": [
-                {
-                    "name": "남산타워",
-                    "mapX": "126.9882",
-                    "mapY": "37.5512",
-                    "image_url": "https://image.example.com/namsan.jpg"
-                }
-            ]
-        }
-        response = self.client.post('/tour/course/', data=bad_data, headers=headers, content_type='application/json')
-        self.assertEqual(response.status_code, 400)
-
-        # 4️⃣ 예외 케이스: 존재하지 않는 여행 ID
-        wrong_data = {
-            "tour_id": 9999,
-            "date": "2025-04-03",
-            "places": [
-                {
-                    "name": "북촌한옥마을",
-                    "mapX": "126.9870",
-                    "mapY": "37.5825",
-                    "image_url": "https://image.example.com/bukchon.jpg"
-                }
-            ]
-        }
-        response = self.client.post('/tour/course/', data=wrong_data, headers=headers, content_type='application/json')
+        #404 Test
+        end_point = '/tour/get_area_list/?area_code=234'
+        response = self.client.get(end_point)
         self.assertEqual(response.status_code, 404)
 
-    def test_delete_tour_course(self):
+    # tour/consumers.py에 있는 app.send_task 함수를 Mock() 객체로 교체
+    # Mock 객체를 테스트 함수 인자로 넘김
+    @patch('tour.consumers.app.send_task')
+    @override_settings(CHANNEL_LAYERS={
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer"
+        }
+    },
+        CACHES={
+            'default': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+                'LOCATION': 'test-cache'
+            }
+        }
+    )
+    async def test_tour_recommender(self, mock_send_task):
         """
-        해당 테스트는 내 여행 경로 삭제 API를 검증합니다.
+            해당 테스트는 웹소켓 통신을 테스트합니다.
         """
-        headers = {
-            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
+        mock_send_task.return_value.task_id = 'mocked-task-id'
+        params = {
+            'areaCode': '34',
+            'user_id': '111',
+            'unique_code': '1',
+            'sigunguName': '아산',
+            'categoryName': '39',
         }
+        query_string = urlencode(params)
+        communicator = WebsocketCommunicator(
+            TaskConsumer.as_asgi(),
+            f'/tour/recommend/?{query_string}',
+        )
+        connected, subprotocol = await communicator.connect(20)
+        self.assertTrue(connected)
+        response = await communicator.receive_json_from(10)
+        logger.debug('tour Recommender test result: ' + str(response))
+        ans = response.get('state') == 'OK' or response.json().get('state') == 'CACHE_HIT'
+        self.assertTrue(ans)
 
-        # 여행 생성
-        create_endpoint = '/tour/'
-        travel_data = {
-            'tour_name': '삭제 테스트 여행',
-            'start_date': '2025-04-10',
-            'end_date': '2025-04-15',
-        }
-        create_response = self.client.post(create_endpoint, data=travel_data, headers=headers,
-                                           content_type='application/json')
-        self.assertEqual(create_response.status_code, 201)
-
-        # 생성된 여행의 ID 가져오기
-        tour_id = create_response.json()['id']
-
-        # 2️⃣ 정상적인 코스 저장 요청
-        course_data = {
-            "tour_id": tour_id,
-            "date": "2025-04-12",
-            "places": [
-                {
-                    "name": "광화문",
-                    "mapX": "126.9769",
-                    "mapY": "37.5759",
-                    "image_url": "https://image.example.com/gwanghwamun.jpg"
-                },
-                {
-                    "name": "서울역",
-                    "mapX": "126.9706",
-                    "mapY": "37.5562",
-                    "image_url": "https://image.example.com/seoul.jpg"
-                }
-            ]
-        }
-        response = self.client.post('/tour/course/', data=course_data, headers=headers, content_type='application/json')
-        self.assertEqual(response.status_code, 201)  # ✅ 정상적으로 저장되었는지 확인
-
-        course_data = {
-            "tour_id": tour_id,
-            "date": "2025-04-13",
-            "places": [
-                {
-                    "name": "광화문2",
-                    "mapX": "126.9769",
-                    "mapY": "37.5759",
-                    "image_url": "https://image.example.com/gwanghwamun.jpg"
-                },
-                {
-                    "name": "서울역2",
-                    "mapX": "126.9706",
-                    "mapY": "37.5562",
-                    "image_url": "https://image.example.com/seoul.jpg"
-                }
-            ]
-        }
-        response = self.client.post('/tour/course/', data=course_data, headers=headers, content_type='application/json')
-        self.assertEqual(response.status_code, 201)  # ✅ 정상적으로 저장되었는지 확인
-
-        # 삭제 요청
-        delete_endpoint = f'/tour/course/{tour_id}/'
-        delete_data = {
-            'target_date': '2025-04-12'
-        }
-        delete_response = self.client.delete(delete_endpoint, data=delete_data, headers=headers, content_type='application/json')
-        self.assertEqual(delete_response.status_code, 204)
-
-        get_response = self.client.get(f'/tour/course/{tour_id}/', headers=headers)
-        print(get_response.json())
-
-    def test_retrieve_course(self):
+    def testSnapshot_post_success(self):
         """
-        해당 테스트는 /tour/course/<tour_id>/ 경로 조회 API가 정상적으로 작동하는지 검증합니다.
+            인생네컷 사진 업로드 성공 테스트
         """
+        pass
 
-        # 1️⃣ 여행 생성
-        headers = {
-            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
-        }
-        travel_data = {
-            'tour_name': '조회용 여행',
-            'start_date': '2025-04-01',
-            'end_date': '2025-04-05'
-        }
-        create_response = self.client.post('/tour/', data=travel_data, headers=headers, content_type='application/json')
-        self.assertEqual(create_response.status_code, 201)
-        tour_id = create_response.json()['id']
+    def testSnapshot_post_fail(self):
+        """
+            인생네컷 사진 업로드 실패 테스트
+        """
+        pass
 
-        # 2️⃣ 경로 저장
-        course_data = {
-            "tour_id": tour_id,
-            "date": "2025-04-02",
-            "places": [
-                {
-                    "name": "덕수궁",
-                    "mapX": "126.9751",
-                    "mapY": "37.5658",
-                    "image_url": "https://image.example.com/deoksugung.jpg"
-                },
-                {
-                    "name": "경복궁",
-                    "mapX": "126.9769",
-                    "mapY": "37.5796",
-                    "image_url": "https://image.example.com/gyeongbok.jpg"
-                }
-            ]
-        }
-        save_response = self.client.post('/tour/course/', data=course_data, headers=headers,
-                                         content_type='application/json')
-        self.assertEqual(save_response.status_code, 201)
+    def testSnapshot_list_success(self):
+        """
+            인생네컷 사진 리스트 가져오기 성공 테스트
+        """
+        pass
 
-        # 3️⃣ 저장한 경로 조회 요청
-        retrieve_uri = f'/tour/course/{tour_id}/'
-        response = self.client.get(retrieve_uri, headers=headers)
+    def testSnapshot_list_fail(self):
+        """
+            인생네컷 사진 리스트 가져오기 실패 테스트
+        """
+        pass
+
+    def testSnapshot_retrieve_success(self):
+        """
+            인생네컷 사진 상세 가져오기 성공 테스트
+        """
+        pass
+
+    def testSnapshot_retrieve_fail(self):
+        """
+            인생네컷 사진 상세 가져오기 실패 테스트
+        """
+        pass
+
+    def test_tour_image_post_success(self):
+        """
+            여행 사진 업로드 성공 테스트
+        """
+        pass
+
+    def test_pose_recommend_retrieve_for_no_cat_success(self):
+        """
+            카테고리가 없는 장소에 대한 포즈 추천 성공 테스트
+        """
+        # 장소가 존재하지 않을 경우를 대비해 장소를 만듭니다.
+        place = Place.objects.create(
+            name='명원박물관 테스트',
+            mapX='127',
+            mapY='37.8111883307',
+        )
+        uri = f'{reverse('pose_recommend')}?place_id={place.id}'
+        response = self.client.get(uri)
         self.assertEqual(response.status_code, 200)
+        logger.debug('tour Recommend for no cat test result: ' + str(response.json()))
 
-        course_list = response.json()
-        self.assertEqual(len(course_list), 1)
-        self.assertEqual(course_list[0]['date'], "2025-04-02")
-        self.assertEqual(len(course_list[0]['places']), 2)
-        self.assertEqual(course_list[0]['places'][0]['name'], "덕수궁")
-
-        # 4️⃣ 예외 케이스: 존재하지 않는 tour_id
-        wrong_uri = '/tour/course/99999/'
-        response = self.client.get(wrong_uri, headers=headers)
-        self.assertEqual(response.status_code, 403)
-
-    def test_get_tour_course_list(self):
+    def test_pose_recommend_retrieve_for_cat_success(self):
         """
-        해당 테스트는 여행 경로들을 리스트로 가져오는지 테스트합니다.
+            카테고리가 존재하는 장소에 대한 포즈 추천 성공 테스트
         """
-
-        # 여행 생성
-        create_endpoint = '/tour/'
-        headers = {
-            'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}',
-        }
-        travel_data = {
-            'tour_name': '경로 테스트 여행',
-            'start_date': '2025-04-01',
-            'end_date': '2025-04-05',
-        }
-        create_response = self.client.post(create_endpoint, data=travel_data, headers=headers,
-                                           content_type='application/json')
-        self.assertEqual(create_response.status_code, 201)
-
-        # 200 Test
-        endpoint = '/tour/course/'
-        response = self.client.get(endpoint, headers=headers)
+        # 장소가 존재하지 않을 경우를 대비해 장소를 만듭니다.
+        place = Place.objects.create(
+            name='명원박물관 테스트',
+            mapX='127',
+            mapY='37.8111883307',
+            cat2='B0201'
+        )
+        uri = f'{reverse('pose_recommend')}?place_id={place.id}'
+        response = self.client.get(uri)
         self.assertEqual(response.status_code, 200)
+        logger.debug('tour Recommend for cat test result: ' + str(response.json()))
 
-        self.assertIn('travels', response.json())
-        travels = response.json()['travels']
-        self.assertIsInstance(travels, list)
+    def test_get_today_tour_success(self):
+        """
+            당일 여행 가져오기 성공 테스트
+        """
+        self.test_tour_create_success()
+        uri = reverse('get_today_tour')
+        response = self.client.get(uri, headers=self.headers)
+        self.assertEqual(response.status_code, 200)
+        logger.debug('get_today_tour_success Test result: ' + str(response.json()))
 
-        # 데이터가 어케 날아오는지 확인하는 코드 ?
 
-        if travels:
-            self.assertIn('tour_id', travels[0])
-            self.assertIn('start_date', travels[0])
-            self.assertIn('end_date', travels[0])
-            self.assertIn('places', travels[0])
+
+

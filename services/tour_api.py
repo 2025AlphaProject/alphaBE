@@ -1,6 +1,16 @@
-import requests
-from enum import Enum
 import math
+from enum import Enum
+
+import requests
+from config.settings import APP_LOGGER
+
+import logging
+
+from services.exception_handler import UnExpectedException
+
+logger = logging.getLogger(APP_LOGGER)
+
+
 # from tour.models import Event
 
 class Area:
@@ -173,7 +183,7 @@ class Arrange(Enum):
 
 
 # 한국 관광정보 api를 위한 베이스 URL
-BASE_URL = 'http://apis.data.go.kr/B551011/KorService1'
+BASE_URL = 'http://apis.data.go.kr/B551011/KorService2'
 
 class TourApi:
     """
@@ -223,16 +233,23 @@ class TourApi:
         :param areaCode: 지역 번호를 의미합니다. AreaCode enum 사용가능
         :return: 지역 코드 리스트를 반환합니다.
         """
-        uri = '/areaCode1'
+        uri = '/areaCode2'
         parameters = self.__upload_required_params()
         parameters['numOfRows'] = 100 # 한번에 100개의 정보를 보여줍니다.
         if areaCode is not None:
             parameters['areaCode'] = areaCode.value if isinstance(areaCode, Enum) else areaCode
         response = requests.get(BASE_URL + uri, params=parameters)
         if response.status_code == 200:
-            if response.json()['response']['body']['totalCount'] == 0: # 컨텐츠가 없으면 빈 리스트 반환
-                return []
-            return response.json()['response']['body']['items']['item']
+            logger.debug(f'결과: {response.text}')
+            try:
+                if response.json()['response']['body']['totalCount'] == 0: # 컨텐츠가 없으면 빈 리스트 반환
+                    return []
+                return response.json()['response']['body']['items']['item']
+            except requests.exceptions.JSONDecodeError:
+                raise UnExpectedException(
+                    error_code='API LIMIT',
+                    error_message='관광데이터 포털 API 한도초과 혹은 일시적 오류입니다.'
+                )
         return None
 
     def get_sigungu_code(self, areaCode, targetName):
@@ -282,7 +299,7 @@ class TourApi:
 
     :return: API 호출이 성공하면 Area 객체 형식의 결과를 반환하며, 실패 시 None을 반환합니다.
     """
-        uri = '/locationBasedList1'
+        uri = '/locationBasedList2'
         parameters = self.__upload_required_params()
         parameters['mapX'] = mapX
         parameters['mapY'] = mapY
@@ -324,7 +341,7 @@ class TourApi:
 
     :return: API 호출이 성공하면 Area 객체 형식의 결과를 반환하며, 실패 시 None을 반환합니다.
     """
-        uri = '/areaBasedList1'
+        uri = '/areaBasedList2'
         # not required parameters
         list = ['numOfRows',
                 'pageNo',
@@ -360,7 +377,7 @@ class TourApi:
         :param contentId: 컨텐츠 아이디 (각 api로 얻은 관광지(지역) 고유 컨텐츠 아이디)
         :return:
         """
-        uri = '/detailImage1'
+        uri = '/detailImage2'
         parameters = self.__upload_required_params()
         parameters['contentId'] = contentId
         parameters['subImageYN'] = 'Y' # 원본,썸네일이미지조회,공공누리 저작권유형정보조회
@@ -393,7 +410,7 @@ class TourApi:
         :param kwargs:
         :return: JSON 형식으로, 분류코드에 해당하는 'code'와 그에 대응되는 이름 정보인 'name' 키 값이 포함
         """
-        uri = '/categoryCode1'
+        uri = '/categoryCode2'
         parameters = self.__upload_required_params()
         for each in kwargs.keys():
             parameters[each] = kwargs[each].value if isinstance(kwargs[each], Enum) else kwargs[each]
@@ -413,7 +430,7 @@ class TourApi:
         :param event_start_date: 이벤트 시작 날짜 (여행 시작 날짜, YYYYMMDD 형식)
         :param event_end_date: 이벤트 마감 날짜(여행 마감 날짜, YYYYMMDD 형식)
         """
-        uri = '/searchFestival1'
+        uri = '/searchFestival2'
         parameters = self.__upload_required_params()
         parameters['eventStartDate'] = event_start_date
         parameters['eventEndDate'] = event_end_date

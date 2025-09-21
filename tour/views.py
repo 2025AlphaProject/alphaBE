@@ -1,47 +1,36 @@
+import logging
+
 from django.core.exceptions import ValidationError
 from rest_framework import viewsets, status
-from rest_framework.response import Response
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
-from usr.models import User
-from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer
 from config.settings import SEOUL_PUBLIC_DATA_SERVICE_KEY, PUBLIC_DATA_PORTAL_API_KEY, KAKAO_REST_API_KEY, APP_LOGGER
-from .serializers import EventSerializer
-from services.tour_api import TourApi, NearEventInfo
-from .services import PlaceService
-from .models import Travel, Place, TravelDaysAndPlaces, PlaceImages, Event
-import datetime
-import logging
 from services.exception_handler import (
     ValidationException,
-    NoAttributeException,
     NoRequiredParameterException,
     ValueException, NoObjectException
 )
+from services.tour_api import TourApi, NearEventInfo
+from usr.models import User
+from .models import Travel, Place, Event, SnapshotImages, UserTourImage, TravelDaysAndPlaces, RelationPlace
+from .serializers import EventSerializer, UserTourImageSerializer, PoseRecommendSerializer, \
+    MiniRelationPlaceSerializer
+from .serializers import TravelSerializer, PlaceSerializer, TravelDaysAndPlacesSerializer, \
+    TravelListSerializer, TourSnapshotsSerializer
+from .services import PlaceService, TravelCreationService, TravelUpdateService, TodayTravelService
+from services.utils import haversine
+from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models.functions import Cast
+from django.db.models import FloatField
+from tour.poses import POSE_MAP
+from tour.poses_url import POSE_URL_MAP
+from tour.sido import SIDO_LIST
+from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
+from tour.sigungu import SIGUNGU_DATA
 
-logger = logging.getLogger(__name__)
-
-
-class TravelViewSet(viewsets.ModelViewSet):
-    queryset = Travel.objects.all()
-    serializer_class = TravelSerializer
-    permission_classes = [IsAuthenticated] # 로그인한 사용자만 api를 승인합니다.
-
-    def create(self, request, *args, **kwargs):  # 새로운 여행 등록 API
-        user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
-
-        # request.data를 변경 가능한 딕셔너리로 변환 후 user 추가
-        travel_data = dict(request.data).copy()
-        # travel_data["user"] = user_sub # 다대일 관계시 유저 추가
-
-        serializer = self.get_serializer(data=travel_data)  # 수정된 데이터로 serializer 초기화
-        serializer.is_valid(raise_exception=True)
-        travel = serializer.save()  # ORM을 이용해 저장
-        travel.user.add(User.objects.get(sub=user_sub))  # 다대 다 관계시 유저 추가
-        data = self.get_serializer(travel).data
-
-        # json 응답을 반환
-        return Response(data, status=status.HTTP_201_CREATED)
+logger = logging.getLogger(APP_LOGGER)
 
       
 class NearEventView(viewsets.ModelViewSet):
@@ -60,7 +49,6 @@ class NearEventView(viewsets.ModelViewSet):
 
         if mapX is None or mapY is None: # 필수 파라미터 검증
             raise NoRequiredParameterException()
-            # return Response({"ERROR": "필수 파라미터 중 일부 혹은 전체가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         if Event.objects.count() == 0: # 주변 행사 정보가 DB에 없을 경우, 코드는 200 OK로 보냅니다.
             logger.warning("Event Info is not exist in DB") # 해당 오류는 서버 오류에 가깝기 때문에 로그를 남깁니다.
@@ -121,267 +109,246 @@ class GetAreaList(viewsets.ViewSet):
 
     def list(self, request, *args, **kwargs):
         area_code = request.GET.get('area_code', None)
-        response_data = {}
-        tour = TourApi(service_key=PUBLIC_DATA_PORTAL_API_KEY)
-        # 전국을 다 보냅니다.
-        area_list = tour.get_sigungu_code_list()
         if area_code is None:
-            for each in area_list:
-                response_data[each['code']] = tour.get_sigungu_code_list(int(each['code']))
-        else:
-            code_list = []
-            for each in area_list:
-                code_list.append(int(each['code']))
+            return Response(SIGUNGU_DATA, status=status.HTTP_200_OK)
+
+        try:
             area_code = int(area_code)
-            if area_code not in code_list:
-                raise NoObjectException('No Area Code', f"There is no area code {area_code}")
-            area_list = tour.get_sigungu_code_list(area_code)
-            response_data[str(area_code)] = area_list
-        return Response(response_data, status=status.HTTP_200_OK)
+        except ValueError:
+            return Response(
+                {"error": "area_code는 숫자여야 합니다."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        response_data = SIGUNGU_DATA.get(area_code, None)
+        if not response_data:
+            raise NoObjectException(error_message='올바른 시군구 데이터가 없습니다.')
+
+        return Response({str(area_code): response_data}, status=status.HTTP_200_OK)
 
 class Sido_list(viewsets.ViewSet):
 
     def retrieve(self, request):
-        tour = TourApi(service_key=PUBLIC_DATA_PORTAL_API_KEY)
-        sido_list = tour.get_sigungu_code_list()
-        return Response(sido_list, status=status.HTTP_200_OK)
+        return Response(SIDO_LIST, status=status.HTTP_200_OK)
 
+class NewTourAddView(viewsets.ModelViewSet):
+    """
+        해당 뷰는 새로운 여행을 추가하는 뷰를 담당합니다.
+        구현 API:
+            여행 등록
+            사용자 여행 리스트 조회
+            해당 여행 상세 조회
+            여행 정보 수정(장소 정보 포함)
+            여행 삭제
+    """
 
+    permission_classes = [IsAuthenticated]
+    queryset = Travel.objects.all() # 여행 모델에 대한 정보만 가지고 옵니다.
+    serializer_class = TravelSerializer
+    filter_backends = (DjangoFilterBackend, )
+    filterset_fields = ('id',)
 
-class CourseView(viewsets.ViewSet):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        place_service = PlaceService(KAKAO_REST_API_KEY)
+        self.travel_creation_service = TravelCreationService(place_service)
+        self.travel_update_service = TravelUpdateService(self.travel_creation_service)
 
-    def __validate_parameters_in_post(self, tour_id, date, places, user_sub) -> tuple[int, str]:
-        """
-            해당 함수는 post 요청이 들어왔을 때 정상적으로 파라미터가 왔는지 검사히기 위한 로직입니다.
-            1. places가 리스트 형식인지 확인
-            2. 필수 파라미터가 존재하는지 확인
-            3. 파라미터 중, date 형식이 맞는지 확인
-            4. 실제로 여행 id가 존재하는지 확인
-        """
-        if not isinstance(places, list): return 400, 'places는 리스트 형태이어야 합니다.'  # places가 리스트 형식이 아니라면
-        if not tour_id or not date or len(places) == 0: return 400, '필수 파라미터 중 일부 혹은 전체가 없습니다. tour_id, date, places를 확인해주세요.' # 파라미터를 잘못 주었을 때
+    def get_queryset(self):
+        return self.queryset.filter(user__sub=self.request.user.sub)
+
+    def create(self, request, *args, **kwargs):
+        """여행 상세등록 API - 최적화된 버전"""
+        logger.debug("/tour/ create 메소드 실행")
+
+        # 파라미터 유효성 검사
+        places_data = request.data.get('places')
+        if not places_data:
+            raise NoRequiredParameterException("No Object", "places 정보가 없습니다.")
+
+        # 여행 데이터 준비
+        travel_data = request.data.copy()
+        travel_data.pop('places')
+
+        # 서비스를 통한 여행 생성
+        travel = self.travel_creation_service.create_travel_with_places(
+            travel_data=travel_data,
+            places_data=places_data,
+            user_sub=request.user.sub
+        )
+
+        # 응답 반환
+        serializer = TravelSerializer(travel)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def partial_update(self, request, *args, **kwargs):
+        """여행 정보 수정 - 최적화된 버전"""
+        travel_id = int(kwargs.get('pk'))
+
+        # 장소 정보가 없는 경우 기본 업데이트
+        places_data = request.data.get('places')
+        if not places_data:
+            return super().partial_update(request, *args, **kwargs)
+
+        # 여행 데이터 준비
+        travel_data = request.data.copy()
+        travel_data.pop('places')
+
+        # 서비스를 통한 업데이트
+        travel = self.travel_update_service.update_travel_with_places(
+            travel_id=travel_id,
+            travel_data=travel_data if travel_data else None,
+            places_data=places_data
+        )
+
+        serializer = TravelSerializer(travel)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def retrieve(self, request, *args, **kwargs):
+        """여행 상세정보 조회 API"""
+        travel_id = int(kwargs.get('pk'))
         try:
-            tour_date = datetime.datetime.strptime(date, "%Y-%m-%d")
-        except ValueError:
-            logger.info(f'date: {date} is not date format') # 클라이언트가 잘못 요청 보낸 것이므로
-            return 400, "date의 형식이 올바르지 않습니다."
-
-        # 실제로 Travel이 존재하는지 확인합니다.
-        travel = None
-        try:
-            travel = Travel.objects.get(id=int(tour_id), user__sub=user_sub)
-        except Travel.DoesNotExist: # travel이 존재하지 않는다면
-            logger.warning(f'travel id: {tour_id} is not exist in DB.')
-            return 404, '해당 여행이 존재하지 않습니다.'
-
-        end_date = datetime.datetime.strptime(str(travel.end_date), "%Y-%m-%d")
-        start_date = datetime.datetime.strptime(str(travel.start_date), "%Y-%m-%d")
-        if end_date < tour_date or start_date > tour_date: # tour_date가 등록된 여행 날짜 외라면
-            logger.warning(f'등록 범위 외 날짜 여행 등록 시도')
-            return 400, '해당 여행은 등록된 날짜의 여행 날짜 범위 외 날짜 입니다.'
-        return 200, 'Validate'
-
-    def create(self, request, *args, **kwargs):  # 여행 경로 저장 API
-        user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
-
-        # request.data를 변경 가능한 딕셔너리로 변환
-        # 필수 파라미터 추출
-        course_data = request.data.copy()
-        tour_id = course_data.get('tour_id', None) # 여행 id
-        date = course_data.get('date', None) # 여행 날짜
-        places = course_data.get('places', []) # 장소 정보들 가져오기
-
-        # 파라미터 validate
-        status_code, message = self.__validate_parameters_in_post(tour_id, date, places, user_sub)
-        if status_code != 200:
-            return Response({
-                "error": status_code,
-                "message": message
-            }, status=status_code)
-
-        travel = Travel.objects.get(id=int(tour_id), user__sub=user_sub)
-
-        place_results = []
-
-        for place_data in places:
-            name = place_data.get('name', None)
-            mapX = place_data.get('mapX', None)
-            mapY = place_data.get('mapY', None)
-            image_url = place_data.get('image_url', None)
-            road_address = place_data.get('road_address', None) # 도로명 주소를 받아옵니다.
-            parcel_address = None # 지번 주소를 받아옵니다.
-
-            # 장소 필수 정보 누락 시 해당 장소는 스킵
-            if not name or not mapX or not mapY:
-                logger.info(f'필수 정보 누락 (place name: {name}, mapX: {mapX}, mapY: {mapY})') # 클라이언트 잘못이므로 info
-                continue
-
-            # 장소 저장 (중복 시 get)
-            place_service = PlaceService(service_key=KAKAO_REST_API_KEY)
-            if road_address is None: parcel_address, road_address = place_service.get_parcel_and_road_address(float(mapX), float(mapY))
-            else: parcel_address = place_service.get_parcel(float(mapX), float(mapY))
-            place, _ = Place.objects.get_or_create(
-                name=name,
-                mapX=mapX,
-                mapY=mapY,
-                road_address=road_address,
-                address=parcel_address
-            )
-
-            # 날짜별 장소 연결 저장
-            tdp, _ = TravelDaysAndPlaces.objects.get_or_create(
-                travel=travel,
-                place=place,
-                date=date
-            )
-
-            # 이미지가 있을 경우 별도 저장
-            if image_url:
-                PlaceImages.objects.get_or_create(
-                    place=place,
-                    image_url=image_url
-                )
-
-            place_results.append({
-                "name": name,
-                "mapX": mapX,
-                "mapY": mapY,
-                "image_url": image_url,
-                "road_address": road_address,
-                "parcel_address": parcel_address,
-                'place_id': place.id,
-                'tdp_id': tdp.id,
-            })
-
-        # 최종 응답 반환
-        return Response({
-            "date": date,
-            "places": place_results
-        }, status=status.HTTP_201_CREATED)
-
-    def retrieve(self, request, pk=None):  # 여행 경로 가져오기 API
-        user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
-        tour_id = pk
-
-        # 여행 존재 여부 및 권한 확인
-        try:
-            travel = Travel.objects.get(id=int(tour_id), user__sub=user_sub)
+            travel = Travel.objects.get(id=travel_id)
+            serializer = TravelSerializer(travel)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         except Travel.DoesNotExist:
-            logger.warning(f'travel id: {tour_id} && sub: {user_sub} is not exist in DB.')
-            return Response({
-                "error": "403",
-                "message": "해당 여행이 존재하지 않거나 접근 권한이 없습니다."
-            }, status=status.HTTP_403_FORBIDDEN)
+            raise NoObjectException(
+                error_message='해당 여행 id에 해당하는 여행이 존재하지 않습니다.'
+            )
 
-        # 해당 여행에 연결된 날짜별 장소 정보 조회
-        travel_days = TravelDaysAndPlaces.objects.filter(travel=travel).order_by('date')
-        if not travel_days.exists():
-            logger.warning(f'travel id: {tour_id} && sub: {user_sub} has no travel days.')
-            return Response({
-                "message": "저장된 여행 경로 정보가 없습니다.",
-                "tour_id": tour_id,
-                "courses": []
-            }, status=status.HTTP_200_OK)
+    def list(self, request, *args, **kwargs):
+        self.serializer_class = TravelListSerializer
+        return super().list(request, *args, **kwargs)
 
-        result = {}  # date 별로 그룹화
 
-        for entry in travel_days:
-            date_str = str(entry.date)
+class BaseImageSaveView(viewsets.ModelViewSet):
+    """
+        해당 클래스는 여행 이미지, 인생네컷 등 사진 데이터를 저장하는 뷰로 활용됩니다.
+    """
 
-            if date_str not in result:
-                result[date_str] = []
+    permission_classes = [IsAuthenticated] # 로그인 사용자를 디폴트로
 
-            image_url = ""
-            image_obj = PlaceImages.objects.filter(place=entry.place).first()
-            if image_obj:
-                image_url = image_obj.image_url
+    def get_queryset(self):
+        return self.queryset.filter(tour__user__sub=self.request.user.sub)
 
-            result[date_str].append({
-                "name": entry.place.name,
-                "mapX": entry.place.mapX,
-                "mapY": entry.place.mapY,
-                "image_url": image_url,
-                "road_address": entry.place.road_address,
-                "parcel_address": entry.place.address,
-                "place_id": entry.place.id,
-                "tdp_id": entry.id,
-            })
+    def create(self, request, *args, **kwargs):
+        """
+            사진 저장 API
+        """
+        image = request.FILES.get('image', None)
+        if image is None:
+            raise NoRequiredParameterException(error_message='사진은 필수 입니다.')
 
-        # 응답 형태: [{ "date": "YYYY-MM-DD", "places": [...] }, ...]
-        response_data = [
-            {
-                "date": date,
-                "places": places
-            } for date, places in result.items()
-        ]
-
-        return Response(response_data, status=status.HTTP_200_OK)
-
-    def destroy(self, request, pk=None):
-        user_sub = request.user.sub  # 로그인한 사용자의 sub
-        tour_id = pk  # URL에서 받은 여행 ID
-        del_date = request.data.get('target_date', None)
-        if not del_date:
+        data = request.data.copy()
+        data['user'] = request.user.sub
+        data['tour'] = data.pop('tour_id', None)
+        logger.debug('tour: ' + str(data['tour']))
+        if data['tour'] is None:
             raise NoRequiredParameterException()
+        data['tour'] = int(data['tour'][0])
+
+        logger.debug('사진 저장 시작')
+        logger.debug('request: ' + str(data))
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def destroy(self, request, *args, **kwargs):
+        obj_id = kwargs.get('pk')
+        # 사진 S3에서도 삭제
         try:
-            tour_date = datetime.datetime.strptime(del_date, "%Y-%m-%d")
-        except ValueError:
-            raise ValueException(
-                error_message=f'date: {del_date} is not date format'
-            )
+            queryset_object = self.get_queryset().get(id=int(obj_id))
+            if queryset_object.user != request.user:
+                raise PermissionDenied(detail='본인의 사진만 저장할 수 있습니다.')
+            # 사진 삭제
+            queryset_object.image.delete()
+        except SnapshotImages.DoesNotExist:
+            raise NoObjectException(error_message='해당 id에 해당하는 사진이 없습니다.')
+        return super().destroy(request, *args, **kwargs)
+
+class TourSnapshotsView(BaseImageSaveView):
+    serializer_class = TourSnapshotsSerializer
+    queryset = SnapshotImages.objects.all()
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ('tour',)
 
 
-        instances = TravelDaysAndPlaces.objects.filter(travel__id=int(tour_id), date=tour_date)
-        if not instances.exists():
-            logger.warning(f'travel id: {tour_id} && sub: {user_sub} has no travel days.')
-            raise NoObjectException(
-                'No Object exists.',
-                f'해당 날짜의 여행이 존재하지 않습니다.'
-            )
-        instances.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+class UserTourImageView(BaseImageSaveView):
+    serializer_class = UserTourImageSerializer
+    queryset = UserTourImage.objects.all()
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ('tour',)
 
-    def list(self, request, *args, **kwargs):  # 여행 경로 리스트 조회 API
-        user_sub = request.user.sub  # 액세스 토큰에서 sub 값 가져오기
 
-        # 사용자가 해당하는 여행 경로들을 모두 조회
+class CategoryListView(viewsets.ViewSet):
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Tour API의 contentTypeId 기반 카테고리 리스트를 반환합니다.
+        """
+        category_list = [
+            {"contentTypeId": 12, "name": "관광지"},
+            {"contentTypeId": 14, "name": "문화시설"},
+            {"contentTypeId": 15, "name": "축제/공연/행사"},
+            {"contentTypeId": 28, "name": "레포츠"},
+            {"contentTypeId": 32, "name": "숙박"},
+            {"contentTypeId": 38, "name": "쇼핑"},
+            {"contentTypeId": 39, "name": "음식점"},
+        ]
+        return Response(category_list, status=status.HTTP_200_OK)
+
+
+class PoseRecommendView(viewsets.ViewSet) :
+    def retrieve(self, request, *args, **kwargs):
+        place_id = request.GET.get('place_id', None)
+        if place_id is None: raise NoRequiredParameterException()
         try:
-            travels = Travel.objects.filter(user__sub=user_sub)  # 해당 user의 여행 경로들
-        except Travel.DoesNotExist:
-            raise NoObjectException(
-                'No Travel object exists.',
-                f'sub: {user_sub}의 여행이 존재하지 않습니다.'
-            )
+            place = Place.objects.get(id=int(place_id))
+        except Place.DoesNotExist:
+            raise NoObjectException(error_message='place_id에 해당하는 장소를 찾을 수 없습니다.')
 
-        # 여행 경로들에 대한 결과 리스트 생성
-        travel_results = []
+        poses = POSE_MAP.get(str(place.cat2)) # list 형태, 카테고리가 없는 경우, "None"이 키 값으로 들어갑니다.
+        logger.debug(f'poses: {poses}')
+        images = POSE_URL_MAP.get(str(place.cat2))
+        data = {
+            'place_id': place_id,
+            'poses': poses,
+            'images': images
+        }
 
-        for travel in travels:
-            # 여행 경로에 포함된 장소들 조회
-            travel_days_and_places = TravelDaysAndPlaces.objects.filter(travel=travel)
+        serializer = PoseRecommendSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-            # 장소 리스트 생성
-            places = []
-            for travel_day_place in travel_days_and_places:
-                place = travel_day_place.place
-                places.append({
-                    "name": place.name,
-                    "mapX": place.mapX,
-                    "mapY": place.mapY,
-                    "image_url": place.placeimages_set.first().image_url if place.placeimages_set.exists() else None
-                })
+class TodayTravelViewSet(viewsets.ModelViewSet):
+    """
+        당일 여행에 대한 정보를 주는 API 뷰셋입니다.
+        구현 메소드: GET
+        들어가야 할 정보: 지역, 여행 인원수, 여행날짜, 사진 업로드 정보, 여행 장소 갯수, 관광타입정보, 여행 이름
+    """
+    # 유저를 가져오기 위한 로그인 여부 판단
+    permission_classes = [IsAuthenticated,] # 로그인이 된 사용자만 접근을 허용합니다.
 
-            # 여행 경로 데이터 포맷
-            travel_results.append({
-                "tour_id": travel.id,
-                "tour_name": travel.tour_name,
-                "start_date": str(travel.start_date),
-                "end_date": str(travel.end_date),
-                "places": places
-            })
+    def list(self, request, *args, **kwargs):
+        # 1. 당일 여행에 대한 정보를 계산한다.
+        service = TodayTravelService()
+        serializer = service.get_today_tour_by_user(request.user)
+        # 2. 시리얼라이저 데이터를 반환한다.
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-        # 최종 응답 반환
-        return Response({
-            "travels": travel_results
-        }, status=status.HTTP_200_OK)
 
+
+class LargeResultsSetPagination(PageNumberPagination):
+    page_size = 25
+    page_size_query_param = 'page_size'
+    max_page_size = 50 # 최대 50개로
+
+
+class RelationPlaceView(viewsets.ModelViewSet):
+    queryset = RelationPlace.objects.all()
+    serializer_class = MiniRelationPlaceSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ('place_name',)
+    pagination_class = LargeResultsSetPagination

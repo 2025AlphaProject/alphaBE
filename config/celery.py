@@ -1,8 +1,10 @@
+import logging
 import os
 
 from celery import Celery
-import logging
+
 from config.settings import APP_LOGGER
+
 logger = logging.getLogger(APP_LOGGER)
 
 # 장고 환경 설정을 불러들입니다.

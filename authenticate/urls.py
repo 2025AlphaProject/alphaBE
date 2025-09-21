@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import kakao_callback, KakaoRefreshTokens, LoginRegisterView, CustomTokenRefreshView
-from rest_framework_simplejwt.views import TokenRefreshView
+
+from .views import kakao_callback, LoginRegisterView, CustomTokenRefreshView
 
 urlpatterns = [
     path('login/', LoginRegisterView.as_view({
@@ -10,5 +10,5 @@ urlpatterns = [
     # path('refresh/', KakaoRefreshTokens.as_view({
     #     'post': 'create',
     # }), name='refresh_tokens'),
-    path('refresh/', CustomTokenRefreshView.as_view())
+    path('refresh/', CustomTokenRefreshView.as_view(), name='refresh'),
 ]

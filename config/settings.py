@@ -10,10 +10,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
-from pathlib import Path
-import os, environ
-from datetime import timedelta
+import environ
 import logging
+import os
+from datetime import timedelta
+from pathlib import Path
 
 # .env 파일을 읽기 위한 객체 생성
 env = environ.Env()
@@ -71,11 +72,11 @@ INSTALLED_APPS = [
     'authenticate',
     'usr',
     'tour',
-    'mission',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist', # 토큰 블랙리스트 위해 필요
     'channels',
     'storages',
+    'django_filters',
 ]
 ASGI_APPLICATION = 'config.asgi.application'
 CHANNEL_LAYERS = {
@@ -124,15 +125,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
 # 기본 데이터 베이스를 mysql로 설정합니다.
 DATABASES = {
     'default': {
@@ -195,7 +187,8 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'authenticate.authentications.CustomAuthentication',
     ),
-    'EXCEPTION_HANDLER': 'services.exception_handler.custom_exception_handler'
+    'EXCEPTION_HANDLER': 'services.exception_handler.custom_exception_handler',
+    'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',),
 }
 
 # 아래는 celery setting을 담당합니다.
@@ -236,8 +229,8 @@ STORAGES = {
 
 # simple jwt setting
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1), # 토큰 유효시간 설정 1시간으로 설정
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=5), # 리프레시 토큰 유효기간 설정 리프레시 토큰 유효기간은 5일로 설정
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=5), # 토큰 유효기간 5일로 설정
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30), # 리프레시 토큰 유효기간 설정 리프레시 토큰 유효기간은 5일로 설정
     "ROTATE_REFRESH_TOKENS": True, # 리프레시 토큰도 같이 반환됩니다.
     "BLACKLIST_AFTER_ROTATION": True, # 이전 토큰 블랙리스트 적용, 사용시 설치앱에 rest_framework_simplejwt.token_blacklist 추가 필요
     "UPDATE_LAST_LOGIN": False, # last_login field가 업데이트 됩니다. (커스텀 모델이라 X)
@@ -246,7 +239,7 @@ SIMPLE_JWT = {
     "SIGNING_KEY": SECRET_KEY, # 장고 자체의 시크릿 키로 signing key 지정
     "VERIFYING_KEY": "",
     "AUDIENCE": None,
-    "ISSUER": None, # 토큰 발급자 명시
+    "ISSUER": "Conever", # 토큰 발급자 명시
     "JSON_ENCODER": None,
     "JWK_URL": None,
     "LEEWAY": 0,
@@ -291,9 +284,6 @@ LOGGING = {
             'format': '[{levelname}] | {asctime} | {message}',
             'style': '{',
         },
-        'logstash': {
-            '()': 'logstash_formatter.LogstashFormatterV1',
-        },
     },
     'handlers': { # 로그 핸들러 설정
         'file': {
@@ -305,13 +295,6 @@ LOGGING = {
             'when': 'midnight', # 자정마다 새 로그파일 생성
             'backupCount': 7, # 일주일치만 저장
         },
-        'logstash': {
-            'level': 'INFO',
-            'class': 'config.tcp_log_handler.TCPLogstashHandler',
-            'host': env('LOGSTASH_HOST'),
-            'port': 3306,
-            'formatter': 'logstash'
-        }
     },
     'loggers': { # 로거 설정, 실제 get_logger를 이용하여 로그 설정 가져옴
         'django': { # 실제 배포 환경에서 사용하는 로거
@@ -330,5 +313,19 @@ LOGGING = {
 # 앱 기본 로거 설정
 APP_LOGGER='django'
 
-# YOLO 모델 디렉터리 설정
-MODEL_DIR = os.path.join(BASE_DIR, "mission", "yolomodels")
+
+
+# 캐시 설정
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': f'redis://{env("CHANNEL_HOST")}:6379/1',
+        'OPTION': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'TIMEOUT': 600, # cache 유효 기간을 10분으로 설정합니다.
+        }
+    }
+}
+
+# 파일 최대 업로드 설정
+FILE_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024 # 100MB로 제한

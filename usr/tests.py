@@ -1,9 +1,8 @@
-from django.test import TestCase
-from .services import UserService
-from config.settings import KAKAO_REFRESH_TOKEN, KAKAO_REST_API_KEY
-from .models import User
-from services.kakao_token_service import KakaoTokenService
 from tests.base import BaseTestCase
+from .models import User
+from .services import UserService
+
+
 # Create your tests here.
 
 class TestService(BaseTestCase):
@@ -11,16 +10,6 @@ class TestService(BaseTestCase):
         """
         테스트 환경에서 꼭 필요한 데이터를 업로드 하기 위한 메소드 입니다.
         """
-        # 유저 정보 임의 생성
-        # user = User.objects.create(
-        #     sub=3928446869, # 앱 키에 따라 내 고유 정보가 달라짐
-        #     username='TestUser',
-        #     gender='male',
-        #     age_range='1-9',
-        #     profile_image_url='https://example.org'
-        # )
-        # user.set_password('test_password112')
-        # user.save()
 
         user2 = User.objects.create(
             sub=1,
@@ -59,6 +48,9 @@ class TestService(BaseTestCase):
         self.assertEqual(response.status_code, 200) # 200이 맞는지 확인합니다.
 
     def test_user_list(self):
+        """
+            해당 테스트는 쿼리에 포함된 user_name에 검색 결과를 제대로 반환하는지 테스트합니다.
+        """
         end_point = '/user/?user_name=TestUser2'
         headers = {
             'Authorization': f'Bearer {self.KAKAO_TEST_ACCESS_TOKEN}'

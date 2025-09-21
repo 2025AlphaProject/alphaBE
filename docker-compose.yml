@@ -4,6 +4,7 @@ services:
   db:
     image: mysql:latest
     restart: always
+    # 배포 땐 아래 포트 막을 것
 #    ports:
 #      - "3306:3306"
     environment:
@@ -24,8 +25,8 @@ services:
       - app_network
 
   celery_worker:
-    image: ytk030305/alpha_celery:0.4.0
-    command: celery -A config worker -l INFO
+    image: ytk030305/alpha_celery:1.1.4
+    command: celery -A config worker -l INFO --logfile=/code/logs/celery_server.log
     depends_on:
       - db
       - redis
@@ -35,10 +36,12 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     networks:
       - app_network
+    volumes:
+      - log_volume:/code/logs
 
   celery_beat:
-    image: ytk030305/alpha_celery:0.4.0
-    command: celery -A config beat -l INFO
+    image: ytk030305/alpha_celery:1.1.4
+    command: celery -A config beat -l INFO --logfile=/code/logs/celery_server.log
     depends_on:
       - db
       - redis
@@ -48,9 +51,11 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     networks:
       - app_network
+    volumes:
+      - log_volume:/code/logs
 
   migrations:
-    image: ytk030305/alpha_be:1.0.8
+    image: ytk030305/alpha_be:2.1.6
     command: sh entrypoint.sh
     depends_on:
       - db
@@ -62,7 +67,7 @@ services:
       - app_network
 
   conever_api: # api 컨테이너
-    image: ytk030305/alpha_be:1.0.8
+    image: ytk030305/alpha_be:2.1.6
     command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
 #    ports:
 #      - "8000:8000"
